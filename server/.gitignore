@@ -1,0 +1,7 @@
+bin/
+webui/node_modules/
+webui/dist/
+internal/api/ui/dist/*
+!internal/api/ui/dist/.gitkeep
+*.sum
+go.sum
