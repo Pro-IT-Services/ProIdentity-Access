@@ -1,0 +1,11 @@
+.git
+bin
+webui/node_modules
+webui/dist
+internal/api/ui/dist
+docker/.env
+docker/*.tgz
+*.tgz
+source.tgz
+docker/.deploy
+*.log

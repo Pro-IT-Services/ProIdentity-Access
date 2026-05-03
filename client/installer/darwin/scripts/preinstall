@@ -1,0 +1,33 @@
+#!/bin/bash
+set -e
+
+DAEMON_PLIST=/Library/LaunchDaemons/com.proitservices.proidentity.access.daemon.plist
+OLD_DAEMON_PLIST=/Library/LaunchDaemons/com.proidentity.app.plist
+AGENT_PLIST=/Library/LaunchAgents/com.proitservices.proidentity.access-ui.plist
+OLD_AGENT_PLIST=/Library/LaunchAgents/com.proidentity.app-ui.plist
+
+# Unload existing daemon before overwriting the binary
+for plist in "$DAEMON_PLIST" "$OLD_DAEMON_PLIST"; do
+    if [ -f "$plist" ]; then
+        launchctl bootout system "$plist" 2>/dev/null || \
+        launchctl unload "$plist" 2>/dev/null || true
+    fi
+done
+
+# Unload existing UI launch agent (upgrade path)
+CURRENT_USER=$(stat -f "%Su" /dev/console 2>/dev/null || true)
+if [ -n "$CURRENT_USER" ] && [ "$CURRENT_USER" != "root" ]; then
+    USER_UID=$(id -u "$CURRENT_USER")
+    for plist in "$AGENT_PLIST" "$OLD_AGENT_PLIST"; do
+        if [ -f "$plist" ]; then
+            launchctl bootout gui/"$USER_UID" "$plist" 2>/dev/null || \
+            launchctl unload "$plist" 2>/dev/null || true
+        fi
+    done
+fi
+
+rm -rf "/Applications/ProIdentity.app"
+rm -rf "/Applications/ProIdentity Uninstaller.app"
+rm -f "$OLD_DAEMON_PLIST" "$OLD_AGENT_PLIST"
+
+exit 0

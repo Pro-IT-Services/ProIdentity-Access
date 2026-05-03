@@ -1,0 +1,48 @@
+name: ProIdentity
+options:
+  bundleIdPrefix: com.proidentity
+  deploymentTarget:
+    iOS: "16.0"
+
+packages:
+  WireGuardKit:
+    path: Dependencies/wireguard-apple
+
+settings:
+  base:
+    DEVELOPMENT_TEAM: ""
+    SWIFT_VERSION: "5"
+
+targets:
+  ProIdentity:
+    type: application
+    platform: iOS
+    sources:
+      - ProIdentity
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.proidentity.ios
+        CODE_SIGN_ENTITLEMENTS: ProIdentity/ProIdentity.entitlements
+        INFOPLIST_FILE: ProIdentity/Info.plist
+        CODE_SIGN_STYLE: Automatic
+    dependencies:
+      - target: PacketTunnel
+        embed: true
+
+  PacketTunnel:
+    type: app-extension
+    platform: iOS
+    sources:
+      - PacketTunnel
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.proidentity.ios.tunnel
+        CODE_SIGN_ENTITLEMENTS: PacketTunnel/PacketTunnel.entitlements
+        INFOPLIST_FILE: PacketTunnel/Info.plist
+        CODE_SIGN_STYLE: Automatic
+        GENERATE_INFOPLIST_FILE: false
+        LIBRARY_SEARCH_PATHS:
+          - "$(PROJECT_DIR)/Dependencies/wireguard-apple/Sources/WireGuardKitGo/out"
+    dependencies:
+      - package: WireGuardKit
+        product: WireGuardKit

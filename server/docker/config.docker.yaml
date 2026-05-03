@@ -1,0 +1,13 @@
+server:
+  host: "0.0.0.0"
+  port: 8080
+  cors_origins:
+    - "http://localhost:8080"
+    - "http://127.0.0.1:8080"
+
+database:
+  dsn: "proidentity:proidentity@tcp(db:3306)/proidentity"
+
+auth:
+  jwt_secret: "set-with-PROIDENTITY_JWT_SECRET"
+
