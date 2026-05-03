@@ -102,6 +102,11 @@ ProIdentity-Access-Server-0.5.19-linux-amd64.tar.gz
 ProIdentity-Access-0.5.19-SHA256SUMS.txt
 ```
 
+When `/etc/proidentity/proidentity.env` does not exist, the installer generates
+an admin password, JWT secret, database user, database password, and database
+DSN. It prints the generated values and SQL you can run if the database and user
+do not already exist.
+
 Installed paths:
 
 | Path | Purpose |
@@ -153,6 +158,10 @@ Env fields:
 | --- | --- | --- |
 | `PROIDENTITY_JWT_SECRET` | Yes | Long random JWT signing secret. |
 | `PROIDENTITY_DATABASE_DSN` | Optional | Overrides `database.dsn` from `config.yaml`. |
+| `PROIDENTITY_DATABASE_NAME` | Optional install input | Used by `install-release.sh` when generating a DSN. |
+| `PROIDENTITY_DATABASE_USER` | Optional install input | Used by `install-release.sh` when generating a DSN. |
+| `PROIDENTITY_DATABASE_PASS` | Optional install input | Used by `install-release.sh` when generating a DSN. |
+| `PROIDENTITY_DATABASE_HOST` | Optional install input | Defaults to `127.0.0.1:3306` when generating a DSN. |
 | `PROIDENTITY_SERVER_HOST` | Optional | Overrides `server.host` from `config.yaml`. |
 | `PROIDENTITY_SERVER_PORT` | Optional | Overrides `server.port` from `config.yaml`. |
 | `WG_ADMIN_USER` | Yes on first boot | Initial admin username. |
@@ -280,6 +289,32 @@ sudo ./host-prep.sh
 
 See `server/docker/README.md` for Docker environment variables and Compose
 operations.
+
+## Proxmox VM Installer
+
+For Proxmox VE, run the interactive VM installer from the Proxmox host shell:
+
+```sh
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/Pro-IT-Services/ProIdentity-Access/main/server/proxmox/proidentity-vm.sh)"
+```
+
+The wizard collects all required values before creating the VM, including VM
+resources, storage, network, database credentials, JWT secret, admin account,
+release version, and HTTP listen mode.
+
+Use direct mode if you do not want Nginx:
+
+```text
+server.host = 0.0.0.0
+```
+
+Use reverse-proxy mode if another system terminates TLS:
+
+```text
+server.host = 127.0.0.1
+```
+
+See `server/proxmox/README.md`.
 
 ## Build From Source
 

@@ -14,6 +14,11 @@ Environment:
   PROIDENTITY_SERVICE_NAME  default: proidentity
   PROIDENTITY_SERVER_OS     default: linux
   PROIDENTITY_SERVER_ARCH   default: amd64
+  PROIDENTITY_DATABASE_NAME default: proidentity
+  PROIDENTITY_DATABASE_USER generated when not set
+  PROIDENTITY_DATABASE_PASS generated when not set
+  PROIDENTITY_DATABASE_HOST default: 127.0.0.1:3306
+  PROIDENTITY_DATABASE_DSN  generated when not set
 EOF
 }
 
@@ -54,6 +59,15 @@ random_secret() {
   fi
 }
 
+random_alnum() {
+  length="${1:-32}"
+  LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | dd bs=1 count="$length" 2>/dev/null
+}
+
+sql_escape() {
+  printf "%s" "$1" | sed "s/'/''/g"
+}
+
 require_cmd curl
 require_cmd sha256sum
 require_cmd tar
@@ -89,8 +103,32 @@ fi
 if [ ! -f "$config_dir/proidentity.env" ]; then
   jwt_secret="$(random_secret)"
   admin_pass="$(random_secret | cut -c 1-24)"
+  db_name="${PROIDENTITY_DATABASE_NAME:-proidentity}"
+  db_user="${PROIDENTITY_DATABASE_USER:-proidentity_$(random_alnum 8)}"
+  db_pass="${PROIDENTITY_DATABASE_PASS:-$(random_alnum 32)}"
+  db_host="${PROIDENTITY_DATABASE_HOST:-127.0.0.1:3306}"
+  db_dsn="${PROIDENTITY_DATABASE_DSN:-$db_user:$db_pass@tcp($db_host)/$db_name}"
+  case "$db_name" in
+    ""|*[!A-Za-z0-9_]*)
+      echo "ERROR: PROIDENTITY_DATABASE_NAME may contain only letters, numbers, and underscores." >&2
+      exit 1
+      ;;
+  esac
+  case "$db_user" in
+    ""|*[!A-Za-z0-9_]*)
+      echo "ERROR: PROIDENTITY_DATABASE_USER may contain only letters, numbers, and underscores." >&2
+      exit 1
+      ;;
+  esac
+  case "$db_pass" in
+    ""|*[!A-Za-z0-9_.-]*)
+      echo "ERROR: PROIDENTITY_DATABASE_PASS may contain only letters, numbers, dot, underscore, and dash." >&2
+      exit 1
+      ;;
+  esac
   cat > "$config_dir/proidentity.env" <<EOF
 PROIDENTITY_JWT_SECRET=$jwt_secret
+PROIDENTITY_DATABASE_DSN=$db_dsn
 WG_ADMIN_USER=admin
 WG_ADMIN_PASS=$admin_pass
 WG_ADMIN_EMAIL=admin@localhost
@@ -98,6 +136,18 @@ EOF
   chmod 0600 "$config_dir/proidentity.env"
   echo "Wrote $config_dir/proidentity.env"
   echo "Initial admin password: $admin_pass"
+  echo "Generated database name: $db_name"
+  echo "Generated database user: $db_user"
+  echo "Generated database password: $db_pass"
+  echo ""
+  echo "If the database/user do not already exist, create them with:"
+  cat <<SQL
+CREATE DATABASE IF NOT EXISTS \`$(sql_escape "$db_name")\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER IF NOT EXISTS '$(sql_escape "$db_user")'@'localhost' IDENTIFIED BY '$(sql_escape "$db_pass")';
+ALTER USER '$(sql_escape "$db_user")'@'localhost' IDENTIFIED BY '$(sql_escape "$db_pass")';
+GRANT ALL PRIVILEGES ON \`$(sql_escape "$db_name")\`.* TO '$(sql_escape "$db_user")'@'localhost';
+FLUSH PRIVILEGES;
+SQL
 fi
 
 install -m 0644 "$tmp/package/systemd/proidentity.service" "/etc/systemd/system/$service_name.service"
