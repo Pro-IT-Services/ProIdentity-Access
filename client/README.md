@@ -1,355 +1,185 @@
-# ProIdentity
+# ProIdentity Access Desktop Client
 
-A cross-platform VPN client built on the WireGuard® protocol, with a desktop GUI and a system daemon. Supports both standalone tunnel management and managed-mode operation against a central management server.
+ProIdentity Access Desktop is a Windows and macOS VPN client built on
+WireGuard. It includes a user-facing app and a privileged local daemon so
+normal users can connect and disconnect VPN sessions without running the app as
+administrator.
 
-**Platform support:** Windows (primary), macOS
-
-> WireGuard is a registered trademark of Jason A. Donenfeld.
+WireGuard is a registered trademark of Jason A. Donenfeld.
 
 Public repository:
 
 - HTTPS: https://github.com/Pro-IT-Services/ProIdentity-Access
 - SSH: git@github.com:Pro-IT-Services/ProIdentity-Access.git
 
----
+## Install From Releases
 
-## Features
+Download installers from:
 
-- Import and manage WireGuard tunnels from `.conf` files
-- Connect/disconnect tunnels with live traffic statistics (RX/TX, last handshake)
-- Daemon runs as a system service (auto-starts on boot), GUI connects to it on launch
-- **Standalone mode** — tunnels stored locally, encrypted with AES-256-GCM
-- **Managed mode** — authenticate against a management server, connect to server-provisioned VPN sessions, sync user-uploaded configs; all traffic encrypted end-to-end between client and server (X25519 ECDH + AES-256-GCM)
-- Setup wizard for first-run configuration
-- TOTP (2FA) support in managed mode
+https://github.com/Pro-IT-Services/ProIdentity-Access/releases
 
----
+Current release asset names:
 
-## License
-
-ProIdentity Access is source-available under the PolyForm Noncommercial
-License 1.0.0 for noncommercial use. Commercial, enterprise, MSP, resale,
-hosted-service, or other revenue-generating use requires a separate written
-commercial license from Pro-IT-Services. See [LICENSE](LICENSE).
-
----
-
-## Architecture
-
-```
-┌─────────────────────────────────────┐
-│        GUI (Wails / React)          │
-│  React + TypeScript + Zustand       │
-│  Dark themed, 960x660 window        │
-└──────────────┬──────────────────────┘
-               │ JSON-RPC 2.0
-               │ Windows named pipe  \\.\pipe\proidentity
-               │ Unix socket         /var/run/proidentity.sock
-               │ Token auth (per-session file-based token)
-┌──────────────▼──────────────────────┐
-│     Daemon (ProIdentity Daemon.exe) │
-│  Windows Service / macOS LaunchD    │
-│  Manages tunnels, routes, DNS       │
-│  Persists configs (AES-256-GCM)     │
-└──────────────┬──────────────────────┘
-               │ WireGuard userspace (golang.zx2c4.com/wireguard)
-               │ Wintun TUN driver (Windows, embedded in binary)
-┌──────────────▼──────────────────────┐
-│       OS Networking Stack           │
-│  TUN device, routes, DNS            │
-└─────────────────────────────────────┘
+```text
+ProIdentity-Access-0.5.19.msi
+ProIdentity-Access-0.5.19.pkg
+ProIdentity-Access-0.5.19-SHA256SUMS.txt
 ```
 
-The GUI and daemon are **separate binaries** that communicate over a local IPC channel. The daemon runs as `LocalSystem` (Windows) or `root` (macOS) and handles all privileged WireGuard operations. The GUI runs as a normal user process.
+### Windows MSI
 
----
+Run `ProIdentity-Access-0.5.19.msi`.
 
-## Installation
+The installer:
 
-### Windows — MSI Installer
+- Installs the desktop app and daemon under `C:\Program Files\ProIdentity\`.
+- Registers the daemon as the `ProIdentity` Windows service.
+- Runs the daemon as `LocalSystem`.
+- Starts the service immediately.
+- Adds a Start Menu shortcut for ProIdentity Access.
 
-Download `ProIdentity-<version>.msi` and run it. The installer:
+Users do not need to run the desktop app as administrator. The daemon performs
+privileged tunnel operations.
 
-- Installs `ProIdentity.exe` and `ProIdentity Daemon.exe` to `C:\Program Files\ProIdentity\`
-- Registers `ProIdentity` as a Windows Service (auto-start, LocalSystem)
-- Starts the service immediately
-- Creates a Start Menu shortcut for the GUI
+### macOS PKG
 
-**Uninstalling** via Add/Remove Programs stops and removes the service automatically.
+Run `ProIdentity-Access-0.5.19.pkg`.
 
-### macOS
+The package installs:
 
-Build from source (see below) and run the daemon installer:
+- `ProIdentity Access.app`
+- A root LaunchDaemon for privileged tunnel operations
+- Supporting uninstall scripts
 
-```bash
-sudo ./daemon -install
+After installation, launch ProIdentity Access and follow the setup wizard.
+
+## Managed Mode Setup
+
+1. Open ProIdentity Access.
+2. Choose managed setup.
+3. Enter the server URL, for example `https://vpn.example.com`.
+4. Register the device.
+5. Sign in with your VPN account.
+6. Connect to an assigned VPN.
+
+Managed mode receives VPN sessions from the ProIdentity Access server. If the
+server expires or revokes the session, the client clears local managed state and
+returns to the setup wizard.
+
+## Standalone Mode
+
+Standalone mode lets users import standard WireGuard `.conf` files. Local
+tunnel data is stored by the daemon and encrypted at rest where supported.
+
+## Build From Source
+
+Common requirements:
+
+- Go 1.22 or newer
+- Node.js 18 or newer
+- Wails v2
+
+Install Wails:
+
+```sh
+go install github.com/wailsapp/wails/v2/cmd/wails@latest
 ```
 
-This installs a LaunchDaemon plist at `/Library/LaunchDaemons/com.proidentity.app.plist` (auto-start, kept alive). Then launch `ProIdentity.app`.
+### Windows MSI Build
 
----
+Additional requirements:
 
-## Building from Source
-
-### Prerequisites
-
-| Tool | Install |
-|------|---------|
-| Go 1.22+ | https://go.dev/dl |
-| Wails v2 CLI | `go install github.com/wailsapp/wails/v2/cmd/wails@latest` |
-| Node.js 18+ | https://nodejs.org |
-
-### Full build (UI + App + Daemon + MSI)
-
-```bat
-build.bat
-```
-
-Or from PowerShell:
-
-```powershell
-.\build.ps1
-.\build.ps1 -Version 0.2.0   # override version
-.\build.ps1 -SkipUI           # skip npm steps (reuse existing frontend/dist)
-```
-
-Requires WiX v4 for the MSI step:
+- .NET SDK
+- WiX v4
 
 ```powershell
 dotnet tool install --global wix --version "4.*"
-wix extension add WixToolset.UI.wixext --global
+wix extension add WixToolset.UI.wixext/4.0.6 --global
+wix extension add WixToolset.Util.wixext/4.0.6 --global
+cd client
+powershell -ExecutionPolicy Bypass -File .\build.ps1 -Version 0.5.19
 ```
 
-### Individual steps
+Output:
 
-```bash
-# GUI
-wails build -platform windows/amd64
-
-# Daemon
-GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" \
-  -o "build/bin/ProIdentity Daemon.exe" ./cmd/daemon
+```text
+client/build/ProIdentity-Access-0.5.19.msi
 ```
 
-Output: `build/bin/ProIdentity.exe`, `build/bin/ProIdentity Daemon.exe`, `build/ProIdentity-0.1.0.msi`
+### macOS PKG Build
 
----
+Additional requirements:
 
-## Daemon
+- macOS
+- Xcode Command Line Tools
+- `pkgbuild`
 
-The daemon (`ProIdentity Daemon.exe` on Windows, `daemon` on macOS) handles all WireGuard tunnel operations. It runs as a privileged system service and exposes a local IPC socket.
+```sh
+cd client
+./build.sh --version 0.5.19
+```
 
-### Service Management (Windows)
+Output:
+
+```text
+client/build/darwin/ProIdentity-Access-0.5.19.pkg
+```
+
+Install locally:
+
+```sh
+sudo installer -pkg client/build/darwin/ProIdentity-Access-0.5.19.pkg -target /
+```
+
+## Architecture
+
+The desktop client is split into two processes:
+
+```text
+Desktop app (Wails / React)
+  -> local IPC socket or Windows named pipe
+Privileged daemon (LocalSystem on Windows, root on macOS)
+  -> WireGuard userspace, TUN device, routes, DNS
+Operating system networking stack
+```
+
+The app handles user interaction. The daemon owns privileged networking,
+tunnel lifecycle, route updates, DNS updates, and local tunnel storage.
+
+## Service Management
+
+Windows service commands:
 
 ```powershell
-# Install service (done automatically by MSI)
-.\daemon.exe -install
-
-# Uninstall service
-.\daemon.exe -uninstall
-
-# Check service status
 sc query ProIdentity
-
-# Start / stop manually
 Start-Service ProIdentity
 Stop-Service ProIdentity
 ```
 
-### Config Storage
+macOS LaunchDaemon commands:
 
-| Platform | Location |
-|----------|----------|
-| Windows | `C:\ProgramData\ProIdentity\tunnels\` |
-| macOS | `/Library/Application Support/ProIdentity/tunnels/` |
-
-Each tunnel is stored as `<uuid>.json`. In standalone mode with encryption enabled, files are AES-256-GCM encrypted (the GUI sets the encryption key over IPC on startup).
-
----
-
-## IPC Protocol
-
-The GUI communicates with the daemon via **JSON-RPC 2.0** over a local socket or named pipe.
-
-### Authentication
-
-On startup the daemon generates a random 32-byte token and writes it to:
-
-| Platform | Token file |
-|----------|------------|
-| Windows | `C:\ProgramData\ProIdentity\ipc.token` |
-| Unix | `/var/run/proidentity.token` |
-
-The GUI reads this file and sends `AUTH <hex-token>\n` on connect. The daemon replies `OK\n` or `DENIED\n`. All subsequent messages are JSON-RPC.
-
-### RPC Methods
-
-| Method | Description |
-|--------|-------------|
-| `tunnel.list` | List all imported tunnels |
-| `tunnel.import` | Import and persist a tunnel from `.conf` content |
-| `tunnel.import_ephemeral` | Import a tunnel without writing to disk |
-| `tunnel.delete` | Delete a tunnel |
-| `tunnel.connect` | Bring up a tunnel |
-| `tunnel.disconnect` | Tear down a tunnel |
-| `tunnel.stats` | Get RX/TX bytes and last handshake timestamp |
-| `tunnel.export` | Export tunnel config as `.conf` text |
-| `daemon.status` | Get daemon version |
-| `daemon.set_encryption_key` | Set the AES-256 key for on-disk config encryption |
-
-### Server-Pushed Events
-
-| Event | Payload | Description |
-|-------|---------|-------------|
-| `tunnel.changed` | `TunnelInfo` | Tunnel state changed (connecting/connected/error/disconnected) |
-| `stats.update` | `StatsInfo` | Traffic stats, pushed every 2 seconds while tunnel is up |
-
----
-
-## Modes of Operation
-
-### Standalone Mode
-
-- Import tunnels from standard WireGuard `.conf` files
-- Configs stored locally under `C:\ProgramData\ProIdentity\tunnels\`
-- On-disk encryption with AES-256-GCM (key stored per-user in app data)
-- Works fully offline
-
-### Managed Mode
-
-Connect to a central management server for organisation-wide VPN management.
-
-**Setup wizard steps:**
-
-1. Choose mode (standalone / managed)
-2. Enter management server URL
-3. Register device — generates an X25519 keypair; the server returns its public key; a shared AES-256 key is derived via ECDH + HKDF-SHA256 and used to encrypt all subsequent API traffic
-4. Log in with username + password (+ optional TOTP code)
-5. Setup complete
-
-**Once logged in:**
-
-- Browse available VPN servers
-- Connect to a server: the server provisions a WireGuard session (assigns IP, sends config), the client injects a session keypair and connects via the daemon
-- Upload personal `.conf` files to the server (encrypted with a per-user server key)
-- Configs sync automatically every 30 seconds
-
-**Session keepalive:** Each active server connection sends a keepalive to the management server every 30 seconds to maintain the session.
-
-**Device revocation:** If the server revokes a device, the client detects the `device revoked` error on the next API call, disconnects all tunnels, wipes all local credentials, and resets to the setup wizard.
-
----
-
-## Security
-
-### IPC
-
-- Authentication via a per-session random token written to a local file
-- Only local processes that can read the token file can connect
-- Named pipe / Unix socket — no network exposure
-
-### On-Disk Encryption (Standalone)
-
-- Algorithm: AES-256-GCM
-- Key: 32 bytes, stored in user app data, set on the daemon over IPC at startup
-- Format: `nonce (12 B) || ciphertext || tag (16 B)`
-- Auto-migration: plaintext configs from older versions are re-encrypted when the key is loaded
-
-### Managed API Transport
-
-- Device registration derives a shared AES-256 key via X25519 ECDH + HKDF-SHA256
-- Every API request/response body is encrypted with this key (AES-256-GCM)
-- The Device ID is used as Additional Authenticated Data (AAD) — request cannot be replayed against a different device
-- Bearer token (JWT) added to all authenticated requests
-
-### User Configs (Managed)
-
-- Configs uploaded to the server are encrypted client-side with a per-user key fetched from the server
-- Configs are never written to local disk in managed mode
-
-### Privilege Separation
-
-| Component | Privilege |
-|-----------|-----------|
-| Daemon | LocalSystem (Windows) / root (macOS) |
-| GUI | Normal user |
-| IPC channel | Local-only, token-authenticated |
-
----
-
-## Project Structure
-
-```
-.
-├── main.go                        Wails entry point
-├── app.go                         GUI backend — all methods exposed to frontend
-├── cmd/daemon/main.go             Daemon entry point (-install / -uninstall / run)
-├── internal/
-│   ├── config/                    WireGuard .conf parser and data model
-│   ├── crypto/                    AES-256-GCM utilities
-│   ├── daemon/
-│   │   ├── tunnel.go              Single tunnel lifecycle (TUN device, routes, DNS)
-│   │   ├── tunnel_manager.go      Manages all tunnels, persistence, stats loop
-│   │   ├── routes_windows.go      Windows route management (netsh / route)
-│   │   ├── routes_darwin.go       macOS route management
-│   │   ├── wintun_windows.go      Wintun DLL extraction (embedded in binary)
-│   │   └── platform/
-│   │       ├── service_windows.go Windows Service install/uninstall/handler
-│   │       └── service_darwin.go  macOS LaunchDaemon install/uninstall/handler
-│   ├── ipc/
-│   │   ├── types.go               JSON-RPC request/response/event types
-│   │   ├── server.go              IPC server (daemon side)
-│   │   ├── client.go              IPC client (GUI side)
-│   │   ├── auth.go                Token generation and validation
-│   │   ├── socket_windows.go      Windows named pipe
-│   │   └── socket_unix.go         Unix socket
-│   └── managed/
-│       ├── client.go              Management server HTTP client
-│       ├── devcrypto.go           X25519 keypair + ECDH key derivation
-│       └── settings.go            Persistent managed-mode settings
-├── frontend/
-│   └── src/
-│       ├── App.tsx                Root component and event routing
-│       ├── components/            UI components (tunnel cards, modals, panels)
-│       ├── stores/                Zustand state stores
-│       ├── wailsbridge.ts         Wails runtime wrapper
-│       └── types/                 TypeScript type definitions
-├── installer/
-│   ├── Product.wxs                WiX v4 MSI installer definition
-│   ├── License.rtf                License shown in the installer dialog
-│   └── build.ps1                  Forwards to root build.ps1
-├── build.ps1                      Full build script (UI + App + Daemon + MSI)
-├── build.bat                      build.ps1 wrapper (bypasses execution policy)
-└── build/
-    └── bin/                       Compiled binaries
+```sh
+sudo launchctl list | grep -i proidentity
+sudo launchctl kickstart -k system/com.proitservices.proidentity.access.daemon
 ```
 
----
+## Security Notes
 
-## Development
+- The daemon IPC endpoint is local-only and token authenticated.
+- The desktop app runs as a normal user.
+- The daemon performs privileged WireGuard operations.
+- Managed API traffic is encrypted during device registration and authenticated
+  requests.
+- Managed session expiration, device revocation, and auth failures reset the app
+  to the setup wizard.
+- Do not commit local configs, logs, build outputs, signing keys, or installer
+  artifacts.
 
-Run in development mode (hot-reload frontend):
+## License
 
-```bash
-wails dev
-```
+ProIdentity Access is source-available under the PolyForm Noncommercial
+License 1.0.0 for noncommercial use.
 
-The daemon must already be running (either as a service or started manually):
-
-```bash
-go run ./cmd/daemon
-```
-
----
-
-## Dependencies
-
-| Package | Purpose |
-|---------|---------|
-| `github.com/wailsapp/wails/v2` | Desktop GUI framework |
-| `golang.zx2c4.com/wireguard` | WireGuard® userspace implementation |
-| `golang.zx2c4.com/wintun` | Windows TUN driver |
-| `github.com/Microsoft/go-winio` | Windows named pipes |
-| `golang.org/x/crypto` | X25519, HKDF |
-| `golang.org/x/sys` | Windows Service control, syscalls |
-| `github.com/google/uuid` | Tunnel UUID generation |
+Commercial, enterprise, MSP, resale, hosted-service, or other
+revenue-generating use requires a separate written commercial license from
+Pro-IT-Services. See the repository root `LICENSE`.

@@ -45,14 +45,14 @@ Install from a release:
 ```sh
 curl -fsSL -o install-release.sh \
   https://raw.githubusercontent.com/Pro-IT-Services/ProIdentity-Access/main/server/install-release.sh
-sudo sh install-release.sh Pro-IT-Services/ProIdentity-Access 0.5.18
+sudo sh install-release.sh Pro-IT-Services/ProIdentity-Access 0.5.19
 ```
 
 The installer downloads and verifies:
 
 ```text
-ProIdentity-Access-Server-0.5.18-linux-amd64.tar.gz
-ProIdentity-Access-0.5.18-SHA256SUMS.txt
+ProIdentity-Access-Server-0.5.19-linux-amd64.tar.gz
+ProIdentity-Access-0.5.19-SHA256SUMS.txt
 ```
 
 It installs the server under `/opt/proidentity`, writes config files under
@@ -85,13 +85,20 @@ sudo systemctl restart proidentity
 
 ## Docker Server Deployment
 
-The Docker deployment runs the server and WireGuard inside a normal Docker
-bridge network. It does not require host networking, but the Docker host must
-provide `/dev/net/tun`, `NET_ADMIN`, and UDP port forwarding for WireGuard.
+Use the release-binary deployment above for the simplest production setup.
+
+The Docker deployment is intended for operators who want the server, MariaDB,
+and WireGuard runtime managed by Docker Compose from a checked-out copy of this
+repository. It builds the server container locally from `server/Dockerfile`,
+then runs it inside a normal Docker bridge network. It does not require host
+networking, but the Docker host must provide `/dev/net/tun`, `NET_ADMIN`, and
+UDP port forwarding for WireGuard.
 
 On a Linux server with Docker and Docker Compose:
 
 ```sh
+git clone https://github.com/Pro-IT-Services/ProIdentity-Access.git
+cd ProIdentity-Access
 cd server/docker
 sudo ./host-prep.sh
 ./up.sh
@@ -209,6 +216,16 @@ Database migrations are applied automatically when the server starts.
 
 ## Desktop Client Usage
 
+Download the desktop installer from
+https://github.com/Pro-IT-Services/ProIdentity-Access/releases.
+
+Release assets use these names:
+
+```text
+ProIdentity-Access-0.5.19.msi
+ProIdentity-Access-0.5.19.pkg
+```
+
 Install the Windows MSI or macOS PKG, launch ProIdentity Access, and follow the
 setup wizard.
 
@@ -248,13 +265,13 @@ dotnet tool install --global wix --version "4.*"
 wix extension add WixToolset.UI.wixext/4.0.6 --global
 wix extension add WixToolset.Util.wixext/4.0.6 --global
 cd client
-powershell -ExecutionPolicy Bypass -File .\build.ps1 -Version 0.5.18
+powershell -ExecutionPolicy Bypass -File .\build.ps1 -Version 0.5.19
 ```
 
 Output:
 
 ```text
-client/build/ProIdentity-Access-0.5.18.msi
+client/build/ProIdentity-Access-0.5.19.msi
 ```
 
 ### macOS PKG
@@ -267,19 +284,19 @@ Additional requirements:
 
 ```sh
 cd client
-./build.sh --version 0.5.18
+./build.sh --version 0.5.19
 ```
 
 Output:
 
 ```text
-client/build/darwin/ProIdentity-Access-0.5.18.pkg
+client/build/darwin/ProIdentity-Access-0.5.19.pkg
 ```
 
 Install locally:
 
 ```sh
-sudo installer -pkg client/build/darwin/ProIdentity-Access-0.5.18.pkg -target /
+sudo installer -pkg client/build/darwin/ProIdentity-Access-0.5.19.pkg -target /
 ```
 
 ## Build Android From Source

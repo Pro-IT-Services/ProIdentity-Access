@@ -1,6 +1,14 @@
 # Docker Deployment
 
-This deployment runs ProIdentity and WireGuard inside a Docker bridge network. It follows the same container pattern commonly used for WireGuard services: publish UDP ports, grant `NET_ADMIN`, mount `/dev/net/tun`, and enable forwarding sysctls.
+This deployment builds the ProIdentity server image locally from this repository
+and runs ProIdentity, MariaDB, and WireGuard through Docker Compose inside a
+Docker bridge network. It follows the same container pattern commonly used for
+WireGuard services: publish UDP ports, grant `NET_ADMIN`, mount `/dev/net/tun`,
+and enable forwarding sysctls.
+
+For production installs that do not need Docker, the recommended path is the
+GitHub Release archive and `server/install-release.sh` documented in the root
+README.
 
 Public repository:
 
@@ -18,6 +26,8 @@ Public repository:
 ## First Run
 
 ```sh
+git clone https://github.com/Pro-IT-Services/ProIdentity-Access.git
+cd ProIdentity-Access
 cd server/docker
 sudo ./host-prep.sh
 ./up.sh
