@@ -162,7 +162,10 @@ It installs:
 | `/etc/systemd/system/proidentity.service` | systemd service |
 
 If `/etc/proidentity/proidentity.env` did not exist, the installer creates it
-and prints the initial admin password once.
+and prints the generated initial admin password and database credentials once.
+If `PROIDENTITY_DATABASE_DSN` is not provided, it generates a database user,
+database password, and DSN in `proidentity.env`. It also prints SQL that can be
+run on MariaDB if the database and user do not already exist.
 
 ## Configure Server
 
@@ -210,6 +213,10 @@ Environment fields:
 | --- | --- | --- |
 | `PROIDENTITY_JWT_SECRET` | Yes | Long random JWT signing secret. Keep private. |
 | `PROIDENTITY_DATABASE_DSN` | Optional | Overrides `database.dsn` from `config.yaml`. |
+| `PROIDENTITY_DATABASE_NAME` | Optional install input | Used by `install-release.sh` when generating a DSN. |
+| `PROIDENTITY_DATABASE_USER` | Optional install input | Used by `install-release.sh` when generating a DSN. |
+| `PROIDENTITY_DATABASE_PASS` | Optional install input | Used by `install-release.sh` when generating a DSN. |
+| `PROIDENTITY_DATABASE_HOST` | Optional install input | Defaults to `127.0.0.1:3306` when generating a DSN. |
 | `PROIDENTITY_SERVER_HOST` | Optional | Overrides `server.host` from `config.yaml`. |
 | `PROIDENTITY_SERVER_PORT` | Optional | Overrides `server.port` from `config.yaml`. |
 | `WG_ADMIN_USER` | Yes on first boot | Initial admin username. |
@@ -442,6 +449,30 @@ http://127.0.0.1:8080
 ```
 
 Forward the selected WireGuard UDP range to the Docker host.
+
+## Proxmox VM Installer
+
+For Proxmox VE, use the VM installer when you want an interactive setup that
+creates the VM first and configures the server on first boot.
+
+Run from the Proxmox VE host shell as `root`:
+
+```sh
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/Pro-IT-Services/ProIdentity-Access/main/server/proxmox/proidentity-vm.sh)"
+```
+
+The wizard asks for VM resources, storage, network, release version, public URL,
+HTTP listen mode, database settings, JWT secret, initial admin account, and SSH
+account before it creates the VM.
+
+It supports:
+
+- direct mode without Nginx: `server.host` is set to `0.0.0.0`
+- reverse-proxy mode: `server.host` is set to `127.0.0.1`
+- generated DB user/password, JWT secret, admin password, and SSH password when
+  those fields are left empty
+
+See `server/proxmox/README.md` for details.
 
 ## Desktop Client Install
 
