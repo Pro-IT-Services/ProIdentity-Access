@@ -6,7 +6,7 @@ usage() {
 Usage: install-release.sh OWNER/REPO VERSION
 
 Example:
-  sudo ./server/install-release.sh Pro-IT-Services/ProIdentity-Access 0.5.18
+  sudo ./server/install-release.sh Pro-IT-Services/ProIdentity-Access 0.5.19
 
 Environment:
   PROIDENTITY_INSTALL_DIR   default: /opt/proidentity

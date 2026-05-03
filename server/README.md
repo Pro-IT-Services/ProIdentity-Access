@@ -31,7 +31,7 @@ Install from a GitHub Release:
 ```sh
 curl -fsSL -o install-release.sh \
   https://raw.githubusercontent.com/Pro-IT-Services/ProIdentity-Access/main/server/install-release.sh
-sudo sh install-release.sh Pro-IT-Services/ProIdentity-Access 0.5.18
+sudo sh install-release.sh Pro-IT-Services/ProIdentity-Access 0.5.19
 ```
 
 Edit `/etc/proidentity/config.yaml`, then start the service:
@@ -45,7 +45,14 @@ The server applies migrations automatically during startup.
 
 ## Docker
 
+The Docker setup builds the server image locally from this checked-out source
+tree and runs it with MariaDB through Docker Compose. Use the release archive
+above if you want the recommended binary deployment instead of a local Docker
+build.
+
 ```sh
+git clone https://github.com/Pro-IT-Services/ProIdentity-Access.git
+cd ProIdentity-Access/server
 cd docker
 sudo ./host-prep.sh
 ./up.sh
