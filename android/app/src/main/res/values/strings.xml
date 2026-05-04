@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ProIdentity Access</string>
+    <string name="vpn_notification_title">VPN Active</string>
+    <string name="vpn_notification_text">WireGuard tunnel is running</string>
+    <string name="channel_id">wg_vpn</string>
+    <string name="channel_name">VPN Status</string>
+</resources>

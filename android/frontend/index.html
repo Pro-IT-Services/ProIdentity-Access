@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>ProIdentity</title>
+    <style>
+      html, body { margin: 0; padding: 0; background: #0f1117; height: 100%; }
+    </style>
+    <!-- Bridge callback infrastructure — must exist before React initialises -->
+    <script>
+      window.__callbacks = {};
+      window.__eventListeners = {};
+      window.__bridgeCallback = function(id, result, error) {
+        var cb = window.__callbacks[id];
+        if (!cb) return;
+        delete window.__callbacks[id];
+        if (error) cb.reject(new Error(error));
+        else cb.resolve(result);
+      };
+      window.__bridgeEvent = function(name, data) {
+        var listeners = window.__eventListeners[name] || [];
+        listeners.forEach(function(fn) { fn(data); });
+      };
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

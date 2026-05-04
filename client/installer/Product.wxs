@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui"
+     xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
+
+  <Package
+    Name="ProIdentity Access"
+    Manufacturer="Pro-IT-Services"
+    Version="$(var.Version)"
+    UpgradeCode="7E3F5D2A-8B4C-4F6E-9D1A-2C3E4F5A6B7C"
+    Language="1033"
+    Scope="perMachine">
+
+    <SummaryInformation Description="Installer for ProIdentity Access by Pro-IT-Services" />
+
+    <!--
+      Remove older versions before installing the new one.
+      Downgrade is blocked with an error message.
+    -->
+    <MajorUpgrade
+      Schedule="afterInstallInitialize"
+      AllowSameVersionUpgrades="yes"
+      DowngradeErrorMessage="A newer version of ProIdentity Access is already installed." />
+
+    <!-- Close the GUI app before upgrading so the exe isn't locked. -->
+    <util:CloseApplication
+      Id="CloseProIdentity"
+      Target="ProIdentity Access.exe"
+      RebootPrompt="no"
+      CloseMessage="yes"
+      Timeout="5" />
+
+    <MediaTemplate EmbedCab="yes" />
+
+    <!-- Standard install-directory UI (lets the user pick the destination folder) -->
+    <Property Id="WIXUI_INSTALLDIR" Value="INSTALLDIR" />
+    <ui:WixUI Id="WixUI_InstallDir" />
+    <WixVariable Id="WixUILicenseRtf" Value="License.rtf" />
+
+    <Feature Id="MainFeature" Level="1">
+      <ComponentGroupRef Id="ProductComponents" />
+    </Feature>
+
+  </Package>
+
+  <!-- ═══════════════════════════════════════════
+       Directory layout
+       ═══════════════════════════════════════════ -->
+  <Fragment>
+    <!-- C:\Program Files\ProIdentity\ -->
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLDIR" Name="ProIdentity Access" />
+    </StandardDirectory>
+
+    <!-- Start Menu\ProIdentity\ -->
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="AppMenuDir" Name="ProIdentity Access" />
+    </StandardDirectory>
+  </Fragment>
+
+  <!-- ═══════════════════════════════════════════
+       Components
+       ═══════════════════════════════════════════ -->
+  <Fragment>
+    <ComponentGroup Id="ProductComponents">
+
+      <!-- ── GUI application ─────────────────── -->
+      <Component Id="MainApp" Directory="INSTALLDIR" Guid="*">
+        <File Id="MainExe"
+              Source="..\build\bin\ProIdentity Access.exe"
+              KeyPath="yes" />
+        <File Id="LicenseFile"
+              Source="..\LICENSE" />
+      </Component>
+
+      <!-- ── Daemon + Windows Service ─────────── -->
+      <!--
+        The service binary is installed to INSTALLDIR and registered as
+        "ProIdentity" (auto-start, LocalSystem).
+        On install  : service is registered and started.
+        On uninstall: service is stopped and removed.
+      -->
+      <Component Id="DaemonApp" Directory="INSTALLDIR" Guid="*">
+        <File Id="DaemonExe"
+              Source="..\build\bin\ProIdentity Daemon.exe"
+              KeyPath="yes" />
+
+        <ServiceInstall
+          Id="ProIdentitySvc"
+          Name="ProIdentity"
+          DisplayName="ProIdentity Access Daemon"
+          Description="Runs privileged VPN tunnel operations for ProIdentity Access."
+          Type="ownProcess"
+          Start="auto"
+          ErrorControl="normal"
+          Account="LocalSystem" />
+
+        <ServiceControl
+          Id="ProIdentitySvcCtrl"
+          Name="ProIdentity"
+          Start="install"
+          Stop="both"
+          Remove="uninstall"
+          Wait="yes" />
+      </Component>
+
+      <!-- ── Start Menu shortcut ───────────────── -->
+      <Component Id="StartMenuShortcuts" Directory="AppMenuDir" Guid="*">
+        <Shortcut Id="AppShortcut"
+                  Name="ProIdentity Access"
+                  Description="Managed VPN access client"
+                  Target="[INSTALLDIR]ProIdentity Access.exe"
+                  WorkingDirectory="INSTALLDIR" />
+        <RemoveFolder Id="RemoveAppMenuDir" Directory="AppMenuDir" On="uninstall" />
+        <!-- Registry value used as the component KeyPath (shortcuts cannot be KeyPaths) -->
+        <RegistryValue
+          Root="HKCU"
+          Key="Software\Pro-IT-Services\ProIdentity Access"
+          Name="StartMenuShortcut"
+          Type="integer"
+          Value="1"
+          KeyPath="yes" />
+      </Component>
+
+    </ComponentGroup>
+  </Fragment>
+
+</Wix>
