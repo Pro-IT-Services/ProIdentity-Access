@@ -8,6 +8,7 @@ import com.proitservices.proidentity.access.bridge.AppSettings
 import com.proitservices.proidentity.access.bridge.AuthInvalidException
 import com.proitservices.proidentity.access.bridge.DeviceCrypto
 import com.proitservices.proidentity.access.bridge.DeviceRevokedException
+import com.proitservices.proidentity.access.bridge.EndpointCandidate
 import com.proitservices.proidentity.access.bridge.LoginResponse
 import com.proitservices.proidentity.access.bridge.ManagedClient
 import com.proitservices.proidentity.access.bridge.ServerInfo
@@ -239,10 +240,8 @@ class ManagedViewModel(application: Application) : AndroidViewModel(application)
                 var config = sessionResp.wgConfig
                 config = injectPrivateKey(config, wgPriv)
 
-                val tunnelId = "managed-$serverId-${UUID.randomUUID()}"
                 val service = WgVpnService.instance ?: throw IllegalStateException("VPN service not running")
-                service.importTunnel(tunnelId, serverName, config)
-                service.connectTunnel(tunnelId)
+                val tunnelId = connectEndpointCandidates(service, serverName, config, sessionResp.endpoints, serverId)
 
                 activeSessions[serverId] = sessionResp.sessionId
                 serverTunnelIds[serverId] = tunnelId
@@ -428,4 +427,49 @@ private fun injectPrivateKey(config: String, privKeyB64: String): String {
         lines.add(interfaceIndex + 1, "PrivateKey = $privKeyB64")
         lines.joinToString("\n")
     } else config
+}
+
+private fun connectEndpointCandidates(
+    service: WgVpnService,
+    serverName: String,
+    config: String,
+    endpoints: List<EndpointCandidate>,
+    serverId: String
+): String {
+    val configs = endpointConfigs(config, endpoints)
+    var lastError: Exception? = null
+    configs.forEach { candidateConfig ->
+        val tunnelId = "managed-$serverId-${UUID.randomUUID()}"
+        try {
+            service.importTunnel(tunnelId, serverName, candidateConfig)
+            service.connectTunnel(tunnelId)
+            return tunnelId
+        } catch (e: Exception) {
+            lastError = e
+            try { service.deleteTunnel(tunnelId) } catch (_: Exception) {}
+        }
+    }
+    throw IllegalStateException(lastError?.message ?: "No endpoint candidates could connect")
+}
+
+private fun endpointConfigs(config: String, endpoints: List<EndpointCandidate>): List<String> {
+    val seen = mutableSetOf<String>()
+    val configs = endpoints.mapNotNull { ep ->
+        val endpoint = ep.endpoint.ifBlank {
+            if (ep.ip.isNotBlank() && ep.port > 0) "${ep.ip}:${ep.port}" else ""
+        }
+        if (endpoint.isBlank() || !seen.add(endpoint)) null else replaceEndpoint(config, endpoint)
+    }
+    return configs.ifEmpty { listOf(config) }
+}
+
+private fun replaceEndpoint(config: String, endpoint: String): String {
+    val lines = config.lines().toMutableList()
+    for (i in lines.indices) {
+        if (lines[i].trim().startsWith("Endpoint", ignoreCase = true)) {
+            lines[i] = "Endpoint = $endpoint"
+            return lines.joinToString("\n")
+        }
+    }
+    return config
 }

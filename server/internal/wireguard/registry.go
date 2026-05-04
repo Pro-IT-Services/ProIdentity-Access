@@ -248,14 +248,17 @@ func (r *Registry) Delete(serverID string) error {
 	return err
 }
 
-// Update updates a server's metadata (name, endpoint, dns only).
-func (r *Registry) Update(serverID, name, endpoint, dns string) error {
+// Update updates a server's metadata.
+func (r *Registry) Update(serverID, name, endpoint string, port int, dns string) error {
 	var dnsVal interface{} = nil
 	if dns != "" {
 		dnsVal = dns
 	}
-	_, err := r.db.Exec("UPDATE wg_servers SET name=?, endpoint=?, dns=? WHERE id=?",
-		name, endpoint, dnsVal, serverID)
+	if port <= 0 {
+		port = 51820
+	}
+	_, err := r.db.Exec("UPDATE wg_servers SET name=?, endpoint=?, port=?, dns=? WHERE id=?",
+		name, endpoint, port, dnsVal, serverID)
 	if err != nil {
 		return err
 	}
@@ -263,6 +266,7 @@ func (r *Registry) Update(serverID, name, endpoint, dns string) error {
 	if inst, ok := r.servers[serverID]; ok {
 		inst.Server.Name = name
 		inst.Server.Endpoint = endpoint
+		inst.Server.Port = port
 		if dns != "" {
 			inst.Server.DNS = &dns
 		} else {

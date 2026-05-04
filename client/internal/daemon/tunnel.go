@@ -1,12 +1,14 @@
 package daemon
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net"
 	"runtime"
 	"strings"
 	"sync"
+	"time"
 
 	"wg-client/internal/config"
 	"wg-client/internal/ipc"
@@ -96,6 +98,7 @@ func (t *Tunnel) Start() error {
 	if mtu <= 0 {
 		mtu = 1420
 	}
+	resolveTunnelPeerEndpoints(t.Config)
 
 	// 1. Create platform TUN device
 	tdev, err := tun.CreateTUN(tunName, mtu)
@@ -276,11 +279,54 @@ func hasFullTunnel(cidrs []string) bool {
 
 // endpointHost extracts the host part from "host:port", returning "" on error.
 func endpointHost(endpoint string) string {
+	host, _, err := net.SplitHostPort(endpoint)
+	if err == nil {
+		return strings.Trim(host, "[]")
+	}
 	idx := strings.LastIndex(endpoint, ":")
 	if idx < 0 {
-		return endpoint
+		return strings.Trim(endpoint, "[]")
 	}
-	return endpoint[:idx]
+	return strings.Trim(endpoint[:idx], "[]")
+}
+
+func resolveTunnelPeerEndpoints(cfg *config.TunnelConfig) {
+	for i := range cfg.Peers {
+		host, port, err := net.SplitHostPort(cfg.Peers[i].Endpoint)
+		if err != nil || host == "" || port == "" {
+			continue
+		}
+		host = strings.Trim(host, "[]")
+		if net.ParseIP(host) != nil {
+			continue
+		}
+		ip, err := resolvePeerEndpointHost(host)
+		if err != nil {
+			log.Printf("warn: resolve endpoint %s: %v", host, err)
+			continue
+		}
+		cfg.Peers[i].Endpoint = net.JoinHostPort(ip, port)
+	}
+}
+
+func resolvePeerEndpointHost(host string) (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	ips, err := net.DefaultResolver.LookupIPAddr(ctx, host)
+	if err != nil {
+		return "", err
+	}
+	for _, addr := range ips {
+		if v4 := addr.IP.To4(); v4 != nil {
+			return v4.String(), nil
+		}
+	}
+	for _, addr := range ips {
+		if ip := addr.IP.To16(); ip != nil {
+			return ip.String(), nil
+		}
+	}
+	return "", fmt.Errorf("no usable IP address")
 }
 
 // sanitizeName returns a safe interface name (max 15 chars on Linux, no spaces).

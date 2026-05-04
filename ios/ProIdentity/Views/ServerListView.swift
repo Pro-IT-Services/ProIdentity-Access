@@ -23,6 +23,30 @@ struct ManagedServer: Identifiable {
     }
 }
 
+struct EndpointCandidate {
+    let endpoint: String
+    let ip: String
+    let port: Int
+
+    init?(_ d: [String: Any]) {
+        endpoint = d["endpoint"] as? String ?? ""
+        ip = d["ip"] as? String ?? ""
+        if let p = d["port"] as? Int {
+            port = p
+        } else if let p = d["port"] as? NSNumber {
+            port = p.intValue
+        } else {
+            port = 0
+        }
+        if endpoint.isEmpty && (ip.isEmpty || port <= 0) { return nil }
+    }
+
+    var wireGuardEndpoint: String {
+        if !endpoint.isEmpty { return endpoint }
+        return "\(ip):\(port)"
+    }
+}
+
 enum ConnectError: LocalizedError {
     case requireTotp
     case requirePushAuth
@@ -117,10 +141,10 @@ class ServerManager: ObservableObject {
             }
 
             let configWithKey = injectPrivateKey(config: wgConfig, privateKey: wgPriv)
-            let cfg = try VPNManager.shared.importManagedTunnel(
-                name: serverName, configContent: configWithKey, serverID: serverID
+            let endpoints = (resp["endpoints"] as? [[String: Any]] ?? []).compactMap { EndpointCandidate($0) }
+            _ = try await connectEndpointCandidates(
+                name: serverName, configContent: configWithKey, serverID: serverID, endpoints: endpoints
             )
-            try await VPNManager.shared.connectTunnel(id: cfg.id)
 
             activeSessions[serverID] = sessionID
             startKeepalive(serverID: serverID, sessionID: sessionID)
@@ -187,6 +211,46 @@ class ServerManager: ObservableObject {
         if privKeyIndex >= 0 { lines[privKeyIndex] = "PrivateKey = \(privateKey)" }
         else if interfaceIndex >= 0 { lines.insert("PrivateKey = \(privateKey)", at: interfaceIndex + 1) }
         return lines.joined(separator: "\n")
+    }
+
+    private func connectEndpointCandidates(name: String, configContent: String, serverID: String, endpoints: [EndpointCandidate]) async throws -> WireGuardConfig {
+        let configs = endpointConfigs(base: configContent, endpoints: endpoints)
+        var lastError: Error?
+        for candidate in configs {
+            do {
+                let cfg = try VPNManager.shared.importManagedTunnel(name: name, configContent: candidate, serverID: serverID)
+                try await VPNManager.shared.connectTunnel(id: cfg.id)
+                return cfg
+            } catch {
+                lastError = error
+                if let tunnelID = VPNManager.shared.tunnelIDForServer(serverID) {
+                    try? await VPNManager.shared.deleteTunnel(id: tunnelID)
+                }
+            }
+        }
+        throw lastError ?? APIError.serverError("No endpoint candidates could connect")
+    }
+
+    private func endpointConfigs(base: String, endpoints: [EndpointCandidate]) -> [String] {
+        var seen = Set<String>()
+        let configs = endpoints.compactMap { ep -> String? in
+            let endpoint = ep.wireGuardEndpoint
+            guard !endpoint.isEmpty, !seen.contains(endpoint) else { return nil }
+            seen.insert(endpoint)
+            return replaceEndpoint(config: base, endpoint: endpoint)
+        }
+        return configs.isEmpty ? [base] : configs
+    }
+
+    private func replaceEndpoint(config: String, endpoint: String) -> String {
+        var lines = config.components(separatedBy: "\n")
+        for (i, line) in lines.enumerated() {
+            if line.trimmingCharacters(in: .whitespaces).lowercased().hasPrefix("endpoint") {
+                lines[i] = "Endpoint = \(endpoint)"
+                return lines.joined(separator: "\n")
+            }
+        }
+        return config
     }
 }
 

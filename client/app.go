@@ -839,17 +839,10 @@ func (a *App) managedConnectInternal(serverID, serverName, totpCode, pushAuthID 
 		}
 	}
 
-	// Import as ephemeral tunnel (not persisted to disk)
-	tunnel, err := a.client.ImportEphemeralTunnel(tunnelName, wgConfig)
+	tunnel, err := a.connectManagedEndpointCandidates(tunnelName, wgConfig, sess.Endpoints)
 	if err != nil {
 		mc.DeleteSession(sess.SessionID)
-		return nil, fmt.Errorf("tunnel import failed: %w", err)
-	}
-
-	if err := a.client.ConnectTunnel(tunnel.ID); err != nil {
-		mc.DeleteSession(sess.SessionID)
-		a.client.DeleteTunnel(tunnel.ID)
-		return nil, fmt.Errorf("tunnel connect failed: %w", err)
+		return nil, err
 	}
 
 	kaCtx, cancel := context.WithCancel(context.Background())
@@ -866,6 +859,77 @@ func (a *App) managedConnectInternal(serverID, serverName, totpCode, pushAuthID 
 
 	tunnel.IsManaged = true
 	return sanitizeTunnelInfo(tunnel), nil
+}
+
+func (a *App) connectManagedEndpointCandidates(tunnelName, wgConfig string, endpoints []managed.EndpointCandidate) (*ipc.TunnelInfo, error) {
+	configs := endpointConfigs(wgConfig, endpoints)
+	var lastErr error
+	for i, cfg := range configs {
+		tunnel, err := a.client.ImportEphemeralTunnel(tunnelName, cfg)
+		if err != nil {
+			lastErr = fmt.Errorf("tunnel import failed: %w", err)
+			continue
+		}
+		if err := a.client.ConnectTunnel(tunnel.ID); err != nil {
+			a.client.DeleteTunnel(tunnel.ID)
+			lastErr = fmt.Errorf("tunnel connect failed: %w", err)
+			continue
+		}
+		if waitForHandshake(a.client, tunnel.ID, 10*time.Second) {
+			return tunnel, nil
+		}
+		a.client.DisconnectTunnel(tunnel.ID)
+		a.client.DeleteTunnel(tunnel.ID)
+		lastErr = fmt.Errorf("endpoint candidate %d did not complete a WireGuard handshake", i+1)
+	}
+	if lastErr == nil {
+		lastErr = fmt.Errorf("tunnel connect failed")
+	}
+	return nil, lastErr
+}
+
+func endpointConfigs(base string, endpoints []managed.EndpointCandidate) []string {
+	configs := []string{}
+	seen := map[string]bool{}
+	for _, ep := range endpoints {
+		endpoint := strings.TrimSpace(ep.Endpoint)
+		if endpoint == "" && ep.IP != "" && ep.Port > 0 {
+			endpoint = fmt.Sprintf("%s:%d", ep.IP, ep.Port)
+		}
+		if endpoint == "" || seen[endpoint] {
+			continue
+		}
+		seen[endpoint] = true
+		configs = append(configs, replaceWgEndpoint(base, endpoint))
+	}
+	if len(configs) == 0 {
+		return []string{base}
+	}
+	return configs
+}
+
+func replaceWgEndpoint(configText, endpoint string) string {
+	lines := strings.Split(configText, "\n")
+	for i, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(strings.ToLower(trimmed), "endpoint") {
+			lines[i] = "Endpoint = " + endpoint
+			return strings.Join(lines, "\n")
+		}
+	}
+	return configText
+}
+
+func waitForHandshake(client *ipc.Client, tunnelID string, timeout time.Duration) bool {
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		stats, err := client.GetStats(tunnelID)
+		if err == nil && stats.LastHandshake > 0 {
+			return true
+		}
+		time.Sleep(time.Second)
+	}
+	return false
 }
 
 // ManagedDisconnectServer tears down the session for a specific server.

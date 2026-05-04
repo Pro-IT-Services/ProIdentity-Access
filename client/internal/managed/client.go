@@ -78,15 +78,26 @@ type ServerInfo struct {
 	DNS       *string `json:"dns"`
 }
 
+// EndpointCandidate is a server-resolved WireGuard endpoint option.
+type EndpointCandidate struct {
+	Role     string `json:"role"`
+	Host     string `json:"host"`
+	IP       string `json:"ip"`
+	Port     int    `json:"port"`
+	Priority int    `json:"priority"`
+	Endpoint string `json:"endpoint"`
+}
+
 // SessionResponse is the response from POST /api/v1/sessions.
 type SessionResponse struct {
-	SessionID       string `json:"session_id"`
-	AssignedIP      string `json:"assigned_ip"`
-	ServerID        string `json:"server_id"`
-	WGConfig        string `json:"wg_config"`
-	VPNName         string `json:"vpn_name"`
-	RequireTOTP     bool   `json:"require_totp"`
-	PushAuthEnabled bool   `json:"push_auth_enabled"`
+	SessionID       string              `json:"session_id"`
+	AssignedIP      string              `json:"assigned_ip"`
+	ServerID        string              `json:"server_id"`
+	WGConfig        string              `json:"wg_config"`
+	VPNName         string              `json:"vpn_name"`
+	Endpoints       []EndpointCandidate `json:"endpoints"`
+	RequireTOTP     bool                `json:"require_totp"`
+	PushAuthEnabled bool                `json:"push_auth_enabled"`
 }
 
 // PushAuthResponse is the response from POST /api/v1/auth/push.

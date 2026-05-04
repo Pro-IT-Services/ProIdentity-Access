@@ -1,24 +1,24 @@
 # Versioning
 
-Current version: **0.5.24**
+Current version: **0.5.25**
 
-Version is defined in `wails.json` → `info.productVersion`.  
+Version is defined in `wails.json` â†’ `info.productVersion`.  
 The build script (`build.ps1` / `build.bat`) reads it from there automatically.
 
 ## Bump rules
 
 | Change type                                      | Part to bump | Example          |
 |--------------------------------------------------|--------------|------------------|
-| Bug fix, typo, minor tweak                       | patch +0.0.1 | 0.1.0 → 0.1.1    |
-| New feature, backward-compatible                 | minor +0.1.0 | 0.1.0 → 0.2.0    |
-| Breaking change (protocol, API, install layout)  | major +1.0.0 | 0.1.0 → 1.0.0    |
+| Bug fix, typo, minor tweak                       | patch +0.0.1 | 0.1.0 â†’ 0.1.1    |
+| New feature, backward-compatible                 | minor +0.1.0 | 0.1.0 â†’ 0.2.0    |
+| Breaking change (protocol, API, install layout)  | major +1.0.0 | 0.1.0 â†’ 1.0.0    |
 
 ## How to bump
 
 Edit **one** line in `wails.json`:
 
 ```json
-"productVersion": "0.5.24"
+"productVersion": "0.5.25"
 ```
 
 Then build and commit:
@@ -26,13 +26,14 @@ Then build and commit:
 ```
 build.bat
 git add wails.json
-git commit -m "Bump version to 0.5.24"
+git commit -m "Bump version to 0.5.25"
 ```
 
 ## Changelog
 
 | Version | Type    | Description                                                  |
 |---------|---------|--------------------------------------------------------------|
+| 0.5.25  | patch   | Resolve WireGuard DNS endpoints and add endpoint failover    |
 | 0.5.24  | patch   | Show cumulative desktop traffic totals instead of live rates |
 | 0.5.22  | patch   | Sync local users into ProIdentity Push Auth provisioning     |
 | 0.5.20  | patch   | Update free internal and company-use license                 |

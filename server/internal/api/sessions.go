@@ -94,7 +94,7 @@ func (s *Server) handleCreateSession(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	sess, wgConfig, err := s.sessions.CreateSession(claims.UserID, req.ServerID, req.ClientPublicKey)
+	sess, wgConfig, endpoints, err := s.sessions.CreateSession(claims.UserID, req.ServerID, req.ClientPublicKey)
 	if err != nil {
 		jsonError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -110,6 +110,7 @@ func (s *Server) handleCreateSession(w http.ResponseWriter, r *http.Request) {
 		"server_id":   sess.ServerID,
 		"wg_config":   wgConfig,
 		"vpn_name":    vpnName,
+		"endpoints":   endpoints,
 	})
 }
 

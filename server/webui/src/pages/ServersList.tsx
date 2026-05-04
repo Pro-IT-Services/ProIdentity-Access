@@ -13,9 +13,9 @@ import { Empty } from '@/components/Empty'
 
 type Form = {
   name: string; endpoint: string; port: string; interface_name: string; subnet: string; dns: string
-  external: boolean; public_key?: string
+  failover_endpoint: string; failover_port: string; external: boolean; public_key?: string
 }
-const empty = (): Form => ({ name: '', endpoint: '', port: '51820', interface_name: '', subnet: '', dns: '', external: false, public_key: '' })
+const empty = (): Form => ({ name: '', endpoint: '', port: '51820', interface_name: '', subnet: '', dns: '', failover_endpoint: '', failover_port: '51820', external: false, public_key: '' })
 
 export default function ServersList() {
   const [servers, setServers] = useState<WGServer[]>([])
@@ -132,6 +132,12 @@ function CreateServerSheet({ open, onClose, onSaved }: { open: boolean; onClose:
         interface_name: form.interface_name, subnet: form.subnet,
         dns: form.dns || undefined, external: form.external,
         public_key: form.external ? form.public_key : undefined,
+        endpoints: [
+          { name: 'Primary', host: form.endpoint, port: parseInt(form.port) || 51820, priority: 0, enabled: true },
+          ...(form.failover_endpoint.trim()
+            ? [{ name: 'Failover', host: form.failover_endpoint.trim(), port: parseInt(form.failover_port) || parseInt(form.port) || 51820, priority: 10, enabled: true }]
+            : []),
+        ],
       })
       onSaved()
     } catch (e: any) { setError(e.message ?? 'Failed') }
@@ -160,6 +166,12 @@ function CreateServerSheet({ open, onClose, onSaved }: { open: boolean; onClose:
                 </Field>
                 <Field label="UDP port">
                   <Input type="number" value={form.port} onChange={e => setForm(p => ({ ...p, port: e.target.value }))} />
+                </Field>
+                <Field label="Failover endpoint" hint="Optional secondary hostname or IP">
+                  <Input value={form.failover_endpoint} onChange={e => setForm(p => ({ ...p, failover_endpoint: e.target.value }))} placeholder="vpn-backup.example.com" />
+                </Field>
+                <Field label="Failover UDP port">
+                  <Input type="number" value={form.failover_port} onChange={e => setForm(p => ({ ...p, failover_port: e.target.value }))} />
                 </Field>
                 <Field label="Interface name" hint="Linux kernel iface, e.g. wg0">
                   <Input className="font-mono" value={form.interface_name} onChange={e => setForm(p => ({ ...p, interface_name: e.target.value }))} placeholder="wg1" required />

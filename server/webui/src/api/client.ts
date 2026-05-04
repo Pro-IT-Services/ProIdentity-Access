@@ -137,8 +137,9 @@ export const api = {
   adminCreateServer: (data: {
     name: string; endpoint: string; port: number; interface_name: string
     subnet: string; dns?: string; external?: boolean; public_key?: string
+    endpoints?: WGServerEndpointInput[]
   }) => request<WGServer>('POST', '/admin/servers', data),
-  adminUpdateServer: (id: string, data: { name: string; endpoint: string; dns: string }) =>
+  adminUpdateServer: (id: string, data: { name: string; endpoint: string; port: number; dns: string; endpoints?: WGServerEndpointInput[] }) =>
     request<{ ok: boolean }>('PUT', `/admin/servers/${id}`, data),
   adminDeleteServer: (id: string) => request<{ ok: boolean }>('DELETE', `/admin/servers/${id}`),
   adminServerGroups: (id: string) => request<Group[]>('GET', `/admin/servers/${id}/groups`),
@@ -330,7 +331,28 @@ export interface WGServer {
   is_active: boolean
   /** Present when fetched via admin endpoint — true means the WG iface is currently up. */
   running?: boolean
+  endpoints?: WGServerEndpoint[]
   created_at: string
+}
+
+export interface WGServerEndpoint {
+  id: string
+  server_id: string
+  name: string
+  host: string
+  port: number
+  priority: number
+  enabled: boolean
+  last_resolved_ip?: string
+  last_resolved_at?: string
+}
+
+export interface WGServerEndpointInput {
+  name: string
+  host: string
+  port: number
+  priority: number
+  enabled?: boolean
 }
 
 export interface Diagnostic {

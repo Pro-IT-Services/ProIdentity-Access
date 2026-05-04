@@ -29,10 +29,10 @@ func NewManager(db *sqlx.DB, registry *wireguard.Registry, fw *firewall.Manager,
 
 // CreateSession allocates an IP on the given server, adds a WG peer, installs firewall rules,
 // and returns the full WireGuard client config string.
-func (m *Manager) CreateSession(userID, serverID, clientPubKey string) (*model.Session, string, error) {
+func (m *Manager) CreateSession(userID, serverID, clientPubKey string) (*model.Session, string, []EndpointCandidate, error) {
 	inst, err := m.registry.Get(serverID)
 	if err != nil {
-		return nil, "", fmt.Errorf("server not available: %w", err)
+		return nil, "", nil, fmt.Errorf("server not available: %w", err)
 	}
 
 	sessionID := uuid.New().String()
@@ -40,7 +40,7 @@ func (m *Manager) CreateSession(userID, serverID, clientPubKey string) (*model.S
 	// Allocate IP from the server's pool
 	assignedIP, err := AllocateIP(m.db, serverID, sessionID)
 	if err != nil {
-		return nil, "", fmt.Errorf("allocate ip: %w", err)
+		return nil, "", nil, fmt.Errorf("allocate ip: %w", err)
 	}
 
 	// Insert session record
@@ -60,13 +60,13 @@ func (m *Manager) CreateSession(userID, serverID, clientPubKey string) (*model.S
 	)
 	if err != nil {
 		_ = ReleaseIP(m.db, serverID, assignedIP)
-		return nil, "", fmt.Errorf("insert session: %w", err)
+		return nil, "", nil, fmt.Errorf("insert session: %w", err)
 	}
 
 	// Add WireGuard peer then do a full config sync
 	if err := inst.Manager.AddPeer(clientPubKey, assignedIP); err != nil {
 		_ = m.deleteSession(sess)
-		return nil, "", fmt.Errorf("wg add peer: %w", err)
+		return nil, "", nil, fmt.Errorf("wg add peer: %w", err)
 	}
 	m.syncServerPeers(serverID)
 
@@ -83,7 +83,12 @@ func (m *Manager) CreateSession(userID, serverID, clientPubKey string) (*model.S
 	// Build WireGuard config from server info
 	srv := inst.Server
 	serverPubKey := srv.PublicKey
-	endpoint := fmt.Sprintf("%s:%d", srv.Endpoint, srv.Port)
+	endpoints, err := m.resolvedEndpoints(srv)
+	if err != nil {
+		_ = m.deleteSession(sess)
+		return nil, "", nil, err
+	}
+	endpoint := endpoints[0].Endpoint
 
 	dns := ""
 	if srv.DNS != nil && *srv.DNS != "" {
@@ -107,7 +112,7 @@ AllowedIPs = %s
 PersistentKeepalive = 25
 `, assignedIP, dnsLine, serverPubKey, endpoint, allowedIPs)
 
-	return sess, cfg, nil
+	return sess, cfg, endpoints, nil
 }
 
 // Keepalive updates the last_keepalive timestamp for a session.

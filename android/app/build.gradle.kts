@@ -11,8 +11,8 @@ android {
         applicationId = "com.proitservices.proidentity.access"
         minSdk = 26
         targetSdk = 35
-        versionCode = 22
-        versionName = "0.5.20"
+        versionCode = 25
+        versionName = "0.5.25"
     }
 
     buildTypes {

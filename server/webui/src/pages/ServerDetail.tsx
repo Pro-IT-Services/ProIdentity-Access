@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { api, type WGServer, type AdminSession, type ResourceGroup, type User, type Installation, type UserConfig } from '../api/client'
+import { api, type WGServer, type AdminSession, type ResourceGroup, type User, type Installation, type UserConfig, type WGServerEndpointInput } from '../api/client'
 import {
   ArrowLeft, Globe, Activity, KeyRound, Settings as SettingsIcon, Trash2, FileKey, Monitor, Save,
 } from 'lucide-react'
@@ -211,18 +211,26 @@ function AccessTab({ serverId }: { serverId: string }) {
 }
 
 function ConfigTab({ server, onSaved, onDeleted }: { server: WGServer; onSaved: () => void; onDeleted: () => void }) {
-  const [form, setForm] = useState({ name: server.name, endpoint: server.endpoint, dns: server.dns ?? '' })
+  const [form, setForm] = useState({ name: server.name, endpoint: server.endpoint, port: String(server.port), dns: server.dns ?? '' })
+  const [endpoints, setEndpoints] = useState<WGServerEndpointInput[]>(() => endpointForms(server))
   const [busy, setBusy] = useState(false)
   const [confirm, setConfirm] = useState(false)
 
-  useEffect(() => { setForm({ name: server.name, endpoint: server.endpoint, dns: server.dns ?? '' }) }, [server.id])
+  useEffect(() => {
+    setForm({ name: server.name, endpoint: server.endpoint, port: String(server.port), dns: server.dns ?? '' })
+    setEndpoints(endpointForms(server))
+  }, [server.id])
 
-  const dirty = form.name !== server.name || form.endpoint !== server.endpoint || (form.dns ?? '') !== (server.dns ?? '')
+  const dirty = form.name !== server.name || form.endpoint !== server.endpoint || parseInt(form.port) !== server.port || (form.dns ?? '') !== (server.dns ?? '') || JSON.stringify(endpoints) !== JSON.stringify(endpointForms(server))
 
   const save = async () => {
     setBusy(true)
     try {
-      await api.adminUpdateServer(server.id, { name: form.name, endpoint: form.endpoint, dns: form.dns })
+      const port = parseInt(form.port) || server.port || 51820
+      const cleanEndpoints = endpoints
+        .map((ep, i) => ({ ...ep, host: ep.host.trim(), name: ep.name || (i === 0 ? 'Primary' : 'Failover'), port: ep.port || port, priority: i === 0 ? 0 : ep.priority || i * 10, enabled: ep.enabled ?? true }))
+        .filter(ep => ep.host)
+      await api.adminUpdateServer(server.id, { name: form.name, endpoint: form.endpoint, port, dns: form.dns, endpoints: cleanEndpoints })
       onSaved()
     } finally { setBusy(false) }
   }
@@ -233,7 +241,9 @@ function ConfigTab({ server, onSaved, onDeleted }: { server: WGServer; onSaved: 
         <KV label="Endpoint" edit>
           <Input value={form.endpoint} onChange={e => setForm(p => ({ ...p, endpoint: e.target.value }))} className="max-w-xs" />
         </KV>
-        <KV label="UDP port"><span className="text-sm font-mono">{server.port}</span></KV>
+        <KV label="UDP port" edit>
+          <Input type="number" value={form.port} onChange={e => setForm(p => ({ ...p, port: e.target.value }))} className="max-w-xs font-mono" />
+        </KV>
         <KV label="Interface"><MonoChip value={server.interface_name} copy={false} /></KV>
         <KV label="Subnet"><MonoChip value={server.subnet} /></KV>
         <KV label="Display name" edit>
@@ -245,6 +255,30 @@ function ConfigTab({ server, onSaved, onDeleted }: { server: WGServer; onSaved: 
         <KV label="Type"><span className="text-sm">{server.external ? 'External (manual peer)' : 'Managed by controller'}</span></KV>
         <KV label="Created"><span className="text-sm text-muted-foreground">{relTime(server.created_at)}</span></KV>
       </section>
+
+      <Section title="Connection endpoints" hint={`${endpoints.length} configured`}
+        description="Clients receive resolved IP endpoints in priority order. The first enabled row is primary; later rows are failover candidates.">
+        <div className="rounded-xl border border-border bg-card divide-y divide-border">
+          {endpoints.map((ep, i) => (
+            <div key={i} className="grid grid-cols-[110px_1fr_96px_84px_auto] gap-2 items-center p-3">
+              <Input value={ep.name} onChange={e => setEndpoints(prev => prev.map((x, idx) => idx === i ? { ...x, name: e.target.value } : x))} placeholder={i === 0 ? 'Primary' : 'Failover'} />
+              <Input value={ep.host} onChange={e => {
+                const host = e.target.value
+                setEndpoints(prev => prev.map((x, idx) => idx === i ? { ...x, host } : x))
+                if (i === 0) setForm(p => ({ ...p, endpoint: host }))
+              }} placeholder="vpn.example.com" />
+              <Input type="number" value={String(ep.port || '')} onChange={e => {
+                const port = parseInt(e.target.value) || 0
+                setEndpoints(prev => prev.map((x, idx) => idx === i ? { ...x, port } : x))
+                if (i === 0) setForm(p => ({ ...p, port: e.target.value }))
+              }} />
+              <Input type="number" value={String(ep.priority ?? i * 10)} onChange={e => setEndpoints(prev => prev.map((x, idx) => idx === i ? { ...x, priority: parseInt(e.target.value) || 0 } : x))} />
+              <Button type="button" variant="ghost" size="sm" disabled={endpoints.length === 1} onClick={() => setEndpoints(prev => prev.filter((_, idx) => idx !== i))}>Remove</Button>
+            </div>
+          ))}
+        </div>
+        <Button type="button" variant="outline" size="sm" className="mt-3" onClick={() => setEndpoints(prev => [...prev, { name: 'Failover', host: '', port: parseInt(form.port) || server.port || 51820, priority: prev.length * 10, enabled: true }])}>Add failover endpoint</Button>
+      </Section>
 
       <div className="flex justify-end">
         <Button onClick={save} disabled={!dirty || busy}><Save className="w-4 h-4" /> {busy ? 'Saving…' : 'Save changes'}</Button>
@@ -278,6 +312,14 @@ function ConfigTab({ server, onSaved, onDeleted }: { server: WGServer; onSaved: 
       />
     </div>
   )
+}
+
+function endpointForms(server: WGServer): WGServerEndpointInput[] {
+  const rows = (server.endpoints ?? [])
+    .filter(ep => ep.enabled)
+    .map(ep => ({ name: ep.name, host: ep.host, port: ep.port, priority: ep.priority, enabled: ep.enabled }))
+  if (rows.length > 0) return rows
+  return [{ name: 'Primary', host: server.endpoint, port: server.port || 51820, priority: 0, enabled: true }]
 }
 
 function StoredConfigsTab({ serverId }: { serverId: string }) {

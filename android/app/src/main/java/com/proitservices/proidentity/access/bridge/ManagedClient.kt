@@ -30,12 +30,21 @@ data class ServerInfo(
     val subnet: String,
     val dns: String?
 )
+data class EndpointCandidate(
+    val role: String,
+    val host: String,
+    val ip: String,
+    val port: Int,
+    val priority: Int,
+    val endpoint: String
+)
 data class SessionResponse(
     val sessionId: String,
     val assignedIp: String,
     val serverId: String,
     val wgConfig: String,
     val vpnName: String,
+    val endpoints: List<EndpointCandidate> = emptyList(),
     val requireTotp: Boolean,
     val pushAuthEnabled: Boolean = false
 )
@@ -228,6 +237,7 @@ class ManagedClient(
             serverId = resp.optString("server_id", serverID),
             wgConfig = resp.getString("wg_config"),
             vpnName = resp.optString("vpn_name", ""),
+            endpoints = parseEndpointCandidates(resp.optJSONArray("endpoints")),
             requireTotp = false
         )
     }
@@ -305,5 +315,20 @@ class ManagedClient(
     // Auth check â€” verifies token is still valid
     fun checkAuth() {
         get("/auth/me")
+    }
+
+    private fun parseEndpointCandidates(arr: JSONArray?): List<EndpointCandidate> {
+        if (arr == null) return emptyList()
+        return (0 until arr.length()).mapNotNull { i ->
+            val obj = arr.optJSONObject(i) ?: return@mapNotNull null
+            EndpointCandidate(
+                role = obj.optString("role", ""),
+                host = obj.optString("host", ""),
+                ip = obj.optString("ip", ""),
+                port = obj.optInt("port", 0),
+                priority = obj.optInt("priority", i),
+                endpoint = obj.optString("endpoint", "")
+            )
+        }
     }
 }

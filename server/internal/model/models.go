@@ -109,3 +109,17 @@ type WGServer struct {
 	IsActive      bool      `db:"is_active"      json:"is_active"`
 	CreatedAt     time.Time `db:"created_at"     json:"created_at"`
 }
+
+type WGServerEndpoint struct {
+	ID             string     `db:"id"               json:"id"`
+	ServerID       string     `db:"server_id"        json:"server_id"`
+	Name           string     `db:"name"             json:"name"`
+	Host           string     `db:"host"             json:"host"`
+	Port           int        `db:"port"             json:"port"`
+	Priority       int        `db:"priority"         json:"priority"`
+	Enabled        bool       `db:"enabled"          json:"enabled"`
+	LastResolvedIP *string    `db:"last_resolved_ip" json:"last_resolved_ip,omitempty"`
+	LastResolvedAt *time.Time `db:"last_resolved_at" json:"last_resolved_at,omitempty"`
+	CreatedAt      time.Time  `db:"created_at"       json:"created_at"`
+	UpdatedAt      *time.Time `db:"updated_at"       json:"updated_at,omitempty"`
+}

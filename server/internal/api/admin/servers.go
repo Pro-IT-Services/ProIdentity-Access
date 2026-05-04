@@ -2,8 +2,10 @@ package admin
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	"proidentity/internal/model"
 	"proidentity/internal/wireguard"
@@ -13,6 +15,14 @@ import (
 type ServerHandler struct {
 	Registry *wireguard.Registry
 	DB       *sqlx.DB
+}
+
+type endpointRequest struct {
+	Name     string `json:"name"`
+	Host     string `json:"host"`
+	Port     int    `json:"port"`
+	Priority int    `json:"priority"`
+	Enabled  *bool  `json:"enabled"`
 }
 
 // List GET /admin/servers
@@ -31,7 +41,7 @@ func (h *ServerHandler) List(w http.ResponseWriter, r *http.Request) {
 	}
 	out := make([]map[string]any, 0, len(servers))
 	for _, s := range servers {
-		out = append(out, safeServerResponse(s, runningIDs[s.ID]))
+		out = append(out, h.safeServerResponse(s, runningIDs[s.ID]))
 	}
 	jsonOK(w, out)
 }
@@ -39,14 +49,15 @@ func (h *ServerHandler) List(w http.ResponseWriter, r *http.Request) {
 // Create POST /admin/servers
 func (h *ServerHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		Name      string `json:"name"`
-		Endpoint  string `json:"endpoint"`
-		Port      int    `json:"port"`
-		Iface     string `json:"interface_name"`
-		Subnet    string `json:"subnet"`
-		DNS       string `json:"dns"`
-		External  bool   `json:"external"`
-		PublicKey string `json:"public_key"` // only for external
+		Name      string            `json:"name"`
+		Endpoint  string            `json:"endpoint"`
+		Port      int               `json:"port"`
+		Iface     string            `json:"interface_name"`
+		Subnet    string            `json:"subnet"`
+		DNS       string            `json:"dns"`
+		External  bool              `json:"external"`
+		PublicKey string            `json:"public_key"` // only for external
+		Endpoints []endpointRequest `json:"endpoints"`
 	}
 	if err := decode(r, &req); err != nil {
 		jsonError(w, 400, "invalid request")
@@ -70,7 +81,11 @@ func (h *ServerHandler) Create(w http.ResponseWriter, r *http.Request) {
 			jsonError(w, 500, err.Error())
 			return
 		}
-		jsonOK(w, safeServerResponse(*srv, true))
+		if err := h.replaceServerEndpoints(srv.ID, normalizedEndpoints(req.Endpoints, req.Endpoint, req.Port)); err != nil {
+			jsonError(w, 500, err.Error())
+			return
+		}
+		jsonOK(w, h.safeServerResponse(*srv, true))
 		return
 	}
 
@@ -79,7 +94,11 @@ func (h *ServerHandler) Create(w http.ResponseWriter, r *http.Request) {
 		jsonError(w, 500, err.Error())
 		return
 	}
-	jsonOK(w, safeServerResponse(*srv, true))
+	if err := h.replaceServerEndpoints(srv.ID, normalizedEndpoints(req.Endpoints, req.Endpoint, req.Port)); err != nil {
+		jsonError(w, 500, err.Error())
+		return
+	}
+	jsonOK(w, h.safeServerResponse(*srv, true))
 }
 
 // Get GET /admin/servers/{id}
@@ -93,14 +112,15 @@ func (h *ServerHandler) Get(w http.ResponseWriter, r *http.Request) {
 	for _, s := range servers {
 		if s.ID == id {
 			_, running := h.Registry.Get(s.ID)
-			jsonOK(w, safeServerResponse(s, running == nil))
+			jsonOK(w, h.safeServerResponse(s, running == nil))
 			return
 		}
 	}
 	jsonError(w, 404, "server not found")
 }
 
-func safeServerResponse(s model.WGServer, running bool) map[string]any {
+func (h *ServerHandler) safeServerResponse(s model.WGServer, running bool) map[string]any {
+	endpoints, _ := h.listServerEndpoints(s.ID)
 	return map[string]any{
 		"id":             s.ID,
 		"name":           s.Name,
@@ -113,6 +133,7 @@ func safeServerResponse(s model.WGServer, running bool) map[string]any {
 		"is_active":      s.IsActive,
 		"created_at":     s.CreatedAt,
 		"running":        running,
+		"endpoints":      endpoints,
 	}
 }
 
@@ -120,19 +141,106 @@ func safeServerResponse(s model.WGServer, running bool) map[string]any {
 func (h *ServerHandler) Update(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	var req struct {
-		Name     string `json:"name"`
-		Endpoint string `json:"endpoint"`
-		DNS      string `json:"dns"`
+		Name      string            `json:"name"`
+		Endpoint  string            `json:"endpoint"`
+		Port      int               `json:"port"`
+		DNS       string            `json:"dns"`
+		Endpoints []endpointRequest `json:"endpoints"`
 	}
 	if err := decode(r, &req); err != nil {
 		jsonError(w, 400, "invalid request")
 		return
 	}
-	if err := h.Registry.Update(id, req.Name, req.Endpoint, req.DNS); err != nil {
+	if req.Port == 0 {
+		var existing model.WGServer
+		_ = h.DB.Get(&existing, "SELECT * FROM wg_servers WHERE id=?", id)
+		req.Port = existing.Port
+	}
+	if err := h.Registry.Update(id, req.Name, req.Endpoint, req.Port, req.DNS); err != nil {
 		jsonError(w, 500, err.Error())
 		return
 	}
+	if len(req.Endpoints) > 0 {
+		if err := h.replaceServerEndpoints(id, normalizedEndpoints(req.Endpoints, req.Endpoint, req.Port)); err != nil {
+			jsonError(w, 500, err.Error())
+			return
+		}
+	}
 	jsonOK(w, map[string]bool{"ok": true})
+}
+
+func (h *ServerHandler) listServerEndpoints(serverID string) ([]model.WGServerEndpoint, error) {
+	var endpoints []model.WGServerEndpoint
+	err := h.DB.Select(&endpoints, `
+		SELECT * FROM wg_server_endpoints
+		WHERE server_id = ?
+		ORDER BY priority ASC, created_at ASC`, serverID)
+	return endpoints, err
+}
+
+func (h *ServerHandler) replaceServerEndpoints(serverID string, endpoints []endpointRequest) error {
+	tx, err := h.DB.Beginx()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if _, err := tx.Exec("DELETE FROM wg_server_endpoints WHERE server_id=?", serverID); err != nil {
+		return err
+	}
+	for _, ep := range endpoints {
+		enabled := true
+		if ep.Enabled != nil {
+			enabled = *ep.Enabled
+		}
+		if _, err := tx.Exec(`
+			INSERT INTO wg_server_endpoints (id, server_id, name, host, port, priority, enabled)
+			VALUES (?, ?, ?, ?, ?, ?, ?)`,
+			uuid.NewString(), serverID, ep.Name, strings.TrimSpace(ep.Host), ep.Port, ep.Priority, enabled,
+		); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
+}
+
+func normalizedEndpoints(input []endpointRequest, primaryHost string, primaryPort int) []endpointRequest {
+	if primaryPort <= 0 {
+		primaryPort = 51820
+	}
+	out := make([]endpointRequest, 0, len(input)+1)
+	seenPriority := map[int]bool{}
+	for _, ep := range input {
+		ep.Host = strings.TrimSpace(ep.Host)
+		if ep.Host == "" {
+			continue
+		}
+		if ep.Port <= 0 {
+			ep.Port = primaryPort
+		}
+		if ep.Name == "" {
+			if ep.Priority == 0 {
+				ep.Name = "Primary"
+			} else {
+				ep.Name = "Failover"
+			}
+		}
+		for seenPriority[ep.Priority] {
+			ep.Priority++
+		}
+		seenPriority[ep.Priority] = true
+		out = append(out, ep)
+	}
+	if len(out) == 0 {
+		enabled := true
+		out = append(out, endpointRequest{
+			Name:     "Primary",
+			Host:     strings.TrimSpace(primaryHost),
+			Port:     primaryPort,
+			Priority: 0,
+			Enabled:  &enabled,
+		})
+	}
+	return out
 }
 
 // Delete DELETE /admin/servers/{id}
