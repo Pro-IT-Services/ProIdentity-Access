@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>ProIdentity Access — brand preview</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { margin: 0; font: 14px/1.4 system-ui, sans-serif; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; min-height: 50vh; }
+  .light { background: #f8fafc; color: #0f172a; }
+  .dark  { background: #0b1220; color: #e2e8f0; }
+  .panel { padding: 32px; display: flex; flex-direction: column; gap: 28px; align-items: flex-start; }
+  h2 { margin: 0; font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; opacity: 0.55; font-weight: 600; }
+  .sizes { display: flex; align-items: flex-end; gap: 24px; }
+  .sizes figure { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .sizes figcaption { font-size: 11px; opacity: 0.55; font-family: ui-monospace, monospace; }
+  .wm { max-width: 460px; width: 100%; }
+  .light .mono { color: #0f172a; }
+  .dark  .mono { color: #e2e8f0; }
+</style>
+</head>
+<body>
+  <div class="row">
+    <div class="panel light">
+      <h2>Mark — light surface (color)</h2>
+      <div class="sizes">
+        <figure><img src="logo-mark.svg" width="24"  height="24"/>  <figcaption>24</figcaption></figure>
+        <figure><img src="logo-mark.svg" width="48"  height="48"/>  <figcaption>48</figcaption></figure>
+        <figure><img src="logo-mark.svg" width="96"  height="96"/>  <figcaption>96</figcaption></figure>
+        <figure><img src="logo-mark.svg" width="192" height="192"/> <figcaption>192</figcaption></figure>
+      </div>
+
+      <h2>Tile — app icon</h2>
+      <div class="sizes">
+        <figure><img src="logo-tile.svg" width="48"  height="48"/>  <figcaption>48</figcaption></figure>
+        <figure><img src="logo-tile.svg" width="96"  height="96"/>  <figcaption>96</figcaption></figure>
+        <figure><img src="logo-tile.svg" width="192" height="192"/> <figcaption>192</figcaption></figure>
+      </div>
+
+      <h2>Wordmark</h2>
+      <img class="wm" src="logo-wordmark.svg"/>
+
+      <h2>Mono — tray / favicon (simplified)</h2>
+      <div class="sizes">
+        <figure><img class="mono" src="logo-mono.svg" width="16" height="16"/>  <figcaption>16</figcaption></figure>
+        <figure><img class="mono" src="logo-mono.svg" width="20" height="20"/>  <figcaption>20</figcaption></figure>
+        <figure><img class="mono" src="logo-mono.svg" width="32" height="32"/>  <figcaption>32</figcaption></figure>
+        <figure><img class="mono" src="logo-mono.svg" width="64" height="64"/>  <figcaption>64</figcaption></figure>
+      </div>
+    </div>
+
+    <div class="panel dark">
+      <h2>Mark — dark surface (color)</h2>
+      <div class="sizes">
+        <figure><img src="logo-mark.svg" width="24"  height="24"/>  <figcaption>24</figcaption></figure>
+        <figure><img src="logo-mark.svg" width="48"  height="48"/>  <figcaption>48</figcaption></figure>
+        <figure><img src="logo-mark.svg" width="96"  height="96"/>  <figcaption>96</figcaption></figure>
+        <figure><img src="logo-mark.svg" width="192" height="192"/> <figcaption>192</figcaption></figure>
+      </div>
+
+      <h2>Tile — app icon</h2>
+      <div class="sizes">
+        <figure><img src="logo-tile.svg" width="48"  height="48"/>  <figcaption>48</figcaption></figure>
+        <figure><img src="logo-tile.svg" width="96"  height="96"/>  <figcaption>96</figcaption></figure>
+        <figure><img src="logo-tile.svg" width="192" height="192"/> <figcaption>192</figcaption></figure>
+      </div>
+
+      <h2>Mono on dark</h2>
+      <div class="sizes">
+        <figure><img class="mono" src="logo-mono.svg" width="16" height="16"/>  <figcaption>16</figcaption></figure>
+        <figure><img class="mono" src="logo-mono.svg" width="20" height="20"/>  <figcaption>20</figcaption></figure>
+        <figure><img class="mono" src="logo-mono.svg" width="32" height="32"/>  <figcaption>32</figcaption></figure>
+        <figure><img class="mono" src="logo-mono.svg" width="64" height="64"/>  <figcaption>64</figcaption></figure>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
