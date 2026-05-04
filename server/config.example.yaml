@@ -1,0 +1,12 @@
+server:
+  host: "127.0.0.1"
+  port: 8080
+  cors_origins:
+    - "https://vpn.example.com"
+    - "http://127.0.0.1:8080"
+
+database:
+  dsn: "proidentity:change-this-db-password@tcp(127.0.0.1:3306)/proidentity"
+
+auth:
+  jwt_secret: "set-with-PROIDENTITY_JWT_SECRET"

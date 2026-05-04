@@ -1,0 +1,45 @@
+#!/bin/bash
+set -e
+
+DAEMON=/Library/ProIdentity/proidentity-daemon
+DAEMON_PLIST=/Library/LaunchDaemons/com.proitservices.proidentity.access.daemon.plist
+AGENT_PLIST=/Library/LaunchAgents/com.proitservices.proidentity.access-ui.plist
+LOG_DIR=/Library/Logs/ProIdentity
+
+# Ensure log directory exists
+mkdir -p "$LOG_DIR"
+
+# Make daemon and uninstaller executable
+chmod 755 "$DAEMON"
+chmod +x "/Applications/ProIdentity Access Uninstaller.app/Contents/MacOS/ProIdentity Uninstaller" 2>/dev/null || true
+
+# Write the LaunchDaemon plist (daemon --install uses its own path)
+"$DAEMON" --install
+
+# Set correct ownership on the daemon plist
+chown root:wheel "$DAEMON_PLIST"
+chmod 644 "$DAEMON_PLIST"
+
+# Load and start the daemon
+if launchctl bootstrap system "$DAEMON_PLIST" 2>/dev/null; then
+    echo "Daemon loaded via bootstrap"
+else
+    launchctl load "$DAEMON_PLIST" 2>/dev/null || true
+    echo "Daemon loaded via legacy load"
+fi
+
+# Install and load the UI launch agent for the current user
+CURRENT_USER=$(stat -f "%Su" /dev/console 2>/dev/null || true)
+if [ -n "$CURRENT_USER" ] && [ "$CURRENT_USER" != "root" ]; then
+    USER_UID=$(id -u "$CURRENT_USER")
+
+    # Set correct ownership on the agent plist
+    chown root:wheel "$AGENT_PLIST"
+    chmod 644 "$AGENT_PLIST"
+
+    # Bootstrap the agent into the user's session (starts app now + on every login)
+    launchctl bootstrap gui/"$USER_UID" "$AGENT_PLIST" 2>/dev/null || \
+    launchctl asuser "$USER_UID" launchctl load "$AGENT_PLIST" 2>/dev/null || true
+fi
+
+exit 0

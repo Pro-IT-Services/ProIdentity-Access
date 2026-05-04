@@ -1,0 +1,64 @@
+services:
+  db:
+    image: mariadb:11.4
+    container_name: proidentity-db
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: ${MYSQL_DATABASE:-proidentity}
+      MARIADB_USER: ${MYSQL_USER:-proidentity}
+      MARIADB_PASSWORD: ${MYSQL_PASSWORD:?set MYSQL_PASSWORD in .env}
+      MARIADB_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD in .env}
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mariadb-admin ping -h 127.0.0.1 -u$${MARIADB_USER} -p$${MARIADB_PASSWORD} --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    networks:
+      - proidentity
+
+  proidentity:
+    image: ${PROIDENTITY_IMAGE:-proidentity/server:local}
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: proidentity-server
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    volumes:
+      - /lib/modules:/lib/modules:ro
+      - app_data:/var/lib/proidentity
+    environment:
+      PROIDENTITY_SERVER_HOST: 0.0.0.0
+      PROIDENTITY_SERVER_PORT: 8080
+      PROIDENTITY_DATABASE_DSN: ${MYSQL_USER:-proidentity}:${MYSQL_PASSWORD:?set MYSQL_PASSWORD in .env}@tcp(db:3306)/${MYSQL_DATABASE:-proidentity}
+      PROIDENTITY_JWT_SECRET: ${PROIDENTITY_JWT_SECRET:?set PROIDENTITY_JWT_SECRET in .env}
+      PROIDENTITY_TRUSTED_PROXIES: ${PROIDENTITY_TRUSTED_PROXIES:-}
+      WG_ADMIN_USER: ${WG_ADMIN_USER:-admin}
+      WG_ADMIN_EMAIL: ${WG_ADMIN_EMAIL:-admin@localhost}
+      WG_ADMIN_PASS: ${WG_ADMIN_PASS:?set WG_ADMIN_PASS in .env}
+    ports:
+      - "${PROIDENTITY_HTTP_BIND:-127.0.0.1}:${PROIDENTITY_HTTP_PORT:-8080}:8080/tcp"
+      - "${PROIDENTITY_WG_UDP_PORTS:-51820-51840}:51820-51840/udp"
+    sysctls:
+      net.ipv4.ip_forward: "1"
+      net.ipv4.conf.all.src_valid_mark: "1"
+    networks:
+      - proidentity
+
+networks:
+  proidentity:
+    name: proidentity
+
+volumes:
+  db_data:
+  app_data:
+

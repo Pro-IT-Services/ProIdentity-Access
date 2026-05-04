@@ -1,0 +1,21 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "ProIdentity Access",
+  "outputfilename": "ProIdentity Access",
+  "frontend:install": "npm install",
+  "frontend:build": "npm run build",
+  "frontend:dev:watcher": "npm run dev",
+  "frontend:dev:serverUrl": "auto",
+  "frontend:dir": "frontend",
+  "author": {
+    "name": "Pro-IT-Services",
+    "email": ""
+  },
+  "info": {
+    "productName": "ProIdentity Access",
+    "productVersion": "0.5.20",
+    "productIdentifier": "com.proitservices.proidentity.access",
+    "copyright": "Copyright 2026 Pro-IT-Services",
+    "comments": "Managed WireGuard VPN access client"
+  }
+}
