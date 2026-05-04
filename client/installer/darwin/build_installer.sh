@@ -14,7 +14,7 @@ BUILD_DIR="$REPO_ROOT/build"
 PKG_ROOT="$BUILD_DIR/darwin/pkg_root"          # assembled install tree (gitignored)
 VERSION=$(python3 -c "import json; print(json.load(open('$REPO_ROOT/wails.json'))['info']['productVersion'])" 2>/dev/null \
           || node -p "require('$REPO_ROOT/wails.json').info.productVersion" 2>/dev/null \
-          || echo "0.5.25")
+          || echo "0.5.26")
 OUTPUT_PKG="$BUILD_DIR/darwin/ProIdentity-Access-$VERSION.pkg"
 
 APP_SRC="$BUILD_DIR/bin/ProIdentity Access.app"

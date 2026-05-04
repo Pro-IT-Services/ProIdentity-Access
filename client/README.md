@@ -21,14 +21,14 @@ https://github.com/Pro-IT-Services/ProIdentity-Access/releases
 Current release asset names:
 
 ```text
-ProIdentity-Access-0.5.25.msi
-ProIdentity-Access-0.5.25.pkg
-ProIdentity-Access-0.5.25-SHA256SUMS.txt
+ProIdentity-Access-0.5.26.msi
+ProIdentity-Access-0.5.26.pkg
+ProIdentity-Access-0.5.26-SHA256SUMS.txt
 ```
 
 ### Windows MSI
 
-Run `ProIdentity-Access-0.5.25.msi`.
+Run `ProIdentity-Access-0.5.26.msi`.
 
 The installer:
 
@@ -43,7 +43,7 @@ privileged tunnel operations.
 
 ### macOS PKG
 
-Run `ProIdentity-Access-0.5.25.pkg`.
+Run `ProIdentity-Access-0.5.26.pkg`.
 
 The package installs:
 
@@ -97,13 +97,13 @@ dotnet tool install --global wix --version "4.*"
 wix extension add WixToolset.UI.wixext/4.0.6 --global
 wix extension add WixToolset.Util.wixext/4.0.6 --global
 cd client
-powershell -ExecutionPolicy Bypass -File .\build.ps1 -Version 0.5.25
+powershell -ExecutionPolicy Bypass -File .\build.ps1 -Version 0.5.26
 ```
 
 Output:
 
 ```text
-client/build/ProIdentity-Access-0.5.25.msi
+client/build/ProIdentity-Access-0.5.26.msi
 ```
 
 ### macOS PKG Build
@@ -116,19 +116,19 @@ Additional requirements:
 
 ```sh
 cd client
-./build.sh --version 0.5.25
+./build.sh --version 0.5.26
 ```
 
 Output:
 
 ```text
-client/build/darwin/ProIdentity-Access-0.5.25.pkg
+client/build/darwin/ProIdentity-Access-0.5.26.pkg
 ```
 
 Install locally:
 
 ```sh
-sudo installer -pkg client/build/darwin/ProIdentity-Access-0.5.25.pkg -target /
+sudo installer -pkg client/build/darwin/ProIdentity-Access-0.5.26.pkg -target /
 ```
 
 ## Architecture

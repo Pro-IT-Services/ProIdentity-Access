@@ -92,14 +92,14 @@ proidentity:change-this-db-password@tcp(127.0.0.1:3306)/proidentity
 ```sh
 curl -fsSL -o install-release.sh \
   https://raw.githubusercontent.com/Pro-IT-Services/ProIdentity-Access/main/server/install-release.sh
-sudo sh install-release.sh Pro-IT-Services/ProIdentity-Access 0.5.25
+sudo sh install-release.sh Pro-IT-Services/ProIdentity-Access 0.5.26
 ```
 
 Release assets downloaded by the installer:
 
 ```text
-ProIdentity-Access-Server-0.5.25-linux-amd64.tar.gz
-ProIdentity-Access-0.5.25-SHA256SUMS.txt
+ProIdentity-Access-Server-0.5.26-linux-amd64.tar.gz
+ProIdentity-Access-0.5.26-SHA256SUMS.txt
 ```
 
 When `/etc/proidentity/proidentity.env` does not exist, the installer generates

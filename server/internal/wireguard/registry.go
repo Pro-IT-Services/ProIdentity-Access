@@ -244,6 +244,7 @@ func (r *Registry) Delete(serverID string) error {
 	// Cascade: orphan sessions reference a non-existent server otherwise.
 	r.db.Exec("DELETE FROM sessions WHERE server_id=?", serverID)
 	r.db.Exec("DELETE FROM ip_pool WHERE server_id=?", serverID)
+	r.db.Exec("DELETE FROM wg_server_endpoints WHERE server_id=?", serverID)
 	_, err := r.db.Exec("DELETE FROM wg_servers WHERE id=?", serverID)
 	return err
 }

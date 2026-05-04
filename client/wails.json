@@ -13,7 +13,7 @@
   },
   "info": {
     "productName": "ProIdentity Access",
-    "productVersion": "0.5.25",
+    "productVersion": "0.5.26",
     "productIdentifier": "com.proitservices.proidentity.access",
     "copyright": "Copyright 2026 Pro-IT-Services",
     "comments": "Managed WireGuard VPN access client"

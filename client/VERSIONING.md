@@ -1,6 +1,6 @@
 # Versioning
 
-Current version: **0.5.25**
+Current version: **0.5.26**
 
 Version is defined in `wails.json` â†’ `info.productVersion`.  
 The build script (`build.ps1` / `build.bat`) reads it from there automatically.
@@ -18,7 +18,7 @@ The build script (`build.ps1` / `build.bat`) reads it from there automatically.
 Edit **one** line in `wails.json`:
 
 ```json
-"productVersion": "0.5.25"
+"productVersion": "0.5.26"
 ```
 
 Then build and commit:
@@ -26,13 +26,14 @@ Then build and commit:
 ```
 build.bat
 git add wails.json
-git commit -m "Bump version to 0.5.25"
+git commit -m "Bump version to 0.5.26"
 ```
 
 ## Changelog
 
 | Version | Type    | Description                                                  |
 |---------|---------|--------------------------------------------------------------|
+| 0.5.26  | patch   | Fix server endpoint migration on MariaDB production installs |
 | 0.5.25  | patch   | Resolve WireGuard DNS endpoints and add endpoint failover    |
 | 0.5.24  | patch   | Show cumulative desktop traffic totals instead of live rates |
 | 0.5.22  | patch   | Sync local users into ProIdentity Push Auth provisioning     |

@@ -11,11 +11,8 @@ CREATE TABLE IF NOT EXISTS wg_server_endpoints (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE KEY uniq_wg_server_endpoint_priority (server_id, priority),
-    KEY idx_wg_server_endpoints_server (server_id),
-    CONSTRAINT fk_wg_server_endpoints_server
-        FOREIGN KEY (server_id) REFERENCES wg_servers(id)
-        ON DELETE CASCADE
-);
+    KEY idx_wg_server_endpoints_server (server_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 INSERT INTO wg_server_endpoints (id, server_id, name, host, port, priority, enabled)
 SELECT UUID(), s.id, 'Primary', s.endpoint, s.port, 0, 1
