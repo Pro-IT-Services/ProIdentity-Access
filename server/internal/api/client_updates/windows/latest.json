@@ -1,0 +1,11 @@
+{
+    "version":  "0.5.20",
+    "latest_version":  "0.5.20",
+    "platform":  "windows-amd64",
+    "filename":  "ProIdentity-Access-0.5.20.msi",
+    "url":  "/api/v1/client-updates/windows/ProIdentity-Access-0.5.20.msi",
+    "sha256":  "3d50a3f9ac0af089acb2dd4e30f4b695b133f01c0f511def88662ee174c45d8f",
+    "size":  6606848,
+    "published_at":  "2026-05-04T09:58:23.7097989Z",
+    "mandatory":  false
+}

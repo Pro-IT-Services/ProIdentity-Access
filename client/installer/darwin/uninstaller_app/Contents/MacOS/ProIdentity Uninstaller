@@ -1,0 +1,75 @@
+#!/bin/bash
+# ProIdentity Access Uninstaller - double-click to run
+
+PLIST=/Library/LaunchDaemons/com.proitservices.proidentity.access.daemon.plist
+OLD_PLIST=/Library/LaunchDaemons/com.proidentity.app.plist
+AGENT_PLIST=/Library/LaunchAgents/com.proitservices.proidentity.access-ui.plist
+OLD_AGENT_PLIST=/Library/LaunchAgents/com.proidentity.app-ui.plist
+DAEMON_DIR=/Library/ProIdentity
+APP="/Applications/ProIdentity Access.app"
+OLD_APP=/Applications/ProIdentity.app
+DATA_DIR="/Library/Application Support/ProIdentity"
+LOG_DIR=/Library/Logs/ProIdentity
+SELF_DIR="/Applications/ProIdentity Access Uninstaller.app"
+OLD_SELF_DIR="/Applications/ProIdentity Uninstaller.app"
+
+# Confirmation dialog
+if ! osascript -e '
+    display dialog "Are you sure you want to uninstall ProIdentity Access?\n\nThis will remove the app, daemon, and all associated files." \
+        with title "ProIdentity Access Uninstaller" \
+        buttons {"Cancel", "Uninstall"} \
+        default button "Cancel" \
+        cancel button "Cancel" \
+        with icon caution
+' 2>/dev/null; then
+    exit 0
+fi
+
+# Ask about tunnel config data
+keep_data=$(osascript -e '
+    display dialog "Do you want to keep your tunnel configuration data?" \
+        with title "ProIdentity Access Uninstaller" \
+        buttons {"Remove Data", "Keep Data"} \
+        default button "Keep Data"
+' 2>/dev/null)
+
+# Build the uninstall command
+BASE_CMD="launchctl bootout system '$PLIST' 2>/dev/null; \
+launchctl bootout system '$OLD_PLIST' 2>/dev/null; \
+launchctl unload '$PLIST' 2>/dev/null; \
+launchctl unload '$OLD_PLIST' 2>/dev/null; \
+rm -f '$PLIST'; \
+rm -f '$OLD_PLIST'; \
+rm -f '$AGENT_PLIST'; \
+rm -f '$OLD_AGENT_PLIST'; \
+rm -rf '$DAEMON_DIR'; \
+rm -rf '$APP'; \
+rm -rf '$OLD_APP'; \
+rm -rf '$LOG_DIR'"
+
+if [[ "$keep_data" == *"Remove Data"* ]]; then
+    FULL_CMD="$BASE_CMD; rm -rf '$DATA_DIR'"
+else
+    FULL_CMD="$BASE_CMD"
+fi
+
+# Remove the uninstaller app itself last
+FULL_CMD="$FULL_CMD; rm -rf '$SELF_DIR'; rm -rf '$OLD_SELF_DIR'"
+
+# Run with admin privileges. macOS shows its own password dialog.
+if ! osascript -e "do shell script \"$FULL_CMD\" with administrator privileges" 2>/dev/null; then
+    osascript -e '
+        display dialog "Uninstall was cancelled or failed." \
+            with title "ProIdentity Access Uninstaller" \
+            buttons {"OK"} default button "OK" \
+            with icon stop
+    ' 2>/dev/null
+    exit 1
+fi
+
+osascript -e '
+    display dialog "ProIdentity Access has been successfully uninstalled." \
+        with title "ProIdentity Access Uninstaller" \
+        buttons {"OK"} default button "OK" \
+        with icon note
+' 2>/dev/null
