@@ -1,0 +1,6 @@
+<svg viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="ProIdentity Access">
+  <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+    <polygon points="178,128 153,171.3 103,171.3 78,128 103,84.7 153,84.7" stroke-width="14"/>
+  </g>
+  <circle cx="128" cy="128" r="18" fill="currentColor"/>
+</svg>
