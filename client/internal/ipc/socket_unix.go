@@ -32,8 +32,8 @@ func listenUnix() (net.Listener, error) {
 	if err != nil {
 		return nil, err
 	}
-	// 0666: any local user may connect; the token handshake in server.go
-	// is the actual authentication barrier.
+	// Any local user may connect; server.go authenticates the OS peer user
+	// with socket credentials and isolates all operations by that owner.
 	_ = os.Chmod(socketPath, 0666)
 	return l, nil
 }

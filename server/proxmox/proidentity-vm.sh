@@ -3,7 +3,7 @@ set -Eeuo pipefail
 
 TITLE="ProIdentity Access VM Installer"
 DEFAULT_REPO="Pro-IT-Services/ProIdentity-Access"
-DEFAULT_VERSION="0.5.26"
+DEFAULT_VERSION="0.6.1"
 DEFAULT_IMAGE_URL="https://cloud.debian.org/images/cloud/trixie/latest/debian-13-generic-amd64.qcow2"
 DEFAULT_SNIPPET_STORAGE="local"
 SNIPPET_STORAGE=""

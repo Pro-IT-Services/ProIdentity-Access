@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -24,8 +25,8 @@ type TunnelManager struct {
 	mu      sync.RWMutex
 	tunnels map[string]*Tunnel // keyed by ID
 
-	keyMu  sync.RWMutex
-	encKey []byte // 32-byte AES-256 key; nil until set by GUI
+	keyMu   sync.RWMutex
+	encKeys map[string][]byte // 32-byte AES-256 key by OS owner; nil until set by GUI
 }
 
 // NewTunnelManager creates a TunnelManager that persists configs to storageDir
@@ -41,27 +42,30 @@ func NewTunnelManager(storageDir string, broadcast func(ipc.Event)) (*TunnelMana
 		storageDir: storageDir,
 		broadcast:  broadcast,
 		tunnels:    make(map[string]*Tunnel),
-	}
-	if err := m.loadPersistedConfigs(); err != nil {
-		log.Printf("warn: load configs: %v", err)
+		encKeys:    make(map[string][]byte),
 	}
 	return m, nil
 }
 
 // --- ipc.Handler implementation ---
 
-func (m *TunnelManager) ListTunnels() ([]ipc.TunnelInfo, error) {
+func (m *TunnelManager) ListTunnels(principal ipc.Principal) ([]ipc.TunnelInfo, error) {
+	ownerID := ownerForPrincipal(principal)
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	var list []ipc.TunnelInfo
 	for _, t := range m.tunnels {
+		if !m.tunnelVisibleToOwner(t, ownerID) {
+			continue
+		}
 		list = append(list, t.Info())
 	}
 	return list, nil
 }
 
-func (m *TunnelManager) ImportTunnel(name, configContent string) (*ipc.TunnelInfo, error) {
-	if !m.encryptionKeySet() {
+func (m *TunnelManager) ImportTunnel(principal ipc.Principal, name, configContent string) (*ipc.TunnelInfo, error) {
+	ownerID := ownerForPrincipal(principal)
+	if !m.encryptionKeySet(ownerID) {
 		return nil, fmt.Errorf("persistent tunnel storage encryption key is not set")
 	}
 
@@ -70,6 +74,7 @@ func (m *TunnelManager) ImportTunnel(name, configContent string) (*ipc.TunnelInf
 		return nil, fmt.Errorf("parse config: %w", err)
 	}
 	cfg.ID = uuid.New().String()
+	cfg.OwnerID = ownerID
 	if name != "" {
 		cfg.Name = name
 	} else if cfg.Name == "" {
@@ -93,12 +98,14 @@ func (m *TunnelManager) ImportTunnel(name, configContent string) (*ipc.TunnelInf
 
 // ImportEphemeralTunnel imports a tunnel without writing it to disk.
 // Used for managed VPN sessions that must not outlive the session.
-func (m *TunnelManager) ImportEphemeralTunnel(name, configContent string) (*ipc.TunnelInfo, error) {
+func (m *TunnelManager) ImportEphemeralTunnel(principal ipc.Principal, name, configContent string) (*ipc.TunnelInfo, error) {
+	ownerID := ownerForPrincipal(principal)
 	cfg, err := config.ParseString(configContent)
 	if err != nil {
 		return nil, fmt.Errorf("parse config: %w", err)
 	}
 	cfg.ID = uuid.New().String()
+	cfg.OwnerID = ownerID
 	if name != "" {
 		cfg.Name = name
 	} else if cfg.Name == "" {
@@ -117,10 +124,11 @@ func (m *TunnelManager) ImportEphemeralTunnel(name, configContent string) (*ipc.
 	return &info, nil
 }
 
-func (m *TunnelManager) DeleteTunnel(id string) error {
+func (m *TunnelManager) DeleteTunnel(principal ipc.Principal, id string) error {
+	ownerID := ownerForPrincipal(principal)
 	m.mu.Lock()
 	t, ok := m.tunnels[id]
-	if !ok {
+	if !ok || !m.tunnelVisibleToOwner(t, ownerID) {
 		m.mu.Unlock()
 		return fmt.Errorf("tunnel %s not found", id)
 	}
@@ -128,15 +136,16 @@ func (m *TunnelManager) DeleteTunnel(id string) error {
 	m.mu.Unlock()
 
 	_ = t.Stop()
-	_ = m.deletePersistedConfig(id)
+	_ = m.deletePersistedConfig(t.Config.OwnerID, id)
 	return nil
 }
 
-func (m *TunnelManager) ConnectTunnel(id string) error {
+func (m *TunnelManager) ConnectTunnel(principal ipc.Principal, id string) error {
+	ownerID := ownerForPrincipal(principal)
 	m.mu.RLock()
 	t, ok := m.tunnels[id]
 	m.mu.RUnlock()
-	if !ok {
+	if !ok || !m.tunnelVisibleToOwner(t, ownerID) {
 		return fmt.Errorf("tunnel %s not found", id)
 	}
 
@@ -161,11 +170,12 @@ func (m *TunnelManager) ConnectTunnel(id string) error {
 	return nil
 }
 
-func (m *TunnelManager) DisconnectTunnel(id string) error {
+func (m *TunnelManager) DisconnectTunnel(principal ipc.Principal, id string) error {
+	ownerID := ownerForPrincipal(principal)
 	m.mu.RLock()
 	t, ok := m.tunnels[id]
 	m.mu.RUnlock()
-	if !ok {
+	if !ok || !m.tunnelVisibleToOwner(t, ownerID) {
 		return fmt.Errorf("tunnel %s not found", id)
 	}
 
@@ -177,11 +187,12 @@ func (m *TunnelManager) DisconnectTunnel(id string) error {
 	return nil
 }
 
-func (m *TunnelManager) GetStats(id string) (*ipc.StatsInfo, error) {
+func (m *TunnelManager) GetStats(principal ipc.Principal, id string) (*ipc.StatsInfo, error) {
+	ownerID := ownerForPrincipal(principal)
 	m.mu.RLock()
 	t, ok := m.tunnels[id]
 	m.mu.RUnlock()
-	if !ok {
+	if !ok || !m.tunnelVisibleToOwner(t, ownerID) {
 		return nil, fmt.Errorf("tunnel %s not found", id)
 	}
 	stats, err := t.Stats()
@@ -190,6 +201,7 @@ func (m *TunnelManager) GetStats(id string) (*ipc.StatsInfo, error) {
 	}
 	return &ipc.StatsInfo{
 		TunnelID:      id,
+		OwnerID:       t.Config.OwnerID,
 		RxBytes:       stats.RxBytes,
 		TxBytes:       stats.TxBytes,
 		LastHandshake: stats.LastHandshake,
@@ -206,15 +218,16 @@ func (m *TunnelManager) DaemonStatus() (*ipc.StatusResult, error) {
 // SetEncryptionKey stores the 32-byte AES-256 key in memory, then reloads
 // persisted configs: decrypts any encrypted files, and migrates any remaining
 // plaintext configs to encrypted format.
-func (m *TunnelManager) SetEncryptionKey(key []byte) error {
+func (m *TunnelManager) SetEncryptionKey(principal ipc.Principal, key []byte) error {
 	if len(key) != 32 {
 		return fmt.Errorf("encryption key must be 32 bytes, got %d", len(key))
 	}
+	ownerID := ownerForPrincipal(principal)
 	m.keyMu.Lock()
-	m.encKey = key
+	m.encKeys[ownerID] = key
 	m.keyMu.Unlock()
 
-	if err := m.loadPersistedConfigs(); err != nil {
+	if err := m.loadPersistedConfigs(ownerID); err != nil {
 		log.Printf("warn: reload configs after key set: %v", err)
 	}
 	return nil
@@ -263,6 +276,7 @@ func (m *TunnelManager) startStatsLoop(t *Tunnel) {
 			}
 			info := ipc.StatsInfo{
 				TunnelID:      t.Config.ID,
+				OwnerID:       t.Config.OwnerID,
 				RxBytes:       stats.RxBytes,
 				TxBytes:       stats.TxBytes,
 				LastHandshake: stats.LastHandshake,
@@ -273,10 +287,53 @@ func (m *TunnelManager) startStatsLoop(t *Tunnel) {
 	}()
 }
 
+func ownerForPrincipal(principal ipc.Principal) string {
+	if principal.Valid() {
+		return principal.UserID
+	}
+	return ipc.LegacyOwnerID
+}
+
+func (m *TunnelManager) tunnelVisibleToOwner(t *Tunnel, ownerID string) bool {
+	if t == nil || t.Config == nil {
+		return false
+	}
+	return t.Config.OwnerID == ownerID || t.Config.OwnerID == ipc.LegacyOwnerID
+}
+
+func (m *TunnelManager) ownerStorageDir(ownerID string) string {
+	if ownerID == "" || ownerID == ipc.LegacyOwnerID {
+		return m.storageDir
+	}
+	return filepath.Join(m.storageDir, "users", safeOwnerID(ownerID))
+}
+
+func safeOwnerID(ownerID string) string {
+	ownerID = strings.TrimSpace(ownerID)
+	if ownerID == "" {
+		return ipc.LegacyOwnerID
+	}
+	return strings.Map(func(r rune) rune {
+		switch {
+		case r >= 'a' && r <= 'z':
+			return r
+		case r >= 'A' && r <= 'Z':
+			return r
+		case r >= '0' && r <= '9':
+			return r
+		case r == '.', r == '-', r == '_':
+			return r
+		default:
+			return '_'
+		}
+	}, ownerID)
+}
+
 // --- persistence ---
 
 type persistedTunnel struct {
 	ID        string                 `json:"id"`
+	OwnerID   string                 `json:"owner_id,omitempty"`
 	Name      string                 `json:"name"`
 	Interface config.InterfaceConfig `json:"interface"`
 	Peers     []config.PeerConfig    `json:"peers"`
@@ -285,6 +342,7 @@ type persistedTunnel struct {
 func (m *TunnelManager) persistConfig(cfg *config.TunnelConfig) error {
 	pt := persistedTunnel{
 		ID:        cfg.ID,
+		OwnerID:   cfg.OwnerID,
 		Name:      cfg.Name,
 		Interface: cfg.Interface,
 		Peers:     cfg.Peers,
@@ -295,7 +353,7 @@ func (m *TunnelManager) persistConfig(cfg *config.TunnelConfig) error {
 	}
 
 	m.keyMu.RLock()
-	key := m.encKey
+	key := m.encKeys[cfg.OwnerID]
 	m.keyMu.RUnlock()
 	if key == nil {
 		return fmt.Errorf("persistent tunnel storage encryption key is not set")
@@ -307,29 +365,54 @@ func (m *TunnelManager) persistConfig(cfg *config.TunnelConfig) error {
 		return fmt.Errorf("encrypt config: %w", err)
 	}
 
-	path := filepath.Join(m.storageDir, cfg.ID+".json")
+	dir := m.ownerStorageDir(cfg.OwnerID)
+	if err := os.MkdirAll(dir, 0700); err != nil {
+		return fmt.Errorf("create owner storage dir: %w", err)
+	}
+	if err := hardenStorageACL(dir); err != nil {
+		log.Printf("warn: harden storage ACL %s: %v", dir, err)
+	}
+	path := filepath.Join(dir, cfg.ID+".json")
 	return os.WriteFile(path, toWrite, 0600)
 }
 
-func (m *TunnelManager) deletePersistedConfig(id string) error {
-	path := filepath.Join(m.storageDir, id+".json")
+func (m *TunnelManager) deletePersistedConfig(ownerID, id string) error {
+	path := filepath.Join(m.ownerStorageDir(ownerID), id+".json")
 	return os.Remove(path)
 }
 
-func (m *TunnelManager) loadPersistedConfigs() error {
+func (m *TunnelManager) loadPersistedConfigs(ownerID string) error {
 	m.keyMu.RLock()
-	key := m.encKey
+	key := m.encKeys[ownerID]
 	m.keyMu.RUnlock()
+	if key == nil {
+		return nil
+	}
 
-	entries, err := os.ReadDir(m.storageDir)
+	if err := m.loadPersistedConfigDir(ownerID, m.ownerStorageDir(ownerID), key, false); err != nil {
+		return err
+	}
+	if ownerID != ipc.LegacyOwnerID {
+		if err := m.loadPersistedConfigDir(ownerID, m.storageDir, key, true); err != nil {
+			log.Printf("warn: migrate legacy configs for owner %s: %v", ownerID, err)
+		}
+	}
+	return nil
+}
+
+func (m *TunnelManager) loadPersistedConfigDir(ownerID, dir string, key []byte, migrateLegacy bool) error {
+	entries, err := os.ReadDir(dir)
 	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
 		return err
 	}
 	for _, e := range entries {
 		if e.IsDir() || filepath.Ext(e.Name()) != ".json" {
 			continue
 		}
-		path := filepath.Join(m.storageDir, e.Name())
+		path := filepath.Join(dir, e.Name())
 		data, err := os.ReadFile(path)
 		if err != nil {
 			log.Printf("read config %s: %v", e.Name(), err)
@@ -365,8 +448,13 @@ func (m *TunnelManager) loadPersistedConfigs() error {
 			log.Printf("parse config %s: %v", e.Name(), err)
 			continue
 		}
+		if pt.OwnerID != "" && pt.OwnerID != ownerID && !migrateLegacy {
+			log.Printf("skip config %s: owner mismatch", e.Name())
+			continue
+		}
 		cfg := &config.TunnelConfig{
 			ID:        pt.ID,
+			OwnerID:   ownerID,
 			Name:      pt.Name,
 			Interface: pt.Interface,
 			Peers:     pt.Peers,
@@ -374,30 +462,39 @@ func (m *TunnelManager) loadPersistedConfigs() error {
 
 		m.mu.Lock()
 		_, alreadyLoaded := m.tunnels[cfg.ID]
+		migratedLoaded := false
 		if !alreadyLoaded {
 			m.tunnels[cfg.ID] = NewTunnel(cfg)
+		} else if migrateLegacy && m.tunnels[cfg.ID].Config.OwnerID == ipc.LegacyOwnerID {
+			m.tunnels[cfg.ID].Config.OwnerID = ownerID
+			migratedLoaded = true
 		}
 		m.mu.Unlock()
 
-		if alreadyLoaded {
+		if alreadyLoaded && !migratedLoaded {
 			continue
 		}
-		log.Printf("loaded tunnel %s (%s)", cfg.Name, cfg.ID)
+		if !alreadyLoaded {
+			log.Printf("loaded tunnel %s (%s)", cfg.Name, cfg.ID)
+		}
 
-		// Migrate plaintext config to encrypted now that the key is available.
-		if isPlaintext && key != nil {
+		// Migrate plaintext or legacy global config to encrypted per-user storage.
+		if isPlaintext || migrateLegacy {
 			if err := m.persistConfig(cfg); err != nil {
 				log.Printf("warn: migrate config %s to encrypted: %v", cfg.ID, err)
 			} else {
 				log.Printf("migrated tunnel %s to encrypted storage", cfg.ID)
+				if migrateLegacy {
+					_ = os.Remove(path)
+				}
 			}
 		}
 	}
 	return nil
 }
 
-func (m *TunnelManager) encryptionKeySet() bool {
+func (m *TunnelManager) encryptionKeySet(ownerID string) bool {
 	m.keyMu.RLock()
 	defer m.keyMu.RUnlock()
-	return m.encKey != nil
+	return m.encKeys[ownerID] != nil
 }

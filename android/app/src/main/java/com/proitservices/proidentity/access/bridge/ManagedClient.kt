@@ -7,6 +7,7 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
+import java.net.URI
 import java.util.concurrent.TimeUnit
 
 data class RegisterResponse(val deviceId: String, val serverPublicKey: String)
@@ -59,12 +60,33 @@ class ManagedClient(
     val deviceID: String = "",
     val aesKey: ByteArray? = null
 ) {
+    init {
+        validateBaseURL(baseURL)
+    }
+
     private val http = OkHttpClient.Builder()
         .connectTimeout(15, TimeUnit.SECONDS)
         .readTimeout(15, TimeUnit.SECONDS)
         .build()
 
     private val JSON_TYPE = "application/json; charset=utf-8".toMediaType()
+
+    private fun validateBaseURL(value: String) {
+        val uri = try {
+            URI(value.trim())
+        } catch (_: Exception) {
+            throw IllegalArgumentException("Invalid server URL")
+        }
+        val scheme = uri.scheme?.lowercase() ?: throw IllegalArgumentException("Server URL must include https://")
+        val host = uri.host ?: throw IllegalArgumentException("Server URL must include a host")
+        val localhost = host == "localhost" || host == "127.0.0.1" || host == "::1"
+        if (scheme != "https" && !(scheme == "http" && localhost)) {
+            throw IllegalArgumentException("Server URL must use HTTPS")
+        }
+        if (!uri.rawQuery.isNullOrEmpty() || !uri.rawFragment.isNullOrEmpty()) {
+            throw IllegalArgumentException("Server URL must not include query or fragment")
+        }
+    }
 
     // --- Core request helpers ---
 

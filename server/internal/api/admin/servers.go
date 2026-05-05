@@ -70,18 +70,54 @@ func (h *ServerHandler) Create(w http.ResponseWriter, r *http.Request) {
 	if req.Port == 0 {
 		req.Port = 51820
 	}
+	name, err := cleanText("name", req.Name, 128)
+	if err != nil {
+		jsonError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	endpoint, err := validateHost("endpoint", req.Endpoint)
+	if err != nil {
+		jsonError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	port, err := validatePort("port", req.Port)
+	if err != nil {
+		jsonError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	iface, err := validateInterfaceName(req.Iface)
+	if err != nil {
+		jsonError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	subnet, err := validateIPv4Prefix("subnet", req.Subnet, 8, 30)
+	if err != nil {
+		jsonError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	dns, err := validateDNSList(req.DNS)
+	if err != nil {
+		jsonError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	endpoints, err := validatedEndpoints(req.Endpoints, endpoint, port)
+	if err != nil {
+		jsonError(w, http.StatusBadRequest, err.Error())
+		return
+	}
 
 	if req.External {
-		if req.PublicKey == "" {
-			jsonError(w, 400, "public_key required for external server")
+		publicKey, err := validateWireGuardPublicKey(req.PublicKey)
+		if err != nil {
+			jsonError(w, http.StatusBadRequest, err.Error())
 			return
 		}
-		srv, err := h.Registry.CreateExternal(req.Name, req.Endpoint, req.Port, req.Iface, req.PublicKey, req.Subnet, req.DNS)
+		srv, err := h.Registry.CreateExternal(name, endpoint, port, iface, publicKey, subnet, dns)
 		if err != nil {
 			jsonError(w, 500, err.Error())
 			return
 		}
-		if err := h.replaceServerEndpoints(srv.ID, normalizedEndpoints(req.Endpoints, req.Endpoint, req.Port)); err != nil {
+		if err := h.replaceServerEndpoints(srv.ID, endpoints); err != nil {
 			jsonError(w, 500, err.Error())
 			return
 		}
@@ -89,12 +125,12 @@ func (h *ServerHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	srv, err := h.Registry.Create(req.Name, req.Endpoint, req.Port, req.Iface, req.Subnet, req.DNS)
+	srv, err := h.Registry.Create(name, endpoint, port, iface, subnet, dns)
 	if err != nil {
 		jsonError(w, 500, err.Error())
 		return
 	}
-	if err := h.replaceServerEndpoints(srv.ID, normalizedEndpoints(req.Endpoints, req.Endpoint, req.Port)); err != nil {
+	if err := h.replaceServerEndpoints(srv.ID, endpoints); err != nil {
 		jsonError(w, 500, err.Error())
 		return
 	}
@@ -156,12 +192,37 @@ func (h *ServerHandler) Update(w http.ResponseWriter, r *http.Request) {
 		_ = h.DB.Get(&existing, "SELECT * FROM wg_servers WHERE id=?", id)
 		req.Port = existing.Port
 	}
-	if err := h.Registry.Update(id, req.Name, req.Endpoint, req.Port, req.DNS); err != nil {
+	name, err := cleanText("name", req.Name, 128)
+	if err != nil {
+		jsonError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	endpoint, err := validateHost("endpoint", req.Endpoint)
+	if err != nil {
+		jsonError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	port, err := validatePort("port", req.Port)
+	if err != nil {
+		jsonError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	dns, err := validateDNSList(req.DNS)
+	if err != nil {
+		jsonError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	if err := h.Registry.Update(id, name, endpoint, port, dns); err != nil {
 		jsonError(w, 500, err.Error())
 		return
 	}
 	if len(req.Endpoints) > 0 {
-		if err := h.replaceServerEndpoints(id, normalizedEndpoints(req.Endpoints, req.Endpoint, req.Port)); err != nil {
+		endpoints, err := validatedEndpoints(req.Endpoints, endpoint, port)
+		if err != nil {
+			jsonError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		if err := h.replaceServerEndpoints(id, endpoints); err != nil {
 			jsonError(w, 500, err.Error())
 			return
 		}
@@ -241,6 +302,28 @@ func normalizedEndpoints(input []endpointRequest, primaryHost string, primaryPor
 		})
 	}
 	return out
+}
+
+func validatedEndpoints(input []endpointRequest, primaryHost string, primaryPort int) ([]endpointRequest, error) {
+	endpoints := normalizedEndpoints(input, primaryHost, primaryPort)
+	for i := range endpoints {
+		host, err := validateHost("endpoint host", endpoints[i].Host)
+		if err != nil {
+			return nil, err
+		}
+		port, err := validatePort("endpoint port", endpoints[i].Port)
+		if err != nil {
+			return nil, err
+		}
+		name, err := cleanText("endpoint name", endpoints[i].Name, 64)
+		if err != nil {
+			return nil, err
+		}
+		endpoints[i].Host = host
+		endpoints[i].Port = port
+		endpoints[i].Name = name
+	}
+	return endpoints, nil
 }
 
 // Delete DELETE /admin/servers/{id}

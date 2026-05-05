@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 )
 
@@ -13,6 +14,10 @@ func jsonOK(w http.ResponseWriter, v any) {
 }
 
 func jsonError(w http.ResponseWriter, code int, msg string) {
+	if code >= http.StatusInternalServerError {
+		log.Printf("api error %d: %s", code, msg)
+		msg = "internal server error"
+	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
 	json.NewEncoder(w).Encode(map[string]string{"error": msg})

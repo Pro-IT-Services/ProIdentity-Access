@@ -47,6 +47,7 @@ const (
 // TunnelInfo is the tunnel representation sent to UI clients.
 type TunnelInfo struct {
 	ID         string       `json:"id"`
+	OwnerID    string       `json:"owner_id,omitempty"`
 	Name       string       `json:"name"`
 	Status     TunnelStatus `json:"status"`
 	Addresses  []string     `json:"addresses"`
@@ -70,6 +71,7 @@ type PeerInfo struct {
 // StatsInfo holds runtime statistics for a connected tunnel.
 type StatsInfo struct {
 	TunnelID      string `json:"tunnel_id"`
+	OwnerID       string `json:"owner_id,omitempty"`
 	RxBytes       int64  `json:"rx_bytes"`
 	TxBytes       int64  `json:"tx_bytes"`
 	LastHandshake int64  `json:"last_handshake"` // Unix timestamp seconds

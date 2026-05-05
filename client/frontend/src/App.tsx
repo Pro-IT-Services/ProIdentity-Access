@@ -101,6 +101,7 @@ export default function App() {
 
   // TOTP prompt for connect-time 2FA. Stores the server pending verification.
   const [totpForServer, setTotpForServer] = useState<ServerInfo | null>(null)
+  const [pushApprovingServer, setPushApprovingServer] = useState<ServerInfo | null>(null)
   const [pushAuthAvailable, setPushAuthAvailable] = useState(false)
   const pushConnectRef = useRef<{ serverId: string; cancelled: boolean } | null>(null)
 
@@ -292,14 +293,14 @@ export default function App() {
       setPendingServerId(null)
       return
     }
-    if (totpForServer?.id === pendingServerId) {
+    if (totpForServer?.id === pendingServerId || pushApprovingServer?.id === pendingServerId) {
       return
     }
     if (!srv?.connecting && !tunnels.some(t => t.status === 'connecting')) {
       const timeout = setTimeout(() => setPendingServerId(null), 3000)
       return () => clearTimeout(timeout)
     }
-  }, [tunnels, servers, pendingServerId, totpForServer?.id])
+  }, [tunnels, servers, pendingServerId, totpForServer?.id, pushApprovingServer?.id])
 
   // Persist the most recently connected managed server.
   useEffect(() => {
@@ -320,6 +321,9 @@ export default function App() {
   // Connect a managed server. Always attempts the connect first so the server
   // can tell us whether push auth or classic TOTP is required.
   const connectManaged = useCallback(async (srv: ServerInfo) => {
+    if (pushConnectRef.current?.serverId === srv.id && !pushConnectRef.current.cancelled) {
+      return
+    }
     setPendingServerId(srv.id)
     try {
       await withTimeout(connectServer(srv), CONNECT_TIMEOUT_MS, 'Connect')
@@ -330,8 +334,9 @@ export default function App() {
         pushConnectRef.current = { ...(pushConnectRef.current ?? { serverId: srv.id, cancelled: false }), cancelled: true }
         const run = { serverId: srv.id, cancelled: false }
         pushConnectRef.current = run
-        setPushAuthAvailable(true)
-        setTotpForServer(srv)
+        setPushAuthAvailable(false)
+        setPushApprovingServer(srv)
+        setTotpForServer(null)
         setPendingServerId(srv.id)
         try {
           const push = await managedCreatePushAuth(`Connect to ${srv.name}`)
@@ -355,6 +360,7 @@ export default function App() {
               }))
               rememberLastServer(srv.id)
               setTotpForServer(null)
+              setPushApprovingServer(null)
               setPushAuthAvailable(false)
               await loadServers()
               return
@@ -367,8 +373,9 @@ export default function App() {
         } catch (pushErr: any) {
           if (!run.cancelled) {
             toast(String(pushErr?.message ?? pushErr), 'warning', 8000)
-            setTotpForServer(null)
+            setPushApprovingServer(null)
             setPushAuthAvailable(false)
+            setTotpForServer(srv)
             setPendingServerId(null)
           }
         } finally {
@@ -376,10 +383,12 @@ export default function App() {
         }
       } else if (msg.includes('require_totp') || msg.includes('totp')) {
         setPendingServerId(null)
+        setPushApprovingServer(null)
         setPushAuthAvailable(false)
         setTotpForServer(srv)
       } else {
         setPendingServerId(null)
+        setPushApprovingServer(null)
         console.warn('connect failed', e)
       }
     }
@@ -463,7 +472,8 @@ export default function App() {
 
   if (trayPopoverOpen) {
     const authState =
-      totpForServer ? (pushAuthAvailable ? 'approving' : 'required')
+      pushApprovingServer ? 'approving'
+      : totpForServer ? (pushAuthAvailable ? 'approving' : 'required')
       : settings.logged_in ? 'push'
       : 'disabled'
     return (

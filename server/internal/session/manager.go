@@ -72,11 +72,13 @@ func (m *Manager) CreateSession(userID, serverID, clientPubKey string) (*model.S
 
 	resources, err := m.userResources(serverID, userID)
 	if err != nil {
-		log.Printf("warn: get resources for server %s: %v", serverID, err)
+		_ = m.deleteSession(sess)
+		return nil, "", nil, fmt.Errorf("get resources for server %s: %w", serverID, err)
 	}
 	if len(resources) > 0 {
 		if err := m.fw.AddRules(assignedIP, resources); err != nil {
-			log.Printf("warn: add firewall rules for %s: %v", assignedIP, err)
+			_ = m.deleteSession(sess)
+			return nil, "", nil, fmt.Errorf("add firewall rules for %s: %w", assignedIP, err)
 		}
 	}
 

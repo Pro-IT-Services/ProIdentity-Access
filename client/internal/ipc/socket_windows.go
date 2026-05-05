@@ -26,7 +26,7 @@ func listenWindowsPipe() (net.Listener, error) {
 	cfg := &winio.PipeConfig{
 		// SY = Local System, BA = Built-in Administrators, IU = Interactive Users.
 		// IU covers the logged-in user even when the daemon runs as SYSTEM (service).
-		// Actual caller identity is verified by the token handshake in server.go.
+		// server.go derives the caller SID and isolates all operations by owner.
 		SecurityDescriptor: "D:P(A;;GA;;;SY)(A;;GA;;;BA)(A;;GA;;;IU)",
 		MessageMode:        false,
 		InputBufferSize:    65536,

@@ -16,6 +16,7 @@ var (
 	pushClientKey string
 	pushClient    *pushauth.Client
 
+	pushCreateMu  sync.Mutex
 	pushPendingMu sync.Mutex
 	pushPending   = map[string]pendingPushAuth{}
 )
@@ -23,6 +24,8 @@ var (
 type pendingPushAuth struct {
 	UserID    string
 	Purpose   string
+	Context   string
+	CreatedAt time.Time
 	ExpiresAt time.Time
 }
 
@@ -48,14 +51,66 @@ func (s *Server) pushAuthClient() *pushauth.Client {
 	return pushClient
 }
 
-func rememberPushAuth(requestID, userID, purpose string, ttlSeconds int) {
-	pushPendingMu.Lock()
-	pushPending[requestID] = pendingPushAuth{
+func rememberPushAuth(requestID, userID, purpose, context string, ttlSeconds int) pendingPushAuth {
+	now := time.Now()
+	pending := pendingPushAuth{
 		UserID:    userID,
 		Purpose:   purpose,
-		ExpiresAt: time.Now().Add(time.Duration(ttlSeconds) * time.Second),
+		Context:   context,
+		CreatedAt: now,
+		ExpiresAt: now.Add(time.Duration(ttlSeconds) * time.Second),
+	}
+	pushPendingMu.Lock()
+	pushPending[requestID] = pending
+	pushPendingMu.Unlock()
+	return pending
+}
+
+func forgetPushAuth(requestID string) {
+	pushPendingMu.Lock()
+	delete(pushPending, requestID)
+	pushPendingMu.Unlock()
+}
+
+func findReusablePendingPushAuth(pc *pushauth.Client, userID, purpose, context string) (string, pendingPushAuth, bool) {
+	type candidate struct {
+		id      string
+		pending pendingPushAuth
+	}
+
+	now := time.Now()
+	var candidates []candidate
+	pushPendingMu.Lock()
+	for id, pending := range pushPending {
+		if now.After(pending.ExpiresAt) {
+			delete(pushPending, id)
+			continue
+		}
+		if pending.UserID == userID && pending.Purpose == purpose && pending.Context == context {
+			candidates = append(candidates, candidate{id: id, pending: pending})
+		}
 	}
 	pushPendingMu.Unlock()
+
+	for _, cand := range candidates {
+		st, err := pc.PollStatus(cand.id)
+		if err != nil {
+			// For very recent requests, prefer local reuse over creating a
+			// duplicate notification when the status endpoint is briefly slow.
+			if time.Since(cand.pending.CreatedAt) < 10*time.Second {
+				return cand.id, cand.pending, true
+			}
+			continue
+		}
+		switch st.Status {
+		case "pending":
+			return cand.id, cand.pending, true
+		case "denied", "expired":
+			forgetPushAuth(cand.id)
+		}
+	}
+
+	return "", pendingPushAuth{}, false
 }
 
 func verifyBoundPushAuth(pc *pushauth.Client, requestID, userID, purpose string) error {
@@ -134,13 +189,25 @@ func (s *Server) handlePushAuthCreate(w http.ResponseWriter, r *http.Request) {
 
 	clientIP := remoteAddr(r)
 
+	pushCreateMu.Lock()
+	defer pushCreateMu.Unlock()
+
+	if requestID, pending, ok := findReusablePendingPushAuth(pc, claims.UserID, "session", req.Context); ok {
+		jsonOK(w, map[string]any{
+			"request_id": requestID,
+			"status":     "pending",
+			"expires_at": pending.ExpiresAt.Unix(),
+		})
+		return
+	}
+
 	ar, err := pc.CreateAuthRequest(email, "ProIdentity Access", req.Context, clientIP, 120)
 	if err != nil {
 		log.Printf("push auth create failed for %s: %v", email, err)
 		jsonError(w, http.StatusBadGateway, err.Error())
 		return
 	}
-	rememberPushAuth(ar.RequestID, claims.UserID, "session", 120)
+	rememberPushAuth(ar.RequestID, claims.UserID, "session", req.Context, 120)
 	jsonOK(w, map[string]any{
 		"request_id": ar.RequestID,
 		"status":     ar.Status,
@@ -167,6 +234,9 @@ func (s *Server) handlePushAuthPoll(w http.ResponseWriter, r *http.Request) {
 		jsonError(w, http.StatusBadGateway, err.Error())
 		return
 	}
+	if st.Status == "denied" || st.Status == "expired" {
+		forgetPushAuth(reqID)
+	}
 	jsonOK(w, st)
 }
 
@@ -188,6 +258,9 @@ func (s *Server) handlePushAuthPollPublic(w http.ResponseWriter, r *http.Request
 	if err != nil {
 		jsonError(w, http.StatusBadGateway, err.Error())
 		return
+	}
+	if st.Status == "denied" || st.Status == "expired" {
+		forgetPushAuth(reqID)
 	}
 	jsonOK(w, map[string]string{"status": st.Status})
 }

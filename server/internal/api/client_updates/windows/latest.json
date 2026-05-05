@@ -1,11 +1,11 @@
 {
-    "version":  "0.5.26",
-    "latest_version":  "0.5.26",
+    "version":  "0.6.1",
+    "latest_version":  "0.6.1",
     "platform":  "windows-amd64",
-    "filename":  "ProIdentity-Access-0.5.26.msi",
-    "url":  "/api/v1/client-updates/windows/ProIdentity-Access-0.5.26.msi",
-    "sha256":  "13a6bc3424abf6c4b75d4e808dfedb1548bfd7c4dc3cee628b417a1fb5d3e20c",
-    "size":  6606848,
-    "published_at":  "2026-05-04T23:04:24.1348168Z",
+    "filename":  "ProIdentity-Access-0.6.1.msi",
+    "url":  "/api/v1/client-updates/windows/ProIdentity-Access-0.6.1.msi",
+    "sha256":  "1d118ecf3ecab964321f5bb9053c3a0925d8ce281eb027ec8fe4085a57a35561",
+    "size":  6623232,
+    "published_at":  "2026-05-05T23:03:28.1946431Z",
     "mandatory":  false
 }

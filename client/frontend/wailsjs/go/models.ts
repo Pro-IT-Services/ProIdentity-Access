@@ -20,6 +20,7 @@ export namespace ipc {
 	}
 	export class StatsInfo {
 	    tunnel_id: string;
+	    owner_id?: string;
 	    rx_bytes: number;
 	    tx_bytes: number;
 	    last_handshake: number;
@@ -31,6 +32,7 @@ export namespace ipc {
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.tunnel_id = source["tunnel_id"];
+	        this.owner_id = source["owner_id"];
 	        this.rx_bytes = source["rx_bytes"];
 	        this.tx_bytes = source["tx_bytes"];
 	        this.last_handshake = source["last_handshake"];
@@ -38,6 +40,7 @@ export namespace ipc {
 	}
 	export class TunnelInfo {
 	    id: string;
+	    owner_id?: string;
 	    name: string;
 	    status: string;
 	    addresses: string[];
@@ -56,6 +59,7 @@ export namespace ipc {
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];
+	        this.owner_id = source["owner_id"];
 	        this.name = source["name"];
 	        this.status = source["status"];
 	        this.addresses = source["addresses"];

@@ -56,13 +56,11 @@ func main() {
 		log.Fatalf("init tunnel manager: %v", err)
 	}
 
-	// Generate a fresh session token so only callers who can read the
-	// token file (local interactive users) are admitted.
-	token, err := ipc.GenerateToken()
-	if err != nil {
-		log.Fatalf("generate IPC token: %v", err)
-	}
-	server = ipc.NewServer(manager, token)
+	// IPC authorization is based on OS peer identity and per-user ownership.
+	// Stale legacy token files are removed so old GUI clients do not depend
+	// on a machine-wide shared secret.
+	ipc.RemoveTokenFile()
+	server = ipc.NewServer(manager, "")
 
 	runFn := func() error {
 		if err := server.Start(); err != nil {

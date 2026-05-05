@@ -13,35 +13,33 @@ import (
 
 // Handler is implemented by the daemon to handle RPC calls.
 type Handler interface {
-	ListTunnels() ([]TunnelInfo, error)
-	ImportTunnel(name, configContent string) (*TunnelInfo, error)
-	ImportEphemeralTunnel(name, configContent string) (*TunnelInfo, error)
-	DeleteTunnel(id string) error
-	ConnectTunnel(id string) error
-	DisconnectTunnel(id string) error
-	GetStats(id string) (*StatsInfo, error)
+	ListTunnels(principal Principal) ([]TunnelInfo, error)
+	ImportTunnel(principal Principal, name, configContent string) (*TunnelInfo, error)
+	ImportEphemeralTunnel(principal Principal, name, configContent string) (*TunnelInfo, error)
+	DeleteTunnel(principal Principal, id string) error
+	ConnectTunnel(principal Principal, id string) error
+	DisconnectTunnel(principal Principal, id string) error
+	GetStats(principal Principal, id string) (*StatsInfo, error)
 	DaemonStatus() (*StatusResult, error)
-	SetEncryptionKey(key []byte) error
+	SetEncryptionKey(principal Principal, key []byte) error
 }
 
 // Server listens on the IPC socket and dispatches RPC calls to a Handler.
 type Server struct {
 	handler  Handler
 	listener net.Listener
-	token    string // session auth token; empty = auth disabled
+	token    string // optional legacy session auth token
 
 	mu      sync.RWMutex
-	clients map[net.Conn]struct{}
+	clients map[net.Conn]Principal
 }
 
 // NewServer creates a new IPC server backed by the given handler.
-// token is the session secret that every client must present immediately
-// after connecting. Pass an empty string to disable auth (testing only).
 func NewServer(h Handler, token string) *Server {
 	return &Server{
 		handler: h,
 		token:   token,
-		clients: make(map[net.Conn]struct{}),
+		clients: make(map[net.Conn]Principal),
 	}
 }
 
@@ -69,7 +67,7 @@ func (s *Server) Stop() {
 	}
 }
 
-// Broadcast pushes an event to all connected GUI clients.
+// Broadcast pushes an event to GUI clients owned by the same OS user.
 func (s *Server) Broadcast(evt Event) {
 	data, err := json.Marshal(evt)
 	if err != nil {
@@ -79,7 +77,10 @@ func (s *Server) Broadcast(evt Event) {
 
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	for c := range s.clients {
+	for c, principal := range s.clients {
+		if !eventVisibleToPrincipal(evt, principal) {
+			continue
+		}
 		_, _ = c.Write(data)
 	}
 }
@@ -90,10 +91,6 @@ func (s *Server) acceptLoop() {
 		if err != nil {
 			return // listener closed
 		}
-		s.mu.Lock()
-		s.clients[conn] = struct{}{}
-		s.mu.Unlock()
-
 		go s.serveConn(conn)
 	}
 }
@@ -106,43 +103,79 @@ func (s *Server) serveConn(conn net.Conn) {
 		s.mu.Unlock()
 	}()
 
+	principal, err := PeerPrincipal(conn)
+	if err != nil || !principal.Valid() {
+		log.Printf("ipc: rejected connection: unable to identify peer: %v", err)
+		conn.Write([]byte("DENIED\n")) //nolint:errcheck
+		return
+	}
+
 	scanner := bufio.NewScanner(conn)
 	scanner.Buffer(make([]byte, 1<<20), 1<<20)
 
-	// Token handshake: first line must be "AUTH <token>".
-	// If auth is enabled and the token doesn't match, close immediately.
-	if s.token != "" {
-		if !scanner.Scan() {
+	firstLine := true
+	registered := false
+	register := func() {
+		if registered {
 			return
 		}
-		line := strings.TrimSpace(scanner.Text())
-		var presented string
-		if _, err := fmt.Sscanf(line, "AUTH %s", &presented); err != nil || subtle.ConstantTimeCompare([]byte(presented), []byte(s.token)) != 1 {
-			log.Printf("ipc: rejected connection — bad auth token")
-			conn.Write([]byte("DENIED\n")) //nolint:errcheck
-			return
-		}
-		conn.Write([]byte("OK\n")) //nolint:errcheck
+		s.mu.Lock()
+		s.clients[conn] = principal
+		s.mu.Unlock()
+		registered = true
 	}
-
 	for scanner.Scan() {
-		var req Request
-		if err := json.Unmarshal(scanner.Bytes(), &req); err != nil {
-			writeResponse(conn, Response{
-				Error: &RPCError{Code: ErrCodeBadParams, Message: "invalid JSON"},
-				ID:    0,
-			})
-			continue
+		line := scanner.Bytes()
+		if firstLine {
+			firstLine = false
+			if handled, ok := s.handleOptionalAuthLine(conn, line); handled {
+				if !ok {
+					return
+				}
+				register()
+				continue
+			}
 		}
-		resp := s.dispatch(req)
-		writeResponse(conn, resp)
+		register()
+		writeResponse(conn, s.dispatchLine(line, principal))
 	}
 }
 
-func (s *Server) dispatch(req Request) Response {
+func (s *Server) handleOptionalAuthLine(conn net.Conn, line []byte) (handled bool, ok bool) {
+	text := strings.TrimSpace(string(line))
+	if !strings.HasPrefix(text, "AUTH ") {
+		return false, true
+	}
+	if s.token == "" {
+		conn.Write([]byte("OK\n")) //nolint:errcheck
+		return true, true
+	}
+	var presented string
+	if _, err := fmt.Sscanf(text, "AUTH %s", &presented); err != nil ||
+		subtle.ConstantTimeCompare([]byte(presented), []byte(s.token)) != 1 {
+		log.Printf("ipc: rejected connection: bad auth token")
+		conn.Write([]byte("DENIED\n")) //nolint:errcheck
+		return true, false
+	}
+	conn.Write([]byte("OK\n")) //nolint:errcheck
+	return true, true
+}
+
+func (s *Server) dispatchLine(line []byte, principal Principal) Response {
+	var req Request
+	if err := json.Unmarshal(line, &req); err != nil {
+		return Response{
+			Error: &RPCError{Code: ErrCodeBadParams, Message: "invalid JSON"},
+			ID:    0,
+		}
+	}
+	return s.dispatch(req, principal)
+}
+
+func (s *Server) dispatch(req Request, principal Principal) Response {
 	switch req.Method {
 	case MethodListTunnels:
-		tunnels, err := s.handler.ListTunnels()
+		tunnels, err := s.handler.ListTunnels(principal)
 		if err != nil {
 			return errResponse(req.ID, ErrCodeInternal, err.Error())
 		}
@@ -153,7 +186,7 @@ func (s *Server) dispatch(req Request) Response {
 		if err := json.Unmarshal(req.Params, &p); err != nil {
 			return errResponse(req.ID, ErrCodeBadParams, "bad params")
 		}
-		t, err := s.handler.ImportTunnel(p.Name, p.ConfigContent)
+		t, err := s.handler.ImportTunnel(principal, p.Name, p.ConfigContent)
 		if err != nil {
 			return errResponse(req.ID, ErrCodeInternal, err.Error())
 		}
@@ -164,7 +197,7 @@ func (s *Server) dispatch(req Request) Response {
 		if err := json.Unmarshal(req.Params, &p); err != nil {
 			return errResponse(req.ID, ErrCodeBadParams, "bad params")
 		}
-		t, err := s.handler.ImportEphemeralTunnel(p.Name, p.ConfigContent)
+		t, err := s.handler.ImportEphemeralTunnel(principal, p.Name, p.ConfigContent)
 		if err != nil {
 			return errResponse(req.ID, ErrCodeInternal, err.Error())
 		}
@@ -175,7 +208,7 @@ func (s *Server) dispatch(req Request) Response {
 		if err := json.Unmarshal(req.Params, &p); err != nil {
 			return errResponse(req.ID, ErrCodeBadParams, "bad params")
 		}
-		if err := s.handler.DeleteTunnel(p.ID); err != nil {
+		if err := s.handler.DeleteTunnel(principal, p.ID); err != nil {
 			return errResponse(req.ID, ErrCodeTunnelError, err.Error())
 		}
 		return okResponse(req.ID, true)
@@ -185,7 +218,7 @@ func (s *Server) dispatch(req Request) Response {
 		if err := json.Unmarshal(req.Params, &p); err != nil {
 			return errResponse(req.ID, ErrCodeBadParams, "bad params")
 		}
-		if err := s.handler.ConnectTunnel(p.ID); err != nil {
+		if err := s.handler.ConnectTunnel(principal, p.ID); err != nil {
 			return errResponse(req.ID, ErrCodeTunnelError, err.Error())
 		}
 		return okResponse(req.ID, true)
@@ -195,7 +228,7 @@ func (s *Server) dispatch(req Request) Response {
 		if err := json.Unmarshal(req.Params, &p); err != nil {
 			return errResponse(req.ID, ErrCodeBadParams, "bad params")
 		}
-		if err := s.handler.DisconnectTunnel(p.ID); err != nil {
+		if err := s.handler.DisconnectTunnel(principal, p.ID); err != nil {
 			return errResponse(req.ID, ErrCodeTunnelError, err.Error())
 		}
 		return okResponse(req.ID, true)
@@ -205,7 +238,7 @@ func (s *Server) dispatch(req Request) Response {
 		if err := json.Unmarshal(req.Params, &p); err != nil {
 			return errResponse(req.ID, ErrCodeBadParams, "bad params")
 		}
-		stats, err := s.handler.GetStats(p.ID)
+		stats, err := s.handler.GetStats(principal, p.ID)
 		if err != nil {
 			return errResponse(req.ID, ErrCodeTunnelError, err.Error())
 		}
@@ -223,7 +256,7 @@ func (s *Server) dispatch(req Request) Response {
 		if err := json.Unmarshal(req.Params, &p); err != nil {
 			return errResponse(req.ID, ErrCodeBadParams, "bad params")
 		}
-		if err := s.handler.SetEncryptionKey(p.Key); err != nil {
+		if err := s.handler.SetEncryptionKey(principal, p.Key); err != nil {
 			return errResponse(req.ID, ErrCodeInternal, err.Error())
 		}
 		return okResponse(req.ID, true)
@@ -233,13 +266,38 @@ func (s *Server) dispatch(req Request) Response {
 	}
 }
 
+func eventVisibleToPrincipal(evt Event, principal Principal) bool {
+	if !principal.Valid() {
+		return false
+	}
+	switch evt.Type {
+	case EventTunnelChanged:
+		var info TunnelInfo
+		if err := json.Unmarshal(evt.Payload, &info); err != nil {
+			return false
+		}
+		return ownerVisible(info.OwnerID, principal)
+	case EventStatsUpdate:
+		var info StatsInfo
+		if err := json.Unmarshal(evt.Payload, &info); err != nil {
+			return false
+		}
+		return ownerVisible(info.OwnerID, principal)
+	default:
+		return true
+	}
+}
+
+func ownerVisible(ownerID string, principal Principal) bool {
+	return ownerID == "" || ownerID == principal.UserID || (ownerID == LegacyOwnerID && !principal.IsLegacy())
+}
+
 func okResponse(id int, result interface{}) Response {
 	data, _ := json.Marshal(result)
 	return Response{Result: data, ID: id}
 }
 
 func errResponse(id, code int, msg string) Response {
-	// Sanitize message — strip internal path info
 	msg = strings.TrimSpace(msg)
 	return Response{Error: &RPCError{Code: code, Message: msg}, ID: id}
 }

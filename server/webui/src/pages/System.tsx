@@ -35,7 +35,7 @@ const SETTING_DEFS: { key: string; label: string; description: string; type?: st
   { key: 'webauthn_rp_name',   label: 'WebAuthn RP name',  description: 'Display name shown during passkey registration.' },
   { key: 'webauthn_origin',    label: 'WebAuthn origin',   description: 'Full origin URL (e.g. https://vpn.example.com).' },
   { key: 'push_auth_enabled',  label: 'Push Auth',         description: 'Enable ProIdentity Cloud push authentication. Replaces classic TOTP when enabled. Set to "true" or "false".', type: 'text' },
-  { key: 'push_auth_api_key',  label: 'Push Auth API key', description: 'Your ProIdentity Cloud Service Provider API key (pi_live_xxx). Leave empty to disable.', secret: true },
+  { key: 'push_auth_api_key',  label: 'Push Auth API key', description: 'Your ProIdentity Cloud Service Provider API key (pi_live_xxx). Leave empty to keep the current key.', secret: true },
 ]
 
 export default function System() {
@@ -647,7 +647,11 @@ function SettingsTab() {
     e.preventDefault()
     setBusy(true); setError('')
     try {
-      const res = await api.updateSettings(settings)
+      const payload = Object.fromEntries(Object.entries(settings).filter(([key, value]) => {
+        const def = SETTING_DEFS.find(d => d.key === key)
+        return !def?.secret || (value !== '' && value !== '__configured__')
+      }))
+      const res = await api.updateSettings(payload)
       if (res.push_auth_sync) {
         const { checked, synced, failed } = res.push_auth_sync
         setSyncMessage(`Push Auth checked ${checked} users, synced ${synced}, failed ${failed}.`)

@@ -1,6 +1,6 @@
 {
   "name": "proidentity-ui",
-  "version": "0.5.26",
+  "version": "0.6.1",
   "private": true,
   "scripts": {
     "dev": "vite",

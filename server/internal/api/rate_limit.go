@@ -55,7 +55,13 @@ func rateLimit(maxRequests int, window time.Duration) func(http.Handler) http.Ha
 func remoteAddr(r *http.Request) string {
 	peer := peerHost(r.RemoteAddr)
 	if trustedForwarder(peer) {
-		if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+		if xri := r.Header.Get("X-Real-IP"); xri != "" {
+			if ip := firstForwardedIP(xri); ip != "" {
+				return ip
+			}
+		}
+		if os.Getenv("PROIDENTITY_TRUST_X_FORWARDED_FOR") == "1" {
+			xff := r.Header.Get("X-Forwarded-For")
 			if ip := firstForwardedIP(xff); ip != "" {
 				return ip
 			}
@@ -92,7 +98,7 @@ func trustedForwarder(host string) bool {
 	if ip == nil {
 		return false
 	}
-	if ip.IsLoopback() {
+	if ip.IsLoopback() && os.Getenv("PROIDENTITY_TRUST_LOOPBACK_PROXY") == "1" {
 		return true
 	}
 	for _, raw := range strings.Split(os.Getenv("PROIDENTITY_TRUSTED_PROXIES"), ",") {

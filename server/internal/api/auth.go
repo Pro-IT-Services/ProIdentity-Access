@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -24,6 +25,21 @@ type pendingWA struct {
 var (
 	waMu      sync.Mutex
 	waPending = map[string]*pendingWA{}
+
+	loginFailMu sync.Mutex
+	loginFails  = map[string]*loginFailure{}
+)
+
+type loginFailure struct {
+	Count       int
+	WindowStart time.Time
+	LockedUntil time.Time
+}
+
+const (
+	loginFailureWindow = 15 * time.Minute
+	loginLockDuration  = 15 * time.Minute
+	loginLockThreshold = 5
 )
 
 // POST /api/v1/auth/login
@@ -36,6 +52,11 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := decode(r, &req); err != nil {
 		jsonError(w, http.StatusBadRequest, "invalid request")
+		return
+	}
+	req.Username = strings.TrimSpace(req.Username)
+	if req.Username == "" || req.Password == "" {
+		jsonError(w, http.StatusBadRequest, "username and password required")
 		return
 	}
 
@@ -54,16 +75,24 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 			UserAgent:     r.UserAgent(),
 		})
 	}
+	if lockedUntil, locked := loginLocked(req.Username); locked {
+		logFail("login temporarily locked", http.StatusTooManyRequests)
+		w.Header().Set("Retry-After", fmt.Sprintf("%.0f", time.Until(lockedUntil).Seconds()))
+		jsonError(w, http.StatusTooManyRequests, "too many failed login attempts")
+		return
+	}
 
 	var user model.User
 	if err := s.db.Get(&user,
 		"SELECT * FROM users WHERE username=? AND is_active=1", req.Username); err != nil {
+		recordLoginFailure(req.Username)
 		logFail("unknown user", http.StatusUnauthorized)
 		jsonError(w, http.StatusUnauthorized, "invalid credentials")
 		return
 	}
 
 	if !auth.CheckPassword(user.PasswordHash, req.Password) {
+		recordLoginFailure(req.Username)
 		logFail("bad password", http.StatusUnauthorized)
 		jsonError(w, http.StatusUnauthorized, "invalid credentials")
 		return
@@ -79,13 +108,22 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 				pc := s.pushAuthClient()
 				if pc != nil {
 					clientIP := remoteAddr(r)
+					pushCreateMu.Lock()
+					if requestID, pending, ok := findReusablePendingPushAuth(pc, user.ID, "login", "Admin login"); ok {
+						resp["push_request_id"] = requestID
+						resp["push_expires_at"] = pending.ExpiresAt.Unix()
+						pushCreateMu.Unlock()
+						jsonOK(w, resp)
+						return
+					}
 					ar, err := pc.CreateAuthRequest(user.Email, "ProIdentity Access", "Admin login", clientIP, 120)
 					if err == nil {
-						rememberPushAuth(ar.RequestID, user.ID, "login", 120)
+						rememberPushAuth(ar.RequestID, user.ID, "login", "Admin login", 120)
 						resp["push_request_id"] = ar.RequestID
 					} else {
 						log.Printf("push auth create failed for login %s: %v", user.Email, err)
 					}
+					pushCreateMu.Unlock()
 				}
 			}
 			jsonOK(w, resp)
@@ -100,6 +138,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			if err := verifyBoundPushAuth(pc, req.PushAuthID, user.ID, "login"); err != nil {
+				recordLoginFailure(req.Username)
 				logFail("push auth not approved", http.StatusUnauthorized)
 				jsonError(w, http.StatusUnauthorized, "push auth not approved")
 				return
@@ -107,6 +146,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		} else if req.TOTPCode != "" {
 			// TOTP code path — verify locally.
 			if user.TOTPSecret == nil || !auth.ValidateTOTP(*user.TOTPSecret, req.TOTPCode) {
+				recordLoginFailure(req.Username)
 				logFail("bad totp", http.StatusUnauthorized)
 				jsonError(w, http.StatusUnauthorized, "invalid 2FA code")
 				return
@@ -119,6 +159,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		jsonError(w, http.StatusInternalServerError, "token error")
 		return
 	}
+	clearLoginFailures(req.Username)
 
 	// Link installation to user if this request came from a registered device
 	if deviceID := r.Header.Get("X-Device-ID"); deviceID != "" {
@@ -141,6 +182,57 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		"is_admin":     user.IsAdmin,
 		"totp_enabled": user.TOTPEnabled,
 	})
+}
+
+func loginFailureKey(username string) string {
+	return strings.ToLower(strings.TrimSpace(username))
+}
+
+func loginLocked(username string) (time.Time, bool) {
+	key := loginFailureKey(username)
+	if key == "" {
+		return time.Time{}, false
+	}
+	now := time.Now()
+	loginFailMu.Lock()
+	defer loginFailMu.Unlock()
+	state, ok := loginFails[key]
+	if !ok {
+		return time.Time{}, false
+	}
+	if now.After(state.LockedUntil) {
+		return time.Time{}, false
+	}
+	return state.LockedUntil, true
+}
+
+func recordLoginFailure(username string) {
+	key := loginFailureKey(username)
+	if key == "" {
+		return
+	}
+	now := time.Now()
+	loginFailMu.Lock()
+	defer loginFailMu.Unlock()
+	state := loginFails[key]
+	if state == nil || now.Sub(state.WindowStart) > loginFailureWindow {
+		state = &loginFailure{WindowStart: now}
+		loginFails[key] = state
+	}
+	state.Count++
+	if state.Count >= loginLockThreshold {
+		state.LockedUntil = now.Add(loginLockDuration)
+	}
+}
+
+func clearLoginFailures(username string) {
+	key := loginFailureKey(username)
+	if key == "" {
+		return
+	}
+	loginFailMu.Lock()
+	delete(loginFails, key)
+	loginFailMu.Unlock()
 }
 
 // GET /api/v1/auth/me

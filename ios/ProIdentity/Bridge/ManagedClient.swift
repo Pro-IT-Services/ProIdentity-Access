@@ -17,6 +17,7 @@ class ManagedClient {
                               token: String? = nil, deviceID: String? = nil,
                               aesKey: SymmetricKey? = nil) throws -> URLRequest {
         let serverURL = AppSettings.shared.serverURL
+        try validateBaseURL(serverURL)
         guard let url = URL(string: serverURL.trimmingCharacters(in: .whitespaces) + "/api/v1" + path) else {
             throw APIError.invalidURL
         }
@@ -74,6 +75,7 @@ class ManagedClient {
 
     // MARK: - Endpoints
     func register(serverURL: String, deviceName: String, publicKey: String) async throws -> [String: Any] {
+        try validateBaseURL(serverURL)
         guard let url = URL(string: serverURL.trimmingCharacters(in: .whitespaces) + "/api/v1/register") else {
             throw APIError.invalidURL
         }
@@ -175,6 +177,22 @@ class ManagedClient {
             privateKeyB64: AppSettings.shared.clientPrivateKey,
             serverPublicKeyB64: AppSettings.shared.serverPublicKey
         )
+    }
+
+    private func validateBaseURL(_ value: String) throws {
+        guard let comps = URLComponents(string: value.trimmingCharacters(in: .whitespacesAndNewlines)),
+              let scheme = comps.scheme?.lowercased(),
+              let host = comps.host,
+              !host.isEmpty else {
+            throw APIError.invalidURL
+        }
+        let localhost = host == "localhost" || host == "127.0.0.1" || host == "::1"
+        guard scheme == "https" || (scheme == "http" && localhost) else {
+            throw APIError.serverError("Server URL must use HTTPS")
+        }
+        guard comps.query == nil && comps.fragment == nil else {
+            throw APIError.invalidURL
+        }
     }
 }
 

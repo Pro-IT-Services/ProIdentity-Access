@@ -141,14 +141,14 @@ Download the installer script from the public repository:
 ```sh
 curl -fsSL -o install-release.sh \
   https://raw.githubusercontent.com/Pro-IT-Services/ProIdentity-Access/main/server/install-release.sh
-sudo sh install-release.sh Pro-IT-Services/ProIdentity-Access 0.5.26
+sudo sh install-release.sh Pro-IT-Services/ProIdentity-Access 0.6.1
 ```
 
 The installer downloads and verifies these release assets:
 
 ```text
-ProIdentity-Access-Server-0.5.26-linux-amd64.tar.gz
-ProIdentity-Access-0.5.26-SHA256SUMS.txt
+ProIdentity-Access-Server-0.6.1-linux-amd64.tar.gz
+ProIdentity-Access-0.6.1-SHA256SUMS.txt
 ```
 
 It installs:
@@ -500,9 +500,9 @@ https://github.com/Pro-IT-Services/ProIdentity-Access/releases
 Release assets:
 
 ```text
-ProIdentity-Access-0.5.26.msi
-ProIdentity-Access-0.5.26.pkg
-ProIdentity-Access-0.5.26-SHA256SUMS.txt
+ProIdentity-Access-0.6.1.msi
+ProIdentity-Access-0.6.1.pkg
+ProIdentity-Access-0.6.1-SHA256SUMS.txt
 ```
 
 Windows:
@@ -551,7 +551,7 @@ Windows desktop build requirements:
 
 ```powershell
 cd client
-powershell -ExecutionPolicy Bypass -File .\build.ps1 -Version 0.5.26
+powershell -ExecutionPolicy Bypass -File .\build.ps1 -Version 0.6.1
 ```
 
 macOS desktop build requirements:
@@ -562,7 +562,7 @@ macOS desktop build requirements:
 
 ```sh
 cd client
-./build.sh --version 0.5.26
+./build.sh --version 0.6.1
 ```
 
 Android build:

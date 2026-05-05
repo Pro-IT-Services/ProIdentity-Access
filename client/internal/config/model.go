@@ -10,6 +10,7 @@ import (
 // TunnelConfig represents a complete WireGuard tunnel configuration.
 type TunnelConfig struct {
 	ID        string
+	OwnerID   string
 	Name      string
 	Interface InterfaceConfig
 	Peers     []PeerConfig

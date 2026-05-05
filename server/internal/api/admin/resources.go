@@ -31,8 +31,18 @@ func (h *ResourceHandler) Create(w http.ResponseWriter, r *http.Request) {
 		jsonError(w, 400, "name and ip_address required")
 		return
 	}
-	if req.Type != "host" && req.Type != "network" {
+	name, err := cleanText("name", req.Name, 128)
+	if err != nil {
+		jsonError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	if req.Type == "" {
 		req.Type = "host"
+	}
+	addr, mask, err := validateResourceAddress(req.Type, req.IPAddress, req.Mask)
+	if err != nil {
+		jsonError(w, http.StatusBadRequest, err.Error())
+		return
 	}
 	normalizedPorts, err := normalizeResourcePorts(req.Ports)
 	if err != nil {
@@ -42,7 +52,7 @@ func (h *ResourceHandler) Create(w http.ResponseWriter, r *http.Request) {
 	id := uuid.New().String()
 	h.DB.Exec(
 		"INSERT INTO resources (id, name, ip_address, type, mask, ports, description) VALUES (?, ?, ?, ?, ?, ?, ?)",
-		id, req.Name, req.IPAddress, req.Type, req.Mask, normalizedPorts, req.Description,
+		id, name, addr, req.Type, mask, normalizedPorts, req.Description,
 	)
 	var res model.Resource
 	h.DB.Get(&res, "SELECT * FROM resources WHERE id=?", id)
@@ -71,16 +81,37 @@ func (h *ResourceHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	decode(r, &req)
 	if req.Name != nil {
-		h.DB.Exec("UPDATE resources SET name=? WHERE id=?", *req.Name, id)
+		name, err := cleanText("name", *req.Name, 128)
+		if err != nil {
+			jsonError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		h.DB.Exec("UPDATE resources SET name=? WHERE id=?", name, id)
 	}
-	if req.IPAddress != nil {
-		h.DB.Exec("UPDATE resources SET ip_address=? WHERE id=?", *req.IPAddress, id)
-	}
-	if req.Type != nil {
-		h.DB.Exec("UPDATE resources SET type=? WHERE id=?", *req.Type, id)
-	}
-	if req.Mask != nil {
-		h.DB.Exec("UPDATE resources SET mask=? WHERE id=?", *req.Mask, id)
+	if req.IPAddress != nil || req.Type != nil || req.Mask != nil {
+		var current model.Resource
+		if err := h.DB.Get(&current, "SELECT * FROM resources WHERE id=?", id); err != nil {
+			jsonError(w, http.StatusNotFound, "not found")
+			return
+		}
+		kind := current.Type
+		ip := current.IPAddress
+		mask := current.Mask
+		if req.Type != nil {
+			kind = *req.Type
+		}
+		if req.IPAddress != nil {
+			ip = *req.IPAddress
+		}
+		if req.Mask != nil {
+			mask = req.Mask
+		}
+		addr, normalizedMask, err := validateResourceAddress(kind, ip, mask)
+		if err != nil {
+			jsonError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		h.DB.Exec("UPDATE resources SET ip_address=?, type=?, mask=? WHERE id=?", addr, kind, normalizedMask, id)
 	}
 	if req.Ports != nil {
 		normalizedPorts, err := normalizeResourcePorts(req.Ports)

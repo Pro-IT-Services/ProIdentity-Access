@@ -67,6 +67,7 @@ func (t *Tunnel) Info() ipc.TunnelInfo {
 
 	return ipc.TunnelInfo{
 		ID:         t.Config.ID,
+		OwnerID:    t.Config.OwnerID,
 		Name:       t.Config.Name,
 		Status:     t.status,
 		Addresses:  t.Config.Interface.Addresses,
