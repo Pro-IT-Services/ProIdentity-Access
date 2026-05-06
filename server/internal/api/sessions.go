@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"proidentity/internal/auth"
+	"proidentity/internal/session"
 )
 
 // GET /api/v1/servers — lists servers available to the authenticated user
@@ -94,7 +95,13 @@ func (s *Server) handleCreateSession(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	sess, wgConfig, endpoints, err := s.sessions.CreateSession(claims.UserID, req.ServerID, req.ClientPublicKey)
+	meta := session.SessionMetadata{
+		SourceIP:   remoteAddr(r),
+		DeviceID:   r.Header.Get("X-Device-ID"),
+		DeviceName: s.deviceName(r.Header.Get("X-Device-ID")),
+		UserAgent:  r.UserAgent(),
+	}
+	sess, wgConfig, endpoints, err := s.sessions.CreateSession(claims.UserID, req.ServerID, req.ClientPublicKey, meta)
 	if err != nil {
 		jsonError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -176,4 +183,13 @@ func (s *Server) handleMySessions(w http.ResponseWriter, r *http.Request) {
 		sessions = append(sessions, m)
 	}
 	jsonOK(w, sessions)
+}
+
+func (s *Server) deviceName(deviceID string) string {
+	if deviceID == "" {
+		return ""
+	}
+	var name string
+	_ = s.db.Get(&name, "SELECT device_name FROM installations WHERE id=?", deviceID)
+	return name
 }

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { api, type Session, type AdminSession } from '../api/client'
+import { api, type Session, type AdminSession, type VPNEvent } from '../api/client'
 import { useAuthStore } from '../stores/useAuthStore'
-import { Wifi, WifiOff, RefreshCw, Trash2 } from 'lucide-react'
+import { Laptop, LogIn, LogOut, Wifi, WifiOff, RefreshCw, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
@@ -9,13 +9,23 @@ import { Card, CardContent } from '@/components/ui/card'
 export default function Sessions() {
   const user = useAuthStore(s => s.user)
   const [sessions, setSessions] = useState<(Session | AdminSession)[]>([])
+  const [events, setEvents] = useState<VPNEvent[]>([])
   const [loading, setLoading] = useState(true)
 
   const load = async () => {
     setLoading(true)
     try {
-      if (user?.is_admin) setSessions(await api.listAllSessions())
-      else setSessions(await api.mySessions())
+      if (user?.is_admin) {
+        const [live, history] = await Promise.all([
+          api.listAllSessions(),
+          api.listVPNEvents({ limit: 100 }),
+        ])
+        setSessions(live)
+        setEvents(history.items ?? [])
+      } else {
+        setSessions(await api.mySessions())
+        setEvents([])
+      }
     } finally {
       setLoading(false)
     }
@@ -28,6 +38,7 @@ export default function Sessions() {
     if (user?.is_admin) await api.terminateSession(id)
     else await api.deleteSession(id)
     setSessions(prev => prev.filter(s => s.id !== id))
+    if (user?.is_admin) api.listVPNEvents({ limit: 100 }).then(d => setEvents(d.items ?? [])).catch(() => {})
   }
 
   return (
@@ -65,7 +76,10 @@ export default function Sessions() {
                     <Badge variant="success">Active</Badge>
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Connected {formatRelative(s.created_at)} · Last seen {formatRelative(s.last_keepalive)}
+                    Connected {formatRelative(s.created_at)} - Last seen {formatRelative(s.last_keepalive)}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {adminLabel(s)}
                   </p>
                 </div>
                 <Button variant="destructive" size="sm" onClick={() => terminate(s.id)}>
@@ -76,8 +90,65 @@ export default function Sessions() {
           ))}
         </div>
       )}
+
+      {user?.is_admin && (
+        <section className="mt-8">
+          <div className="flex items-end justify-between mb-3">
+            <div>
+              <h2 className="text-lg font-semibold">Connection history</h2>
+              <p className="text-muted-foreground text-sm">Recent VPN connects and disconnects with source and device.</p>
+            </div>
+            <Badge variant="secondary">{events.length} shown</Badge>
+          </div>
+          {events.length === 0 ? (
+            <Card>
+              <CardContent className="p-8 flex flex-col items-center text-muted-foreground">
+                <Laptop className="w-9 h-9 mb-3 opacity-40" />
+                <p className="text-sm">No connection events recorded yet</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-2">
+              {events.map(e => (
+                <Card key={e.id}>
+                  <CardContent className="p-4 flex items-center gap-4">
+                    <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${e.event_type === 'connected' ? 'bg-success/10' : 'bg-muted'}`}>
+                      {e.event_type === 'connected'
+                        ? <LogIn className="w-4 h-4 text-success" />
+                        : <LogOut className="w-4 h-4 text-muted-foreground" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-medium text-sm">{e.username ?? e.email ?? 'Unknown user'}</span>
+                        <Badge variant={e.event_type === 'connected' ? 'success' : 'secondary'}>
+                          {e.event_type === 'connected' ? 'Connected' : 'Disconnected'}
+                        </Badge>
+                        {e.reason && <span className="text-xs text-muted-foreground">{e.reason}</span>}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {e.server_name ?? 'Unknown server'} - VPN {e.assigned_ip} - Source {e.source_ip ?? 'unknown'}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                        Device {e.device_name || e.device_id || 'unknown'} - {formatRelative(e.created_at)}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
     </div>
   )
+}
+
+function adminLabel(s: Session | AdminSession): string {
+  const parts: string[] = []
+  if ('server_name' in s && s.server_name) parts.push(`Server ${s.server_name}`)
+  if (s.source_ip) parts.push(`Source ${s.source_ip}`)
+  if (s.device_name || s.device_id) parts.push(`Device ${s.device_name || s.device_id}`)
+  return parts.length > 0 ? parts.join(' - ') : 'Source and device not recorded for this session'
 }
 
 function formatRelative(ts: string): string {

@@ -101,7 +101,9 @@ nano .env
 | `PROIDENTITY_HTTP_PORT` | Yes | `8080` | Host HTTP port for reverse proxy. |
 | `PROIDENTITY_WG_UDP_PORTS` | Yes | `51820-51840` | Host UDP range mapped to container `51820-51840/udp`. |
 | `PROIDENTITY_JWT_SECRET` | Yes | generated or placeholder | Long random JWT signing secret. |
-| `PROIDENTITY_TRUSTED_PROXIES` | Recommended | private networks | Reverse proxy networks allowed to pass client IP headers. |
+| `PROIDENTITY_TRUSTED_PROXIES` | Recommended | private networks | Reverse proxy IPs/CIDRs allowed to pass client IP headers. |
+| `PROIDENTITY_TRUST_LOOPBACK_PROXY` | Recommended | `1` | Trust proxy headers from same-host reverse proxies. |
+| `PROIDENTITY_DISABLE_X_FORWARDED_FOR` | Optional | empty | Set to `1` to ignore `X-Forwarded-For`. |
 | `WG_ADMIN_USER` | Yes on first boot | `admin` | Initial admin username. |
 | `WG_ADMIN_EMAIL` | Recommended | `admin@localhost` | Initial admin email. |
 | `WG_ADMIN_PASS` | Yes on first boot | generated or placeholder | Initial admin password. |

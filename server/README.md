@@ -231,6 +231,28 @@ sudo systemctl reload nginx
 sudo certbot --nginx -d vpn.example.com
 ```
 
+Configure trusted proxy headers so logs, audit events, push-auth requests, and
+VPN connection history use the real client IP. Same-host reverse proxy:
+
+```ini
+[Service]
+Environment=PROIDENTITY_TRUST_LOOPBACK_PROXY=1
+```
+
+Separate proxy host or network:
+
+```ini
+[Service]
+Environment=PROIDENTITY_TRUSTED_PROXIES=10.10.2.69,10.0.0.0/8
+```
+
+Apply with:
+
+```sh
+sudo systemctl daemon-reload
+sudo systemctl restart proidentity
+```
+
 Expose only:
 
 ```text

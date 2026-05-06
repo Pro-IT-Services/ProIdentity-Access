@@ -120,6 +120,14 @@ export const api = {
   // Admin — sessions
   listAllSessions: () => request<AdminSession[]>('GET', '/admin/sessions'),
   terminateSession: (id: string) => request<{ ok: boolean }>('DELETE', `/admin/sessions/${id}`),
+  listVPNEvents: (params: { limit?: number; offset?: number; user_id?: string; server_id?: string; event?: 'connected' | 'disconnected'; device?: string; source_ip?: string; since?: string } = {}) => {
+    const q = new URLSearchParams()
+    Object.entries(params).forEach(([k, v]) => { if (v != null && v !== '') q.set(k, String(v)) })
+    const qs = q.toString()
+    return request<{ items: VPNEvent[]; total: number; limit: number; offset: number }>(
+      'GET', `/admin/vpn-events${qs ? '?' + qs : ''}`,
+    )
+  },
 
   // Admin — user stored configs
   adminListUserConfigs: () => request<UserConfig[]>('GET', '/admin/user-configs'),
@@ -290,6 +298,10 @@ export interface Session {
   id: string
   server_id: string | null
   assigned_ip: string
+  source_ip?: string | null
+  device_id?: string | null
+  device_name?: string | null
+  user_agent?: string | null
   created_at: string
   last_keepalive: string
 }
@@ -297,6 +309,7 @@ export interface Session {
 export interface AdminSession extends Session {
   username: string
   email: string
+  server_name?: string | null
 }
 
 export interface UserConfig {
@@ -419,6 +432,24 @@ export interface AuditRow {
   ip: string | null
   user_agent: string | null
   detail: string | null
+}
+
+export interface VPNEvent {
+  id: string
+  event_type: 'connected' | 'disconnected'
+  reason: string | null
+  user_id: string | null
+  username: string | null
+  email: string | null
+  session_id: string
+  server_id: string | null
+  server_name: string | null
+  assigned_ip: string
+  source_ip: string | null
+  device_id: string | null
+  device_name: string | null
+  user_agent: string | null
+  created_at: string
 }
 
 export interface ReachRow {

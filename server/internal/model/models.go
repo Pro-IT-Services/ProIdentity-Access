@@ -78,6 +78,10 @@ type Session struct {
 	ServerID        *string   `db:"server_id"         json:"server_id"`
 	ClientPublicKey string    `db:"client_public_key" json:"client_public_key"`
 	AssignedIP      string    `db:"assigned_ip"       json:"assigned_ip"`
+	SourceIP        *string   `db:"source_ip"         json:"source_ip,omitempty"`
+	DeviceID        *string   `db:"device_id"         json:"device_id,omitempty"`
+	DeviceName      *string   `db:"device_name"       json:"device_name,omitempty"`
+	UserAgent       *string   `db:"user_agent"        json:"user_agent,omitempty"`
 	CreatedAt       time.Time `db:"created_at"        json:"created_at"`
 	LastKeepalive   time.Time `db:"last_keepalive"    json:"last_keepalive"`
 }

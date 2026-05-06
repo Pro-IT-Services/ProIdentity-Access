@@ -17,6 +17,7 @@ import (
 	"proidentity/internal/audit"
 	"proidentity/internal/auth"
 	"proidentity/internal/config"
+	"proidentity/internal/requestip"
 	"proidentity/internal/session"
 	"proidentity/internal/wireguard"
 )
@@ -47,6 +48,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) buildRouter() *chi.Mux {
 	r := chi.NewRouter()
+	r.Use(realIPMiddleware)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(securityHeaders)
@@ -198,6 +200,7 @@ func (s *Server) buildRouter() *chi.Mux {
 			r.With(RequirePerm(auth.PermSessionsManage)).Group(func(r chi.Router) {
 				sh := &admin.SessionHandler{DB: s.db}
 				r.Get("/admin/sessions", sh.List)
+				r.Get("/admin/vpn-events", (&admin.VPNEventHandler{DB: s.db}).List)
 				r.Delete("/admin/sessions/{id}", func(w http.ResponseWriter, r *http.Request) {
 					id := chi.URLParam(r, "id")
 					if err := s.sessions.Terminate(id); err != nil {
@@ -258,6 +261,15 @@ func (s *Server) buildRouter() *chi.Mux {
 	}
 
 	return r
+}
+
+func realIPMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if ip := requestip.ClientIP(r); ip != "" {
+			r.RemoteAddr = ip
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 // handleInfo returns public server metadata (no auth required).

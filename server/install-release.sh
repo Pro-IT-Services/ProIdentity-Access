@@ -19,6 +19,8 @@ Environment:
   PROIDENTITY_DATABASE_PASS generated when not set
   PROIDENTITY_DATABASE_HOST default: 127.0.0.1:3306
   PROIDENTITY_DATABASE_DSN  generated when not set
+  PROIDENTITY_TRUSTED_PROXIES comma-separated trusted reverse proxy IPs/CIDRs
+  PROIDENTITY_TRUST_LOOPBACK_PROXY set to 1 when a local reverse proxy forwards HTTP
 EOF
 }
 
@@ -143,6 +145,9 @@ if [ ! -f "$config_dir/proidentity.env" ]; then
   cat > "$config_dir/proidentity.env" <<EOF
 PROIDENTITY_JWT_SECRET=$jwt_secret
 PROIDENTITY_DATABASE_DSN=$db_dsn
+PROIDENTITY_TRUSTED_PROXIES=${PROIDENTITY_TRUSTED_PROXIES:-}
+PROIDENTITY_TRUST_LOOPBACK_PROXY=${PROIDENTITY_TRUST_LOOPBACK_PROXY:-}
+PROIDENTITY_DISABLE_X_FORWARDED_FOR=${PROIDENTITY_DISABLE_X_FORWARDED_FOR:-}
 WG_ADMIN_USER=admin
 WG_ADMIN_PASS=$admin_pass
 WG_ADMIN_EMAIL=admin@localhost

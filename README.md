@@ -297,6 +297,33 @@ sudo systemctl reload nginx
 sudo certbot --nginx -d vpn.example.com
 ```
 
+To make audit logs, VPN connection history, rate limits, and push-auth context show
+the real client IP instead of the reverse proxy IP, configure trusted proxy
+headers on the server. For a same-host Nginx proxy:
+
+```sh
+sudo systemctl edit proidentity
+```
+
+```ini
+[Service]
+Environment=PROIDENTITY_TRUST_LOOPBACK_PROXY=1
+```
+
+For a separate reverse proxy host, use its address or subnet:
+
+```ini
+[Service]
+Environment=PROIDENTITY_TRUSTED_PROXIES=10.10.2.69,10.0.0.0/8
+```
+
+Then reload and restart:
+
+```sh
+sudo systemctl daemon-reload
+sudo systemctl restart proidentity
+```
+
 After Certbot, verify that the public URL works:
 
 ```sh
@@ -445,7 +472,9 @@ Important Docker `.env` fields:
 | `PROIDENTITY_HTTP_PORT` | Yes | Host HTTP port, usually `8080`. |
 | `PROIDENTITY_WG_UDP_PORTS` | Yes | Host UDP range published to the container. |
 | `PROIDENTITY_JWT_SECRET` | Yes | Long random JWT signing secret. |
-| `PROIDENTITY_TRUSTED_PROXIES` | Recommended | Reverse proxy networks allowed to pass client IP headers. |
+| `PROIDENTITY_TRUSTED_PROXIES` | Recommended | Comma-separated reverse proxy IPs/CIDRs allowed to pass client IP headers, for example `127.0.0.1,10.10.2.69,10.0.0.0/8`. |
+| `PROIDENTITY_TRUST_LOOPBACK_PROXY` | Recommended behind local proxy | Set to `1` when Nginx/Caddy/Traefik runs on the same host and forwards from `127.0.0.1` or `::1`. |
+| `PROIDENTITY_DISABLE_X_FORWARDED_FOR` | Optional | Set to `1` to ignore `X-Forwarded-For` and use only `Forwarded`/`X-Real-IP` from trusted proxies. |
 | `WG_ADMIN_USER` | Yes on first boot | Initial admin username. |
 | `WG_ADMIN_EMAIL` | Recommended | Initial admin email. |
 | `WG_ADMIN_PASS` | Yes on first boot | Initial admin password. |

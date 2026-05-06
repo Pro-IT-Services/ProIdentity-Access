@@ -1,6 +1,7 @@
 package session
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 	"strconv"
@@ -23,13 +24,20 @@ type Manager struct {
 	settings func(key string) string // live settings lookup
 }
 
+type SessionMetadata struct {
+	SourceIP   string
+	DeviceID   string
+	DeviceName string
+	UserAgent  string
+}
+
 func NewManager(db *sqlx.DB, registry *wireguard.Registry, fw *firewall.Manager, settings func(string) string) *Manager {
 	return &Manager{db: db, registry: registry, fw: fw, settings: settings}
 }
 
 // CreateSession allocates an IP on the given server, adds a WG peer, installs firewall rules,
 // and returns the full WireGuard client config string.
-func (m *Manager) CreateSession(userID, serverID, clientPubKey string) (*model.Session, string, []EndpointCandidate, error) {
+func (m *Manager) CreateSession(userID, serverID, clientPubKey string, meta SessionMetadata) (*model.Session, string, []EndpointCandidate, error) {
 	inst, err := m.registry.Get(serverID)
 	if err != nil {
 		return nil, "", nil, fmt.Errorf("server not available: %w", err)
@@ -50,13 +58,22 @@ func (m *Manager) CreateSession(userID, serverID, clientPubKey string) (*model.S
 		ServerID:        &serverID,
 		ClientPublicKey: clientPubKey,
 		AssignedIP:      assignedIP,
+		SourceIP:        optionalString(meta.SourceIP),
+		DeviceID:        optionalString(meta.DeviceID),
+		DeviceName:      optionalString(meta.DeviceName),
+		UserAgent:       optionalString(meta.UserAgent),
 		CreatedAt:       time.Now(),
 		LastKeepalive:   time.Now(),
 	}
 	_, err = m.db.Exec(`
-		INSERT INTO sessions (id, user_id, server_id, client_public_key, assigned_ip, created_at, last_keepalive)
-		VALUES (?, ?, ?, ?, ?, NOW(), NOW())`,
+		INSERT INTO sessions (
+			id, user_id, server_id, client_public_key, assigned_ip,
+			source_ip, device_id, device_name, user_agent,
+			created_at, last_keepalive
+		)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
 		sess.ID, sess.UserID, sess.ServerID, sess.ClientPublicKey, sess.AssignedIP,
+		sess.SourceIP, sess.DeviceID, sess.DeviceName, sess.UserAgent,
 	)
 	if err != nil {
 		_ = ReleaseIP(m.db, serverID, assignedIP)
@@ -65,19 +82,19 @@ func (m *Manager) CreateSession(userID, serverID, clientPubKey string) (*model.S
 
 	// Add WireGuard peer then do a full config sync
 	if err := inst.Manager.AddPeer(clientPubKey, assignedIP); err != nil {
-		_ = m.deleteSession(sess)
+		_ = m.deleteSession(sess, "", false)
 		return nil, "", nil, fmt.Errorf("wg add peer: %w", err)
 	}
 	m.syncServerPeers(serverID)
 
 	resources, err := m.userResources(serverID, userID)
 	if err != nil {
-		_ = m.deleteSession(sess)
+		_ = m.deleteSession(sess, "", false)
 		return nil, "", nil, fmt.Errorf("get resources for server %s: %w", serverID, err)
 	}
 	if len(resources) > 0 {
 		if err := m.fw.AddRules(assignedIP, resources); err != nil {
-			_ = m.deleteSession(sess)
+			_ = m.deleteSession(sess, "", false)
 			return nil, "", nil, fmt.Errorf("add firewall rules for %s: %w", assignedIP, err)
 		}
 	}
@@ -87,7 +104,7 @@ func (m *Manager) CreateSession(userID, serverID, clientPubKey string) (*model.S
 	serverPubKey := srv.PublicKey
 	endpoints, err := m.resolvedEndpoints(srv)
 	if err != nil {
-		_ = m.deleteSession(sess)
+		_ = m.deleteSession(sess, "", false)
 		return nil, "", nil, err
 	}
 	endpoint := endpoints[0].Endpoint
@@ -114,6 +131,8 @@ AllowedIPs = %s
 PersistentKeepalive = 25
 `, assignedIP, dnsLine, serverPubKey, endpoint, allowedIPs)
 
+	m.recordConnectionEvent("connected", "", sess)
+
 	return sess, cfg, endpoints, nil
 }
 
@@ -136,7 +155,7 @@ func (m *Manager) Terminate(sessionID string) error {
 	if err := m.db.Get(&sess, "SELECT * FROM sessions WHERE id=?", sessionID); err != nil {
 		return fmt.Errorf("session not found: %w", err)
 	}
-	return m.deleteSession(&sess)
+	return m.deleteSession(&sess, "requested", true)
 }
 
 // TerminateUserSessions tears down all sessions for a user.
@@ -147,7 +166,7 @@ func (m *Manager) TerminateUserSessions(userID string) error {
 	}
 	for _, s := range sessions {
 		s := s
-		if err := m.deleteSession(&s); err != nil {
+		if err := m.deleteSession(&s, "user_terminated", true); err != nil {
 			log.Printf("warn: terminate session %s: %v", s.ID, err)
 		}
 	}
@@ -163,7 +182,7 @@ func (m *Manager) TerminateAll() {
 	}
 	for _, s := range sessions {
 		s := s
-		if err := m.deleteSession(&s); err != nil {
+		if err := m.deleteSession(&s, "shutdown", true); err != nil {
 			log.Printf("warn: terminate session %s: %v", s.ID, err)
 		}
 	}
@@ -209,7 +228,7 @@ func (m *Manager) expireStale() {
 	for _, s := range stale {
 		s := s
 		log.Printf("session %s expired (user %s, ip %s)", s.ID, s.UserID, s.AssignedIP)
-		if err := m.deleteSession(&s); err != nil {
+		if err := m.deleteSession(&s, "expired", true); err != nil {
 			log.Printf("warn: expire session %s: %v", s.ID, err)
 		}
 	}
@@ -244,7 +263,7 @@ func (m *Manager) cleanDeadPeers() {
 		if err != nil {
 			// Peer is not present on the WireGuard interface at all — clean up
 			log.Printf("peer %s not on interface, cleaning session %s", s.ClientPublicKey[:8], s.ID)
-			if err := m.deleteSession(&s); err != nil {
+			if err := m.deleteSession(&s, "peer_missing", true); err != nil {
 				log.Printf("warn: cleanup ghost session %s: %v", s.ID, err)
 			}
 			continue
@@ -255,14 +274,14 @@ func (m *Manager) cleanDeadPeers() {
 		if age == 0 || age > deadThreshold {
 			log.Printf("dead peer %s (handshake age %v), terminating session %s",
 				s.ClientPublicKey[:8], age, s.ID)
-			if err := m.deleteSession(&s); err != nil {
+			if err := m.deleteSession(&s, "dead_peer", true); err != nil {
 				log.Printf("warn: terminate dead session %s: %v", s.ID, err)
 			}
 		}
 	}
 }
 
-func (m *Manager) deleteSession(sess *model.Session) error {
+func (m *Manager) deleteSession(sess *model.Session, reason string, emitEvent bool) error {
 	serverID := ""
 	if sess.ServerID != nil {
 		serverID = *sess.ServerID
@@ -297,6 +316,9 @@ func (m *Manager) deleteSession(sess *model.Session) error {
 	_, err := m.db.Exec("DELETE FROM sessions WHERE id=?", sess.ID)
 	if err != nil {
 		return err
+	}
+	if emitEvent {
+		m.recordConnectionEvent("disconnected", reason, sess)
 	}
 
 	// Full config sync after removal
@@ -388,6 +410,54 @@ func (m *Manager) ListSessions() ([]model.Session, error) {
 	var sessions []model.Session
 	err := m.db.Select(&sessions, "SELECT * FROM sessions ORDER BY created_at DESC")
 	return sessions, err
+}
+
+func optionalString(v string) *string {
+	v = strings.TrimSpace(v)
+	if v == "" {
+		return nil
+	}
+	return &v
+}
+
+func (m *Manager) recordConnectionEvent(eventType, reason string, sess *model.Session) {
+	if sess == nil {
+		return
+	}
+	serverID := ""
+	if sess.ServerID != nil {
+		serverID = *sess.ServerID
+	}
+
+	var username, email, serverName sql.NullString
+	_ = m.db.QueryRow(`
+		SELECT u.username, u.email, ws.name
+		FROM users u
+		LEFT JOIN wg_servers ws ON ws.id = ?
+		WHERE u.id = ?`,
+		serverID, sess.UserID,
+	).Scan(&username, &email, &serverName)
+
+	if _, err := m.db.Exec(`
+		INSERT INTO vpn_connection_events (
+			id, event_type, reason, user_id, username, email,
+			session_id, server_id, server_name, assigned_ip,
+			source_ip, device_id, device_name, user_agent
+		)
+		VALUES (UUID(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		eventType, optionalString(reason), sess.UserID, nullStringPtr(username), nullStringPtr(email),
+		sess.ID, optionalString(serverID), nullStringPtr(serverName), sess.AssignedIP,
+		sess.SourceIP, sess.DeviceID, sess.DeviceName, sess.UserAgent,
+	); err != nil {
+		log.Printf("warn: record vpn %s event session %s: %v", eventType, sess.ID, err)
+	}
+}
+
+func nullStringPtr(v sql.NullString) *string {
+	if !v.Valid {
+		return nil
+	}
+	return &v.String
 }
 
 // buildAllowedIPs returns a comma-separated list of CIDRs the client should route through VPN.

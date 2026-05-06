@@ -285,6 +285,7 @@ run_self_test() {
   VERSION="$DEFAULT_VERSION"
   SERVER_HOST="0.0.0.0"
   SERVER_PORT="8080"
+  TRUST_LOOPBACK_PROXY=""
   CORS_EXTRA=""
   CI_USER="proidentity"
   CI_PASSWORD="testLogin123"
@@ -392,7 +393,7 @@ choose_snippets_storage() {
 write_firstboot_snippet() {
   local snippet="$1"
   local db_name_q db_user_q db_pass_q admin_user_q admin_pass_q admin_email_q
-  local jwt_secret_q public_url_q repo_q version_q server_host_q server_port_q cors_extra_q
+  local jwt_secret_q public_url_q repo_q version_q server_host_q server_port_q trust_loopback_proxy_q cors_extra_q
   local hostname_q ci_user_q ci_password_q
   hostname_q="$(shell_quote "$HOSTNAME")"
   db_name_q="$(shell_quote "$DB_NAME")"
@@ -407,6 +408,7 @@ write_firstboot_snippet() {
   version_q="$(shell_quote "$VERSION")"
   server_host_q="$(shell_quote "$SERVER_HOST")"
   server_port_q="$(shell_quote "$SERVER_PORT")"
+  trust_loopback_proxy_q="$(shell_quote "$TRUST_LOOPBACK_PROXY")"
   cors_extra_q="$(shell_quote "$CORS_EXTRA")"
   ci_user_q="$(shell_quote "$CI_USER")"
   ci_password_q="$(shell_quote "$CI_PASSWORD")"
@@ -455,6 +457,7 @@ write_files:
       VERSION=${version_q}
       SERVER_HOST=${server_host_q}
       SERVER_PORT=${server_port_q}
+      TRUST_LOOPBACK_PROXY=${trust_loopback_proxy_q}
       CORS_EXTRA=${cors_extra_q}
       HOSTNAME=${hostname_q}
       CI_USER=${ci_user_q}
@@ -568,6 +571,7 @@ write_files:
       PROIDENTITY_DATABASE_DSN=\$DB_USER:\$DB_PASS@tcp(127.0.0.1:3306)/\$DB_NAME
       PROIDENTITY_SERVER_HOST=\$SERVER_HOST
       PROIDENTITY_SERVER_PORT=\$SERVER_PORT
+      PROIDENTITY_TRUST_LOOPBACK_PROXY=\$TRUST_LOOPBACK_PROXY
       WG_ADMIN_USER=\$ADMIN_USER
       WG_ADMIN_PASS=\$ADMIN_PASS
       WG_ADMIN_EMAIL=\$ADMIN_EMAIL
@@ -742,8 +746,10 @@ collect_inputs() {
     "proxy" "Reverse proxy: listen on 127.0.0.1")"
   if [[ "$LISTEN_MODE" == "direct" ]]; then
     SERVER_HOST="0.0.0.0"
+    TRUST_LOOPBACK_PROXY=""
   else
     SERVER_HOST="127.0.0.1"
+    TRUST_LOOPBACK_PROXY="1"
   fi
   if [[ "$IP_MODE" == "static" ]]; then
     DEFAULT_PUBLIC_URL="http://$(ip_without_cidr "$IP_CIDR"):${SERVER_PORT}"

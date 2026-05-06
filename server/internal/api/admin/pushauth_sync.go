@@ -3,7 +3,6 @@ package admin
 import (
 	"fmt"
 	"log"
-	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -11,6 +10,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	"proidentity/internal/model"
 	"proidentity/internal/pushauth"
+	"proidentity/internal/requestip"
 )
 
 type PushAuthSyncResult struct {
@@ -50,14 +50,7 @@ func displayNameForUser(u model.User) string {
 }
 
 func requestIP(r *http.Request) string {
-	if r == nil {
-		return ""
-	}
-	host, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err == nil {
-		return host
-	}
-	return r.RemoteAddr
+	return requestip.ClientIP(r)
 }
 
 func markPushAuthSync(db *sqlx.DB, userID, status string, errText *string) {

@@ -12,9 +12,12 @@ type SessionHandler struct{ DB *sqlx.DB }
 func (h *SessionHandler) List(w http.ResponseWriter, r *http.Request) {
 	rows, err := h.DB.Queryx(`
 		SELECT s.id, s.assigned_ip, s.created_at, s.last_keepalive,
+		       s.source_ip, s.device_id, s.device_name, s.user_agent,
+		       s.server_id, ws.name AS server_name,
 		       u.username, u.email
 		FROM sessions s
 		JOIN users u ON u.id = s.user_id
+		LEFT JOIN wg_servers ws ON ws.id = s.server_id
 		ORDER BY s.created_at DESC`)
 	if err != nil {
 		jsonError(w, 500, err.Error())
