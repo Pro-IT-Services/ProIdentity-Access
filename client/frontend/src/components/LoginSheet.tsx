@@ -38,7 +38,9 @@ export function LoginSheet({ open, onClose, onLoggedIn }: Props) {
 
   useEffect(() => {
     if (!open) return
-    setUsername(''); setPassword(''); setTotp(''); setNeedTotp(false); setShowPw(false)
+    // Prefill the saved username so a re-login after an expired session only
+    // needs the password/2FA.
+    setUsername(settings.username || ''); setPassword(''); setTotp(''); setNeedTotp(false); setShowPw(false)
     setPushEnabled(false); setPushRequestId(null); setPushStatus('idle'); setMode('totp')
     setPushLoading(false); setPushError('')
     stopPolling(); clearError()

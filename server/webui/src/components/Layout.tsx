@@ -2,7 +2,7 @@ import { Outlet, NavLink, useNavigate, Link } from 'react-router-dom'
 import { useAuthStore } from '../stores/useAuthStore'
 import {
   LayoutDashboard, Globe, Settings, LogOut,
-  Activity, User, Users, Network, History,
+  Activity, User, Users, Network, History, FileKey,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ThemeToggle } from './ThemeToggle'
@@ -32,6 +32,7 @@ const NAV: NavGroup[] = [
     items: [
       { to: '/access', label: 'Access', icon: Users, anyPerm: ['users.manage', 'resources.manage'] },
       { to: '/servers', label: 'Servers', icon: Globe, anyPerm: ['servers.manage'] },
+      { to: '/openvpn', label: 'OpenVPN', icon: FileKey, anyPerm: ['openvpn.manage'] },
       { to: '/topology', label: 'Topology', icon: Network, anyPerm: ['topology.read'] },
       { to: '/connection-history', label: 'Connection History', icon: History, anyPerm: ['sessions.manage'] },
       { to: '/system', label: 'System', icon: Settings, anyPerm: ['system.settings', 'roles.manage', 'audit.read', 'denials.read', 'diagnostics.read'] },

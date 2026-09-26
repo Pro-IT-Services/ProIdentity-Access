@@ -10,3 +10,13 @@ database:
 
 auth:
   jwt_secret: "set-with-PROIDENTITY_JWT_SECRET"
+  # How long a login stays valid. Also the inactivity window: a client closed
+  # longer than this must sign in again (server + username are remembered, so
+  # only the password/2FA is needed). Go duration string. Default 720h (30 days).
+  # Override with PROIDENTITY_TOKEN_TTL.
+  token_ttl: "720h"
+  # Maximum total lifetime of a continuously-used session before a full
+  # re-authentication is forced, even while the client keeps refreshing.
+  # Go duration string. Default 2160h (90 days). Override with
+  # PROIDENTITY_SESSION_MAX_AGE.
+  session_max_age: "2160h"

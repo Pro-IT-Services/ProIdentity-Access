@@ -196,9 +196,21 @@ func (c *Client) PollPushStatus(requestID string) (*PushAuthStatus, error) {
 	return &resp, nil
 }
 
-// CheckAuth calls /auth/me to verify the current token is still valid.
-func (c *Client) CheckAuth() error {
-	return c.getAuth("/auth/me", nil)
+// CheckAuth calls /auth/me to verify the current token is still valid. The
+// server may return a renewed token (sliding session); when it does, CheckAuth
+// applies it to this client and returns it so the caller can persist it.
+// Returns an empty string when the token was not refreshed.
+func (c *Client) CheckAuth() (string, error) {
+	var resp struct {
+		Token string `json:"token"`
+	}
+	if err := c.getAuth("/auth/me", &resp); err != nil {
+		return "", err
+	}
+	if resp.Token != "" {
+		c.Token = resp.Token
+	}
+	return resp.Token, nil
 }
 
 // ListServers returns the WireGuard servers accessible to the authenticated user.
@@ -284,6 +296,42 @@ func (c *Client) GetUserConfigKey() ([]byte, error) {
 		return nil, fmt.Errorf("unexpected key length %d", len(key))
 	}
 	return key, nil
+}
+
+// OpenVPNProfileInfo is metadata for an OpenVPN profile assigned to the user.
+type OpenVPNProfileInfo struct {
+	ID            string `json:"id"`
+	Name          string `json:"name"`
+	Description   string `json:"description,omitempty"`
+	RequiresTOTP  bool   `json:"requires_totp"`
+	AuthUserPass  bool   `json:"auth_user_pass"`
+	DevType       string `json:"dev_type"`
+	AllowCustomIP bool   `json:"allow_custom_ip"`
+	CustomIP      string `json:"custom_ip,omitempty"`
+}
+
+// OpenVPNProfileConfig is a profile's metadata plus its decrypted .ovpn config.
+type OpenVPNProfileConfig struct {
+	OpenVPNProfileInfo
+	Config string `json:"config"`
+}
+
+// ListOpenVPNProfiles returns OpenVPN profiles assigned to the current user.
+func (c *Client) ListOpenVPNProfiles() ([]OpenVPNProfileInfo, error) {
+	var profiles []OpenVPNProfileInfo
+	if err := c.getAuth("/openvpn/profiles", &profiles); err != nil {
+		return nil, err
+	}
+	return profiles, nil
+}
+
+// GetOpenVPNConfig fetches the decrypted .ovpn for an assigned profile.
+func (c *Client) GetOpenVPNConfig(id string) (*OpenVPNProfileConfig, error) {
+	var cfg OpenVPNProfileConfig
+	if err := c.getAuth("/openvpn/profiles/"+id+"/config", &cfg); err != nil {
+		return nil, err
+	}
+	return &cfg, nil
 }
 
 // ListUserConfigs returns metadata for all configs stored on the server.

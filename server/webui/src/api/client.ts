@@ -236,6 +236,19 @@ export const api = {
 
   // Admin — full access topology
   adminTopology: () => request<Topology>('GET', '/admin/topology'),
+
+  // Admin — OpenVPN profiles + per-user assignments
+  adminListOpenVPN: () => request<OpenVPNProfile[]>('GET', '/admin/openvpn/profiles'),
+  adminCreateOpenVPN: (data: { name: string; description?: string; config: string; requires_totp: boolean; allow_custom_ip: boolean; dev_type?: string }) =>
+    request<{ id: string; dev_type: string; auth_user_pass: boolean }>('POST', '/admin/openvpn/profiles', data),
+  adminUpdateOpenVPN: (id: string, data: { name: string; description?: string; requires_totp: boolean; allow_custom_ip: boolean; dev_type?: string; config?: string }) =>
+    request<{ ok: boolean }>('PUT', `/admin/openvpn/profiles/${id}`, data),
+  adminDeleteOpenVPN: (id: string) => request<{ ok: boolean }>('DELETE', `/admin/openvpn/profiles/${id}`),
+  adminOpenVPNAssignments: (id: string) => request<OpenVPNAssignment[]>('GET', `/admin/openvpn/profiles/${id}/assignments`),
+  adminAssignOpenVPN: (id: string, user_id: string, custom_ip?: string) =>
+    request<{ ok: boolean }>('POST', `/admin/openvpn/profiles/${id}/assignments`, { user_id, custom_ip }),
+  adminUnassignOpenVPN: (id: string, userId: string) =>
+    request<{ ok: boolean }>('DELETE', `/admin/openvpn/profiles/${id}/assignments/${userId}`),
 }
 
 // Types
@@ -258,6 +271,26 @@ export interface PermDef {
   label: string
   description: string
   category: string
+}
+
+export interface OpenVPNProfile {
+  id: string
+  name: string
+  description?: string
+  requires_totp: boolean
+  auth_user_pass: boolean
+  dev_type: string
+  allow_custom_ip: boolean
+  assigned_count: number
+  created_at: string
+}
+
+export interface OpenVPNAssignment {
+  user_id: string
+  username: string
+  email: string
+  custom_ip?: string
+  assigned_at: string
 }
 
 export interface Passkey {

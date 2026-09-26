@@ -1,5 +1,33 @@
 export namespace ipc {
 	
+	export class OpenVPNStatus {
+	    id: string;
+	    owner_id?: string;
+	    name: string;
+	    status: string;
+	    dev_type: string;
+	    ip?: string;
+	    rx_bytes: number;
+	    tx_bytes: number;
+	    error?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new OpenVPNStatus(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.owner_id = source["owner_id"];
+	        this.name = source["name"];
+	        this.status = source["status"];
+	        this.dev_type = source["dev_type"];
+	        this.ip = source["ip"];
+	        this.rx_bytes = source["rx_bytes"];
+	        this.tx_bytes = source["tx_bytes"];
+	        this.error = source["error"];
+	    }
+	}
 	export class PeerInfo {
 	    public_key?: string;
 	    endpoint: string;
@@ -137,6 +165,36 @@ export namespace main {
 	        this.logged_in = source["logged_in"];
 	        this.vpn_name = source["vpn_name"];
 	        this.totp_enabled = source["totp_enabled"];
+	    }
+	}
+	export class OpenVPNProfileView {
+	    id: string;
+	    name: string;
+	    source: string;
+	    requires_totp: boolean;
+	    auth_user_pass: boolean;
+	    dev_type: string;
+	    allow_custom_ip: boolean;
+	    custom_ip?: string;
+	    remembered_user?: string;
+	    has_saved_password: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new OpenVPNProfileView(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.source = source["source"];
+	        this.requires_totp = source["requires_totp"];
+	        this.auth_user_pass = source["auth_user_pass"];
+	        this.dev_type = source["dev_type"];
+	        this.allow_custom_ip = source["allow_custom_ip"];
+	        this.custom_ip = source["custom_ip"];
+	        this.remembered_user = source["remembered_user"];
+	        this.has_saved_password = source["has_saved_password"];
 	    }
 	}
 	export class UpdateCheckResult {

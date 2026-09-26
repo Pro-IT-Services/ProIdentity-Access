@@ -22,6 +22,10 @@ type Handler interface {
 	GetStats(principal Principal, id string) (*StatsInfo, error)
 	DaemonStatus() (*StatusResult, error)
 	SetEncryptionKey(principal Principal, key []byte) error
+
+	ConnectOpenVPN(principal Principal, p OpenVPNConnectParams) (*OpenVPNStatus, error)
+	DisconnectOpenVPN(principal Principal, id string) error
+	ListOpenVPN(principal Principal) ([]OpenVPNStatus, error)
 }
 
 // Server listens on the IPC socket and dispatches RPC calls to a Handler.
@@ -261,6 +265,34 @@ func (s *Server) dispatch(req Request, principal Principal) Response {
 		}
 		return okResponse(req.ID, true)
 
+	case MethodConnectOpenVPN:
+		var p OpenVPNConnectParams
+		if err := json.Unmarshal(req.Params, &p); err != nil {
+			return errResponse(req.ID, ErrCodeBadParams, "bad params")
+		}
+		st, err := s.handler.ConnectOpenVPN(principal, p)
+		if err != nil {
+			return errResponse(req.ID, ErrCodeTunnelError, err.Error())
+		}
+		return okResponse(req.ID, st)
+
+	case MethodDisconnectOpenVPN:
+		var p TunnelIDParam
+		if err := json.Unmarshal(req.Params, &p); err != nil {
+			return errResponse(req.ID, ErrCodeBadParams, "bad params")
+		}
+		if err := s.handler.DisconnectOpenVPN(principal, p.ID); err != nil {
+			return errResponse(req.ID, ErrCodeTunnelError, err.Error())
+		}
+		return okResponse(req.ID, true)
+
+	case MethodListOpenVPN:
+		sessions, err := s.handler.ListOpenVPN(principal)
+		if err != nil {
+			return errResponse(req.ID, ErrCodeInternal, err.Error())
+		}
+		return okResponse(req.ID, sessions)
+
 	default:
 		return errResponse(req.ID, -32601, fmt.Sprintf("unknown method %q", req.Method))
 	}
@@ -279,6 +311,12 @@ func eventVisibleToPrincipal(evt Event, principal Principal) bool {
 		return ownerVisible(info.OwnerID, principal)
 	case EventStatsUpdate:
 		var info StatsInfo
+		if err := json.Unmarshal(evt.Payload, &info); err != nil {
+			return false
+		}
+		return ownerVisible(info.OwnerID, principal)
+	case EventOpenVPNChanged:
+		var info OpenVPNStatus
 		if err := json.Unmarshal(evt.Payload, &info); err != nil {
 			return false
 		}

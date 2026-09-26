@@ -7,6 +7,7 @@ import { Button } from './ui/Button'
 import { StatusDot, type Status } from './ui/StatusDot'
 import { MonoChip } from './ui/MonoChip'
 import { managedDisconnectByTunnelID } from '../wailsbridge'
+import { OpenVPNPanel } from './OpenVPNPanel'
 import { cn } from '../lib/cn'
 
 import type { ServerInfo } from '../types'
@@ -74,8 +75,7 @@ export function ConnectionsList({ onConnected, onConnectIntent, onConnectManaged
 
   const showSignIn = !settings.logged_in && !!onSignIn
 
-  if (rows.length === 0) {
-    return (
+  const wgSection = rows.length === 0 ? (
       <div className="space-y-3">
         <p className="text-sm text-muted-foreground italic px-1">
           {showSignIn
@@ -88,10 +88,7 @@ export function ConnectionsList({ onConnected, onConnectIntent, onConnectManaged
           </Button>
         )}
       </div>
-    )
-  }
-
-  return (
+  ) : (
     <div className="space-y-3">
       {showSignIn && (
         <div className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg border border-dashed border-border bg-secondary/20">
@@ -212,6 +209,13 @@ export function ConnectionsList({ onConnected, onConnectIntent, onConnectManaged
         )
       })}
     </div>
+    </div>
+  )
+
+  return (
+    <div className="space-y-4">
+      {wgSection}
+      <OpenVPNPanel />
     </div>
   )
 }

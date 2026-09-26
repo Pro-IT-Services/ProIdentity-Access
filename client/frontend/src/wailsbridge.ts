@@ -237,6 +237,68 @@ export async function checkForUpdate(): Promise<UpdateCheckResult> {
   return await (await App()).CheckForUpdate() as UpdateCheckResult
 }
 
+// --- OpenVPN API ---
+
+export type OpenVPNProfileView = {
+  id: string
+  name: string
+  source: 'assigned' | 'local'
+  requires_totp: boolean
+  auth_user_pass: boolean
+  dev_type: 'tun' | 'tap'
+  allow_custom_ip: boolean
+  custom_ip?: string
+  remembered_user?: string
+  has_saved_password: boolean
+}
+
+export type OpenVPNStatus = {
+  id: string
+  name: string
+  status: 'disconnected' | 'connecting' | 'connected' | 'error'
+  dev_type: string
+  ip?: string
+  rx_bytes: number
+  tx_bytes: number
+  error?: string
+}
+
+export async function managedListOpenVPNProfiles(): Promise<OpenVPNProfileView[]> {
+  if (!isWails()) return []
+  return (await (await App()).ManagedListOpenVPNProfiles()) as OpenVPNProfileView[] ?? []
+}
+
+export async function managedListOpenVPNSessions(): Promise<OpenVPNStatus[]> {
+  if (!isWails()) return []
+  return (await (await App()).ManagedListOpenVPNSessions()) as OpenVPNStatus[] ?? []
+}
+
+export async function managedConnectOpenVPN(
+  id: string, source: string, username: string, password: string,
+  totp: string, customIP: string, remember: boolean,
+): Promise<OpenVPNStatus> {
+  return await (await App()).ManagedConnectOpenVPN(id, source, username, password, totp, customIP, remember) as OpenVPNStatus
+}
+
+export async function managedDisconnectOpenVPN(sessionID: string): Promise<void> {
+  if (!isWails()) return
+  await (await App()).ManagedDisconnectOpenVPN(sessionID)
+}
+
+export async function importOpenVPNProfile(name: string, config: string, requiresTotp: boolean): Promise<OpenVPNProfileView> {
+  return await (await App()).ImportOpenVPNProfile(name, config, requiresTotp) as OpenVPNProfileView
+}
+
+export async function deleteLocalOpenVPNProfile(id: string): Promise<void> {
+  if (!isWails()) return
+  await (await App()).DeleteLocalOpenVPNProfile(id)
+}
+
+export async function forgetOpenVPNPassword(id: string): Promise<void> {
+  if (!isWails()) return
+  await (await App()).ForgetOpenVPNPassword(id)
+}
+
 // Mock data for browser dev mode
 const MOCK_TUNNELS: TunnelInfo[] = [
   {

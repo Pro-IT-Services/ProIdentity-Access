@@ -208,17 +208,18 @@ export default function App() {
       refresh()
     })
     rt.EventsOn('auth.expired', () => {
-      toast('Your login expired or was revoked. Please set up again.', 'warning', 10_000)
+      toast('Your session expired. Please sign in again.', 'warning', 8_000)
       useTunnelStore.setState({ tunnels: [], selectedId: null, stats: {}, loading: false })
+      // Keep server_url + username + vpn_name so the login sheet is prefilled and
+      // the app shell stays put — only the session is gone. Do NOT touch the setup
+      // store: setup is still complete, we just need a fresh password/2FA.
+      const prev = useManagedStore.getState().settings
       useManagedStore.setState({
         servers: [],
-        settings: { server_url: '', username: '', is_admin: false, logged_in: false, vpn_name: '', totp_enabled: false },
+        settings: { ...prev, is_admin: false, logged_in: false },
         loading: false, error: null,
       })
-      useSetupStore.setState({ setupDone: false, step: 'mode', mode: null, serverURL: '', deviceName: '', loading: false, error: null })
-      try { localStorage.removeItem(LAST_SERVER_KEY) } catch { /* ignore */ }
-      setLastServerIdState(null)
-      setShowLogin(false)
+      setShowLogin(true)
     })
     rt.EventsOn('installation_revoked', () => {
       toast('Your login expired or device registration was revoked. Please set up again.', 'revoked', 0)

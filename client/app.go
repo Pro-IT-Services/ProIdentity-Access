@@ -106,6 +106,12 @@ func (a *App) forwardDaemonEvents() {
 				runtime.EventsEmit(a.ctx, evt.Type, info)
 				signalTrayRefresh()
 			}
+		case ipc.EventOpenVPNChanged:
+			var st ipc.OpenVPNStatus
+			if json.Unmarshal(evt.Payload, &st) == nil {
+				runtime.EventsEmit(a.ctx, evt.Type, st)
+				signalTrayRefresh()
+			}
 		}
 	}
 }
@@ -1075,27 +1081,19 @@ func (a *App) handleRevoked() {
 // the in-memory mUserConfigs map. Config content is NEVER pre-fetched or stored on disk.
 // Configs are only downloaded when the user explicitly connects to them.
 func (a *App) handleAuthInvalid() {
-	a.resetManagedInstallation("Login expired or authorization revoked")
+	a.softLogout("Login expired — password/2FA required")
 }
 
-func (a *App) handleManagedAuthError(err error) error {
-	if errors.Is(err, managed.ErrDeviceRevoked) {
-		a.handleRevoked()
-		return err
-	}
-	if errors.Is(err, managed.ErrAuthInvalid) {
-		a.handleAuthInvalid()
-		return err
-	}
-	return nil
-}
-
-func (a *App) resetManagedInstallation(reason string) {
-	log.Printf("%s: wiping all local credentials and state", reason)
+// softLogout clears the session token and tears down live tunnels, but keeps
+// the server URL, username, and device registration on disk. The user can sign
+// back in with just their password/2FA — no full re-setup. Use this for expired
+// or otherwise invalid tokens; use handleRevoked when the server has actually
+// deregistered this device.
+func (a *App) softLogout(reason string) {
+	log.Printf("%s: clearing session, keeping server + device registration", reason)
 
 	a.stopPollLoop()
 	a.disconnectAll()
-	a.wipeAllDaemonTunnels()
 
 	a.mMu.Lock()
 	for _, tID := range a.mUserConfigTunnels {
@@ -1108,14 +1106,32 @@ func (a *App) resetManagedInstallation(reason string) {
 	a.mUserConfigTunnels = make(map[string]string)
 	a.mConfigKey = nil
 	a.mClient = nil
-	a.mSettings = &managed.Settings{}
+	// Clear only the session; keep ServerURL, Username, VPNName, TOTPEnabled,
+	// DeviceID, keys, Mode and SetupDone so re-login needs password/2FA only.
+	a.mSettings.Token = ""
+	a.mSettings.IsAdmin = false
+	settings := a.mSettings
 	a.mMu.Unlock()
 
-	_ = a.mSettings.Delete()
+	if err := settings.Save(); err != nil {
+		log.Printf("softLogout: persist settings: %v", err)
+	}
 
 	if a.ctx != nil {
-		runtime.EventsEmit(a.ctx, "installation_revoked", nil)
+		runtime.EventsEmit(a.ctx, "auth.expired", nil)
 	}
+}
+
+func (a *App) handleManagedAuthError(err error) error {
+	if errors.Is(err, managed.ErrDeviceRevoked) {
+		a.handleRevoked()
+		return err
+	}
+	if errors.Is(err, managed.ErrAuthInvalid) {
+		a.handleAuthInvalid()
+		return err
+	}
+	return nil
 }
 
 func (a *App) wipeAllDaemonTunnels() {
@@ -1364,12 +1380,23 @@ func (a *App) pollLoop(ctx context.Context, mc *managed.Client) {
 			return
 		case <-ticker.C:
 			// Check token is still valid (detects password change, user disabled, etc.)
-			if err := mc.CheckAuth(); err != nil {
+			// The server may hand back a renewed token to keep an active session alive.
+			refreshed, err := mc.CheckAuth()
+			if err != nil {
 				if handled := a.handleManagedAuthError(err); handled != nil {
 					return
 				}
 				log.Printf("poll: auth check failed: %v — forcing re-login", err)
 				return
+			}
+			if refreshed != "" {
+				a.mMu.Lock()
+				a.mSettings.Token = refreshed
+				err := a.mSettings.Save()
+				a.mMu.Unlock()
+				if err != nil {
+					log.Printf("poll: persist refreshed token: %v", err)
+				}
 			}
 
 			if err := a.syncServerConfigs(mc); err != nil {

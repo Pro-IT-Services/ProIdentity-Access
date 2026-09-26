@@ -8,11 +8,17 @@ export function CheckForUpdate():Promise<main.UpdateCheckResult>;
 
 export function ConnectTunnel(arg1:string):Promise<void>;
 
+export function DeleteLocalOpenVPNProfile(arg1:string):Promise<void>;
+
 export function DeleteTunnel(arg1:string):Promise<void>;
 
 export function DisconnectTunnel(arg1:string):Promise<void>;
 
+export function ForgetOpenVPNPassword(arg1:string):Promise<void>;
+
 export function GetStats(arg1:string):Promise<ipc.StatsInfo>;
+
+export function ImportOpenVPNProfile(arg1:string,arg2:string,arg3:boolean):Promise<main.OpenVPNProfileView>;
 
 export function ImportTunnel(arg1:string,arg2:string):Promise<ipc.TunnelInfo>;
 
@@ -26,6 +32,8 @@ export function ManagedCheckSetup():Promise<boolean>;
 
 export function ManagedCompleteSetup():Promise<void>;
 
+export function ManagedConnectOpenVPN(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:string,arg7:boolean):Promise<ipc.OpenVPNStatus>;
+
 export function ManagedConnectServer(arg1:string,arg2:string,arg3:string):Promise<ipc.TunnelInfo>;
 
 export function ManagedConnectServerPush(arg1:string,arg2:string,arg3:string):Promise<ipc.TunnelInfo>;
@@ -36,11 +44,17 @@ export function ManagedDefaultDeviceName():Promise<string>;
 
 export function ManagedDisconnectByTunnelID(arg1:string):Promise<void>;
 
+export function ManagedDisconnectOpenVPN(arg1:string):Promise<void>;
+
 export function ManagedDisconnectServer(arg1:string):Promise<void>;
 
 export function ManagedGetSettings():Promise<main.ManagedSettings>;
 
 export function ManagedGetSetupStep():Promise<string>;
+
+export function ManagedListOpenVPNProfiles():Promise<Array<main.OpenVPNProfileView>>;
+
+export function ManagedListOpenVPNSessions():Promise<Array<ipc.OpenVPNStatus>>;
 
 export function ManagedListServers():Promise<Array<managed.ServerInfo>>;
 

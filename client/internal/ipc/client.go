@@ -130,6 +130,20 @@ func (c *Client) SetEncryptionKey(key []byte) error {
 	return c.call(MethodSetEncryptionKey, SetEncryptionKeyParams{Key: key}, nil)
 }
 
+func (c *Client) ConnectOpenVPN(p OpenVPNConnectParams) (*OpenVPNStatus, error) {
+	var result OpenVPNStatus
+	return &result, c.call(MethodConnectOpenVPN, p, &result)
+}
+
+func (c *Client) DisconnectOpenVPN(id string) error {
+	return c.call(MethodDisconnectOpenVPN, TunnelIDParam{ID: id}, nil)
+}
+
+func (c *Client) ListOpenVPN() ([]OpenVPNStatus, error) {
+	var result []OpenVPNStatus
+	return result, c.call(MethodListOpenVPN, nil, &result)
+}
+
 // --- internal ---
 
 // readerLoop is the single goroutine that reads all incoming data.

@@ -10,6 +10,10 @@ export function ConnectTunnel(arg1) {
   return window['go']['main']['App']['ConnectTunnel'](arg1);
 }
 
+export function DeleteLocalOpenVPNProfile(arg1) {
+  return window['go']['main']['App']['DeleteLocalOpenVPNProfile'](arg1);
+}
+
 export function DeleteTunnel(arg1) {
   return window['go']['main']['App']['DeleteTunnel'](arg1);
 }
@@ -18,8 +22,16 @@ export function DisconnectTunnel(arg1) {
   return window['go']['main']['App']['DisconnectTunnel'](arg1);
 }
 
+export function ForgetOpenVPNPassword(arg1) {
+  return window['go']['main']['App']['ForgetOpenVPNPassword'](arg1);
+}
+
 export function GetStats(arg1) {
   return window['go']['main']['App']['GetStats'](arg1);
+}
+
+export function ImportOpenVPNProfile(arg1, arg2, arg3) {
+  return window['go']['main']['App']['ImportOpenVPNProfile'](arg1, arg2, arg3);
 }
 
 export function ImportTunnel(arg1, arg2) {
@@ -46,6 +58,10 @@ export function ManagedCompleteSetup() {
   return window['go']['main']['App']['ManagedCompleteSetup']();
 }
 
+export function ManagedConnectOpenVPN(arg1, arg2, arg3, arg4, arg5, arg6, arg7) {
+  return window['go']['main']['App']['ManagedConnectOpenVPN'](arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+}
+
 export function ManagedConnectServer(arg1, arg2, arg3) {
   return window['go']['main']['App']['ManagedConnectServer'](arg1, arg2, arg3);
 }
@@ -66,6 +82,10 @@ export function ManagedDisconnectByTunnelID(arg1) {
   return window['go']['main']['App']['ManagedDisconnectByTunnelID'](arg1);
 }
 
+export function ManagedDisconnectOpenVPN(arg1) {
+  return window['go']['main']['App']['ManagedDisconnectOpenVPN'](arg1);
+}
+
 export function ManagedDisconnectServer(arg1) {
   return window['go']['main']['App']['ManagedDisconnectServer'](arg1);
 }
@@ -76,6 +96,14 @@ export function ManagedGetSettings() {
 
 export function ManagedGetSetupStep() {
   return window['go']['main']['App']['ManagedGetSetupStep']();
+}
+
+export function ManagedListOpenVPNProfiles() {
+  return window['go']['main']['App']['ManagedListOpenVPNProfiles']();
+}
+
+export function ManagedListOpenVPNSessions() {
+  return window['go']['main']['App']['ManagedListOpenVPNSessions']();
 }
 
 export function ManagedListServers() {

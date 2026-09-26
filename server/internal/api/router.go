@@ -112,6 +112,10 @@ func (s *Server) buildRouter() *chi.Mux {
 			// Installations (user)
 			r.Get("/installations/mine", s.handleListMyInstallations)
 
+			// OpenVPN profiles assigned to the current user
+			r.Get("/openvpn/profiles", s.handleListOpenVPNProfiles)
+			r.Get("/openvpn/profiles/{id}/config", s.handleDownloadOpenVPNProfile)
+
 			// Admin endpoints — gated per-resource by named permissions.
 			// is_admin users implicitly hold every permission (loaded by Authenticate),
 			// so existing admin behavior is preserved.
@@ -194,6 +198,17 @@ func (s *Server) buildRouter() *chi.Mux {
 				r.Get("/admin/servers/{id}/bundles", svh.ListBundles)
 				r.Post("/admin/servers/{id}/bundles", svh.AddBundle)
 				r.Delete("/admin/servers/{id}/bundles/{bid}", svh.RemoveBundle)
+			})
+
+			// OpenVPN profiles + per-user assignments
+			r.With(RequirePerm(auth.PermOpenVPNManage)).Group(func(r chi.Router) {
+				r.Get("/admin/openvpn/profiles", s.handleAdminListOpenVPNProfiles)
+				r.Post("/admin/openvpn/profiles", s.handleAdminCreateOpenVPNProfile)
+				r.Put("/admin/openvpn/profiles/{id}", s.handleAdminUpdateOpenVPNProfile)
+				r.Delete("/admin/openvpn/profiles/{id}", s.handleAdminDeleteOpenVPNProfile)
+				r.Get("/admin/openvpn/profiles/{id}/assignments", s.handleAdminListOpenVPNAssignments)
+				r.Post("/admin/openvpn/profiles/{id}/assignments", s.handleAdminAssignOpenVPN)
+				r.Delete("/admin/openvpn/profiles/{id}/assignments/{userId}", s.handleAdminUnassignOpenVPN)
 			})
 
 			// Sessions (live + terminate)

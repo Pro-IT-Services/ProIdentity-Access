@@ -154,7 +154,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	token, err := auth.IssueToken(user.ID, user.Username, user.IsAdmin, s.cfg.Auth.JWTSecret, 24*time.Hour)
+	token, err := auth.IssueToken(user.ID, user.Username, user.IsAdmin, s.cfg.Auth.JWTSecret, s.cfg.Auth.TokenTTLDur)
 	if err != nil {
 		jsonError(w, http.StatusInternalServerError, "token error")
 		return
@@ -243,7 +243,7 @@ func (s *Server) handleMe(w http.ResponseWriter, r *http.Request) {
 		jsonError(w, http.StatusNotFound, "user not found")
 		return
 	}
-	jsonOK(w, map[string]any{
+	resp := map[string]any{
 		"id":           user.ID,
 		"username":     user.Username,
 		"email":        user.Email,
@@ -254,7 +254,13 @@ func (s *Server) handleMe(w http.ResponseWriter, r *http.Request) {
 		"totp_enabled": user.TOTPEnabled,
 		"created_at":   user.CreatedAt,
 		"permissions":  permsFrom(r),
-	})
+	}
+	// Sliding session: renew the token while the client is active so it never
+	// hits the expiry wall. Capped by SessionMaxAge inside RefreshIfNeeded.
+	if tok, refreshed, err := auth.RefreshIfNeeded(claims, s.cfg.Auth.JWTSecret, s.cfg.Auth.TokenTTLDur, s.cfg.Auth.SessionMaxAgeDur); err == nil && refreshed {
+		resp["token"] = tok
+	}
+	jsonOK(w, resp)
 }
 
 // GET /api/v1/auth/permissions — full catalog of permission keys.
@@ -530,7 +536,7 @@ func (s *Server) handlePasskeyLoginFinish(w http.ResponseWriter, r *http.Request
 	delete(waPending, user.ID+"_login")
 	waMu.Unlock()
 
-	token, err := auth.IssueToken(user.ID, user.Username, user.IsAdmin, s.cfg.Auth.JWTSecret, 24*time.Hour)
+	token, err := auth.IssueToken(user.ID, user.Username, user.IsAdmin, s.cfg.Auth.JWTSecret, s.cfg.Auth.TokenTTLDur)
 	if err != nil {
 		jsonError(w, http.StatusInternalServerError, "token error")
 		return

@@ -27,6 +27,8 @@ type TunnelManager struct {
 
 	keyMu   sync.RWMutex
 	encKeys map[string][]byte // 32-byte AES-256 key by OS owner; nil until set by GUI
+
+	openvpn *OpenVPNManager // OpenVPN sessions (parallel to WireGuard tunnels)
 }
 
 // NewTunnelManager creates a TunnelManager that persists configs to storageDir
@@ -43,8 +45,23 @@ func NewTunnelManager(storageDir string, broadcast func(ipc.Event)) (*TunnelMana
 		broadcast:  broadcast,
 		tunnels:    make(map[string]*Tunnel),
 		encKeys:    make(map[string][]byte),
+		openvpn:    NewOpenVPNManager(broadcast),
 	}
 	return m, nil
+}
+
+// --- OpenVPN (delegated to OpenVPNManager, isolated per OS owner) ---
+
+func (m *TunnelManager) ConnectOpenVPN(principal ipc.Principal, p ipc.OpenVPNConnectParams) (*ipc.OpenVPNStatus, error) {
+	return m.openvpn.ConnectOpenVPN(ownerForPrincipal(principal), p)
+}
+
+func (m *TunnelManager) DisconnectOpenVPN(principal ipc.Principal, id string) error {
+	return m.openvpn.DisconnectOpenVPN(ownerForPrincipal(principal), id)
+}
+
+func (m *TunnelManager) ListOpenVPN(principal ipc.Principal) ([]ipc.OpenVPNStatus, error) {
+	return m.openvpn.ListOpenVPN(ownerForPrincipal(principal)), nil
 }
 
 // --- ipc.Handler implementation ---
@@ -246,6 +263,9 @@ func (m *TunnelManager) StopAll() {
 		if err := t.Stop(); err != nil {
 			log.Printf("stop tunnel %s: %v", t.Config.ID, err)
 		}
+	}
+	if m.openvpn != nil {
+		m.openvpn.StopAll()
 	}
 }
 

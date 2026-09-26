@@ -77,11 +77,36 @@ type StatsInfo struct {
 	LastHandshake int64  `json:"last_handshake"` // Unix timestamp seconds
 }
 
+// OpenVPNStatus is the OpenVPN session representation sent to UI clients.
+type OpenVPNStatus struct {
+	ID      string       `json:"id"`
+	OwnerID string       `json:"owner_id,omitempty"`
+	Name    string       `json:"name"`
+	Status  TunnelStatus `json:"status"`
+	DevType string       `json:"dev_type"` // "tun" or "tap"
+	IP      string       `json:"ip,omitempty"`
+	RxBytes int64        `json:"rx_bytes"`
+	TxBytes int64        `json:"tx_bytes"`
+	Error   string       `json:"error,omitempty"`
+}
+
 // --- Method parameter / result types ---
 
 type ImportParams struct {
 	Name          string `json:"name"`
 	ConfigContent string `json:"config_content"`
+}
+
+// OpenVPNConnectParams carries everything the daemon needs to launch an OpenVPN
+// session. Password already has any external TOTP appended by the caller.
+type OpenVPNConnectParams struct {
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	Config   string `json:"config"`   // raw .ovpn text
+	DevType  string `json:"dev_type"` // "tun" or "tap"
+	CustomIP string `json:"custom_ip,omitempty"`
+	Username string `json:"username,omitempty"`
+	Password string `json:"password,omitempty"`
 }
 
 type SetEncryptionKeyParams struct {
@@ -99,8 +124,9 @@ type StatusResult struct {
 
 // Event type constants
 const (
-	EventTunnelChanged = "tunnel.changed" // payload: TunnelInfo
-	EventStatsUpdate   = "stats.update"   // payload: StatsInfo
+	EventTunnelChanged  = "tunnel.changed"  // payload: TunnelInfo
+	EventStatsUpdate    = "stats.update"    // payload: StatsInfo
+	EventOpenVPNChanged = "openvpn.changed" // payload: OpenVPNStatus
 )
 
 // RPC method names
@@ -114,6 +140,10 @@ const (
 	MethodGetStats         = "tunnel.stats"
 	MethodDaemonStatus     = "daemon.status"
 	MethodSetEncryptionKey = "daemon.set_encryption_key"
+
+	MethodConnectOpenVPN    = "openvpn.connect"
+	MethodDisconnectOpenVPN = "openvpn.disconnect"
+	MethodListOpenVPN       = "openvpn.list"
 )
 
 // Error codes
