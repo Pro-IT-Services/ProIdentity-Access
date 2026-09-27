@@ -9,11 +9,8 @@ import com.proitservices.proidentity.access.bridge.AuthInvalidException
 import com.proitservices.proidentity.access.bridge.DeviceCrypto
 import com.proitservices.proidentity.access.bridge.DeviceRevokedException
 import com.proitservices.proidentity.access.bridge.EndpointCandidate
-import com.proitservices.proidentity.access.bridge.LoginResponse
 import com.proitservices.proidentity.access.bridge.ManagedClient
-import com.proitservices.proidentity.access.bridge.ServerInfo
 import com.proitservices.proidentity.access.model.ManagedSettings
-import com.proitservices.proidentity.access.model.PeerInfo
 import com.proitservices.proidentity.access.model.ServerStatus
 import com.proitservices.proidentity.access.model.TunnelInfo
 import com.proitservices.proidentity.access.model.TunnelStatus
@@ -34,13 +31,11 @@ data class ManagedUiState(
     val settings: ManagedSettings = ManagedSettings(),
     val serverStatuses: Map<String, ServerStatus> = emptyMap(),
     val isLoading: Boolean = false,
-    val showLoginModal: Boolean = false,
     val showTotpModal: Boolean = false,
     val showPushAuth: Boolean = false,
     val pushStatus: String = "idle",
     val pushAuthEnabled: Boolean = false,
     val totpTargetServerId: String? = null,
-    val loginError: String? = null,
     val error: String? = null
 )
 
@@ -51,24 +46,27 @@ class ManagedViewModel(application: Application) : AndroidViewModel(application)
     private val _uiState = MutableStateFlow(ManagedUiState())
     val uiState: StateFlow<ManagedUiState> = _uiState.asStateFlow()
 
+    /** Device was revoked by an admin, or the user reset the app: everything is wiped. */
     private val _installationRevoked = MutableSharedFlow<Unit>()
     val installationRevoked = _installationRevoked.asSharedFlow()
 
-    private val _authExpired = MutableSharedFlow<Unit>()
-    val authExpired = _authExpired.asSharedFlow()
+    /** The session ended (expired, invalidated, or signed out). Device + server are kept. */
+    private val _signInRequired = MutableSharedFlow<Unit>()
+    val signInRequired = _signInRequired.asSharedFlow()
 
-    // Session tracking (was in AndroidBridge)
-    private val activeSessions = mutableMapOf<String, String>()   // serverID â†’ sessionID
-    private val serverTunnelIds = mutableMapOf<String, String>()  // serverID â†’ tunnelID
-    val tunnelServerIds = mutableMapOf<String, String>()           // tunnelID â†’ serverID (read by TunnelViewModel)
+    // Session tracking
+    private val activeSessions = mutableMapOf<String, String>()   // serverID -> sessionID
+    private val serverTunnelIds = mutableMapOf<String, String>()  // serverID -> tunnelID
+    val tunnelServerIds = mutableMapOf<String, String>()           // tunnelID -> serverID (read by TunnelViewModel)
 
     private var keepaliveJob: Job? = null
     private var serverPollJob: Job? = null
 
+    @Volatile private var endingSession = false
+
     // Callbacks wired by MainActivity after both VMs are created
     var onTunnelAdded: ((TunnelInfo) -> Unit)? = null
     var onTunnelRemoved: ((String) -> Unit)? = null
-    var onLoginComplete: (() -> Unit)? = null  // triggers TunnelViewModel.refresh()
 
     init { loadSettings() }
 
@@ -80,10 +78,12 @@ class ManagedViewModel(application: Application) : AndroidViewModel(application)
             isAdmin = s.isAdmin,
             loggedIn = s.token.isNotEmpty(),
             vpnName = s.vpnName,
-            totpEnabled = s.totpEnabled
+            totpEnabled = s.totpEnabled,
+            mode = s.mode
         )
         _uiState.update { it.copy(settings = settings) }
         if (settings.loggedIn) {
+            endingSession = false
             startServerPolling()
             startKeepaliveMonitor()
         }
@@ -94,123 +94,67 @@ class ManagedViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch(Dispatchers.IO) { fetchServers() }
     }
 
-    fun openLoginModal() { _uiState.update { it.copy(showLoginModal = true, loginError = null) } }
-    fun dismissLoginModal() { _uiState.update { it.copy(showLoginModal = false, loginError = null) } }
     fun dismissTotpModal() { _uiState.update { it.copy(showTotpModal = false, totpTargetServerId = null) } }
+    fun dismissPushAuth() { _uiState.update { it.copy(showPushAuth = false, pushStatus = "idle") } }
     fun clearError() { _uiState.update { it.copy(error = null) } }
 
-    private var loginUsername = ""
-    private var loginPassword = ""
+    /** Called by TunnelViewModel when one of its API calls hits an auth failure. */
+    fun onAuthFailure(revoked: Boolean) = endSession(revoked)
 
-    fun login(username: String, password: String, totpCode: String = "") {
-        loginUsername = username
-        loginPassword = password
-        viewModelScope.launch(Dispatchers.IO) {
-            _uiState.update { it.copy(isLoading = true, loginError = null) }
-            try {
-                val client = buildAuthClient()
-                val resp = client.login(username, password, totpCode)
-                if (resp.requireTotp) {
-                    if (resp.pushAuthEnabled && resp.pushRequestId.isNotEmpty()) {
-                        _uiState.update { it.copy(isLoading = false, showLoginModal = false, showPushAuth = true, pushStatus = "pending", pushAuthEnabled = true) }
-                        pollPushLogin(resp.pushRequestId)
-                    } else {
-                        _uiState.update { it.copy(isLoading = false, loginError = "Enter your TOTP code", pushAuthEnabled = resp.pushAuthEnabled) }
-                    }
-                } else {
-                    completeLogin(resp)
-                }
-            } catch (e: Exception) {
-                _uiState.update { it.copy(isLoading = false, loginError = "Login failed: ${e.message}") }
-            }
-        }
-    }
-
-    fun loginWithPush(pushAuthID: String) {
-        viewModelScope.launch(Dispatchers.IO) {
-            _uiState.update { it.copy(isLoading = true) }
-            try {
-                val client = buildAuthClient()
-                val resp = client.login(loginUsername, loginPassword, pushAuthID = pushAuthID)
-                completeLogin(resp)
-            } catch (e: Exception) {
-                _uiState.update { it.copy(isLoading = false, loginError = "Login failed: ${e.message}", showPushAuth = false) }
-            }
-        }
-    }
-
-    private fun pollPushLogin(requestID: String) {
-        viewModelScope.launch(Dispatchers.IO) {
-            while (isActive) {
-                delay(2000)
-                try {
-                    val client = buildAuthClient()
-                    val status = client.pollPushStatus(requestID)
-                    _uiState.update { it.copy(pushStatus = status) }
-                    when (status) {
-                        "approved" -> { loginWithPush(requestID); return@launch }
-                        "denied", "expired" -> return@launch
-                    }
-                } catch (_: Exception) {}
-            }
-        }
-    }
-
-    fun dismissPushAuth() { _uiState.update { it.copy(showPushAuth = false, pushStatus = "idle") } }
-
-    fun forceAuthReset() {
-        handleAuthReset()
-    }
-
-    private fun completeLogin(resp: LoginResponse) {
-        appSettings.token = resp.token
-        appSettings.username = resp.username
-        appSettings.isAdmin = resp.isAdmin
-        appSettings.totpEnabled = resp.totpEnabled
-        loadSettings()
-        _uiState.update { it.copy(isLoading = false, showLoginModal = false, showPushAuth = false, pushStatus = "idle") }
-        fetchServers()
-        onLoginComplete?.invoke()
-    }
-
+    /** Explicit sign-out from Settings: ends the session and forgets the username. */
     fun logout() {
         viewModelScope.launch(Dispatchers.IO) {
             stopServerPolling()
             stopKeepaliveMonitor()
-            val serverIds = activeSessions.keys.toList()
-            for (sid in serverIds) {
+            for (sid in activeSessions.keys.toList()) {
                 try { disconnectServerInternal(sid) } catch (_: Exception) {}
             }
-            appSettings.token = ""
+            appSettings.clearSession()
             appSettings.username = ""
-            appSettings.isAdmin = false
             loadSettings()
             _uiState.update { it.copy(serverStatuses = emptyMap()) }
+            _signInRequired.emit(Unit)
+        }
+    }
+
+    /** Settings > Reset app: disconnect everything and wipe all local state. */
+    fun resetApp() {
+        viewModelScope.launch(Dispatchers.IO) {
+            for (sid in activeSessions.keys.toList()) {
+                try { disconnectServerInternal(sid) } catch (_: Exception) {}
+            }
+            endSession(revoked = true)
         }
     }
 
     fun refreshServers() {
-        viewModelScope.launch(Dispatchers.IO) { fetchServers() }
+        viewModelScope.launch(Dispatchers.IO) {
+            _uiState.update { it.copy(isLoading = true) }
+            fetchServers()
+            _uiState.update { it.copy(isLoading = false) }
+        }
     }
 
     private fun fetchServers() {
+        if (appSettings.token.isEmpty()) return
         try {
             val servers = buildAuthClient().listServers()
             val statuses = servers.associate { server ->
                 val tunnelId = serverTunnelIds[server.id]
+                val previous = _uiState.value.serverStatuses[server.id]
                 server.id to ServerStatus(
                     server = server,
                     connected = tunnelId != null,
                     tunnelId = tunnelId,
-                    connecting = false,
-                    error = null
+                    connecting = previous?.connecting ?: false,
+                    error = previous?.error
                 )
             }
             _uiState.update { it.copy(serverStatuses = statuses) }
         } catch (e: DeviceRevokedException) {
-            handleAuthReset()
+            endSession(revoked = true)
         } catch (e: AuthInvalidException) {
-            handleAuthReset()
+            endSession(revoked = false)
         } catch (_: Exception) {}
     }
 
@@ -237,8 +181,7 @@ class ManagedViewModel(application: Application) : AndroidViewModel(application)
                     return@launch
                 }
 
-                var config = sessionResp.wgConfig
-                config = injectPrivateKey(config, wgPriv)
+                val config = injectPrivateKey(sessionResp.wgConfig, wgPriv)
 
                 val service = WgVpnService.instance ?: throw IllegalStateException("VPN service not running")
                 val tunnelId = connectEndpointCandidates(service, serverName, config, sessionResp.endpoints, serverId)
@@ -246,22 +189,25 @@ class ManagedViewModel(application: Application) : AndroidViewModel(application)
                 activeSessions[serverId] = sessionResp.sessionId
                 serverTunnelIds[serverId] = tunnelId
                 tunnelServerIds[tunnelId] = serverId
+                appSettings.lastConnection = "server:$serverId"
 
                 val tunnel = TunnelInfo(
                     id = tunnelId, name = serverName,
                     status = TunnelStatus.CONNECTED,
-                    addresses = emptyList(), dns = emptyList(),
+                    addresses = listOf(sessionResp.assignedIp).filter { it.isNotBlank() },
+                    dns = emptyList(),
                     mtu = null, listenPort = null, privateKey = "",
                     peers = emptyList(), isManaged = true, error = null
                 )
                 onTunnelAdded?.invoke(tunnel)
                 setServerStatus(serverId) { it.copy(connected = true, tunnelId = tunnelId, connecting = false) }
             } catch (e: DeviceRevokedException) {
-                handleAuthReset()
+                endSession(revoked = true)
             } catch (e: AuthInvalidException) {
-                handleAuthReset()
+                endSession(revoked = false)
             } catch (e: Exception) {
                 setServerStatus(serverId) { it.copy(connecting = false, error = e.message) }
+                _uiState.update { it.copy(error = e.message ?: "Could not connect to $serverName") }
             }
         }
     }
@@ -272,13 +218,24 @@ class ManagedViewModel(application: Application) : AndroidViewModel(application)
         connectServer(serverId, totpCode)
     }
 
+    /** Re-issue a push request for the server currently awaiting 2FA. */
+    fun retryPushConnect() {
+        val serverId = _uiState.value.totpTargetServerId ?: return
+        connectServer(serverId)
+    }
+
+    /** Switch the pending 2FA prompt from push to a typed code. */
+    fun switchConnectToTotp() {
+        _uiState.update { it.copy(showPushAuth = false, pushStatus = "idle", showTotpModal = true) }
+    }
+
     private fun pollPushConnect(serverId: String, requestID: String) {
         viewModelScope.launch(Dispatchers.IO) {
             while (isActive) {
                 delay(2000)
+                if (!_uiState.value.showPushAuth) return@launch // user dismissed or switched to code
                 try {
-                    val client = buildAuthClient()
-                    val status = client.pollPushStatus(requestID)
+                    val status = buildAuthClient().pollPushStatus(requestID)
                     _uiState.update { it.copy(pushStatus = status) }
                     when (status) {
                         "approved" -> {
@@ -340,45 +297,64 @@ class ManagedViewModel(application: Application) : AndroidViewModel(application)
         keepaliveJob = viewModelScope.launch(Dispatchers.IO) {
             while (isActive) {
                 delay(10_000)
-                // Auth check â€” detect password change, user disabled, etc.
+                // Auth check — detects password change, disabled user, expiry.
                 try {
                     buildAuthClient().checkAuth()
                 } catch (e: DeviceRevokedException) {
-                    handleAuthReset(); return@launch
+                    endSession(revoked = true); return@launch
                 } catch (e: AuthInvalidException) {
-                    handleAuthReset(); return@launch
+                    endSession(revoked = false); return@launch
                 } catch (_: Exception) {
-                    return@launch
+                    continue // transient network error: keep monitoring
                 }
-                // Keepalives
-                val sessions = activeSessions.entries.toList()
-                for ((_, sessionId) in sessions) {
+                for ((_, sessionId) in activeSessions.entries.toList()) {
                     try {
-                    buildAuthClient().keepalive(sessionId)
-                } catch (e: DeviceRevokedException) {
-                    handleAuthReset(); return@launch
-                } catch (e: AuthInvalidException) {
-                    handleAuthReset(); return@launch
-                } catch (_: Exception) {}
+                        buildAuthClient().keepalive(sessionId)
+                    } catch (e: DeviceRevokedException) {
+                        endSession(revoked = true); return@launch
+                    } catch (e: AuthInvalidException) {
+                        endSession(revoked = false); return@launch
+                    } catch (_: Exception) {}
+                }
             }
-        }
         }
     }
 
     private fun stopKeepaliveMonitor() { keepaliveJob?.cancel(); keepaliveJob = null }
 
-    private fun handleAuthReset() {
+    /**
+     * Ends the managed session.
+     *  - revoked = true  : device revoked by an admin (or app reset) — wipe everything.
+     *  - revoked = false : login expired / invalidated — keep server, device and
+     *                      username so the user only re-enters password / 2FA.
+     */
+    private fun endSession(revoked: Boolean) {
+        if (endingSession && !revoked) return
+        endingSession = true
         stopServerPolling()
         stopKeepaliveMonitor()
-        WgVpnService.instance?.clearAllTunnels()
-        appSettings.wipeAll()
+
+        val managedTunnelIds = serverTunnelIds.values.toList()
         activeSessions.clear()
         serverTunnelIds.clear()
         tunnelServerIds.clear()
-        _uiState.update { ManagedUiState(error = "Login expired or revoked. Please set up again.") }
-        viewModelScope.launch {
-            _authExpired.emit(Unit)
-            _installationRevoked.emit(Unit)
+
+        if (revoked) {
+            WgVpnService.instance?.clearAllTunnels()
+            appSettings.wipeAll()
+            _uiState.update { ManagedUiState() }
+            viewModelScope.launch { _installationRevoked.emit(Unit) }
+        } else {
+            managedTunnelIds.forEach { id ->
+                WgVpnService.instance?.deleteTunnel(id)
+                onTunnelRemoved?.invoke(id)
+            }
+            appSettings.clearSession()
+            loadSettings()
+            _uiState.update {
+                it.copy(serverStatuses = emptyMap(), showTotpModal = false, showPushAuth = false, totpTargetServerId = null)
+            }
+            viewModelScope.launch { _signInRequired.emit(Unit) }
         }
     }
 

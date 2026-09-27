@@ -2,7 +2,7 @@ name: ProIdentity
 options:
   bundleIdPrefix: com.proidentity
   deploymentTarget:
-    iOS: "16.0"
+    iOS: "17.0"
 
 packages:
   WireGuardKit:

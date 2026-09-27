@@ -38,7 +38,11 @@ data class TunnelUiState(
     val isLoading: Boolean = false,
     val error: String? = null,
     val deleteCountdown: Int? = null,
-    val vpnPermissionNeeded: Boolean = false
+    val vpnPermissionNeeded: Boolean = false,
+    /** tunnelId -> epoch millis when it reached CONNECTED (drives the session timer). */
+    val connectedAt: Map<String, Long> = emptyMap(),
+    /** Tunnel awaiting deletion — hidden from lists while the Undo window is open. */
+    val deletePendingId: String? = null
 )
 
 class TunnelViewModel(application: Application) : AndroidViewModel(application) {
@@ -62,7 +66,8 @@ class TunnelViewModel(application: Application) : AndroidViewModel(application) 
     // Set by ManagedViewModel
     var tunnelToServerMap: Map<String, String> = emptyMap()
     var onManagedDisconnectRequest: ((serverID: String) -> Unit)? = null
-    var onAuthInvalid: (() -> Unit)? = null
+    /** revoked = true: device revoked (wipe); false: login expired (soft re-login). */
+    var onAuthFailure: ((revoked: Boolean) -> Unit)? = null
 
     init {
         WgVpnService.stateListeners.add { tunnelId, state ->
@@ -76,6 +81,12 @@ class TunnelViewModel(application: Application) : AndroidViewModel(application) 
                 s.copy(
                     tunnels = s.tunnels.map {
                         if (it.id == tunnelId) it.copy(status = status) else it
+                    },
+                    connectedAt = when {
+                        status == TunnelStatus.CONNECTED && tunnelId !in s.connectedAt ->
+                            s.connectedAt + (tunnelId to System.currentTimeMillis())
+                        status == TunnelStatus.CONNECTED -> s.connectedAt
+                        else -> s.connectedAt - tunnelId
                     }
                 )
             }
@@ -87,7 +98,11 @@ class TunnelViewModel(application: Application) : AndroidViewModel(application) 
 
     fun refresh() {
         viewModelScope.launch(Dispatchers.IO) {
-            val service = WgVpnService.instance ?: return@launch
+            // The service starts alongside the activity; give it a moment on cold start.
+            var service = WgVpnService.instance
+            var waited = 0
+            while (service == null && waited < 3000) { delay(100); waited += 100; service = WgVpnService.instance }
+            if (service == null) return@launch
             val entries = service.listTunnels()
             val tunnels = entries.map { e -> buildTunnelInfo(e) }
 
@@ -141,10 +156,10 @@ class TunnelViewModel(application: Application) : AndroidViewModel(application) 
                 )
             }
         } catch (e: DeviceRevokedException) {
-            triggerAuthReset()
+            triggerAuthReset(revoked = true)
             emptyList()
         } catch (e: AuthInvalidException) {
-            triggerAuthReset()
+            triggerAuthReset(revoked = false)
             emptyList()
         } catch (_: Exception) { emptyList() }
     }
@@ -180,10 +195,11 @@ class TunnelViewModel(application: Application) : AndroidViewModel(application) 
             try {
                 if (id.startsWith("uconf-")) connectUserConfig(id)
                 else WgVpnService.instance?.connectTunnel(id)
+                settings.lastConnection = "tunnel:$id"
             } catch (e: DeviceRevokedException) {
-                triggerAuthReset()
+                triggerAuthReset(revoked = true)
             } catch (e: AuthInvalidException) {
-                triggerAuthReset()
+                triggerAuthReset(revoked = false)
             } catch (e: Exception) {
                 setStatus(id, TunnelStatus.ERROR)
                 setError(e.message ?: "Connect failed")
@@ -252,18 +268,18 @@ class TunnelViewModel(application: Application) : AndroidViewModel(application) 
                         withContext(Dispatchers.Main) { onDone(true, null) }
                         return@launch
                     } catch (e: DeviceRevokedException) {
-                        triggerAuthReset()
+                        triggerAuthReset(revoked = true)
                         withContext(Dispatchers.Main) { onDone(false, "Login expired or revoked") }
                         return@launch
                     } catch (e: AuthInvalidException) {
-                        triggerAuthReset()
+                        triggerAuthReset(revoked = false)
                         withContext(Dispatchers.Main) { onDone(false, "Login expired or revoked") }
                         return@launch
                     } catch (_: Exception) { /* fall through to local */ }
                 }
 
                 val id = java.util.UUID.randomUUID().toString()
-                val entry = service.importTunnel(id, name.ifEmpty { "Tunnel" }, config)
+                val entry = service.importTunnel(id, name.ifEmpty { "Tunnel" }, config, persist = true)
                 val tunnel = buildTunnelInfo(entry)
                 _uiState.update { s ->
                     s.copy(tunnels = s.tunnels + tunnel, selectedTunnelId = tunnel.id)
@@ -278,9 +294,9 @@ class TunnelViewModel(application: Application) : AndroidViewModel(application) 
     fun startDeleteCountdown(id: String) {
         deletePendingId = id
         deleteCountdownJob?.cancel()
-        _uiState.update { it.copy(deleteCountdown = 3) }
+        _uiState.update { it.copy(deleteCountdown = 5, deletePendingId = id) }
         deleteCountdownJob = viewModelScope.launch {
-            for (i in 2 downTo 0) {
+            for (i in 4 downTo 0) {
                 delay(1000)
                 _uiState.update { it.copy(deleteCountdown = if (i > 0) i else null) }
             }
@@ -292,7 +308,7 @@ class TunnelViewModel(application: Application) : AndroidViewModel(application) 
         deleteCountdownJob?.cancel()
         deleteCountdownJob = null
         deletePendingId = null
-        _uiState.update { it.copy(deleteCountdown = null) }
+        _uiState.update { it.copy(deleteCountdown = null, deletePendingId = null) }
     }
 
     private fun confirmDelete() {
@@ -302,18 +318,22 @@ class TunnelViewModel(application: Application) : AndroidViewModel(application) 
             try {
                 if (id.startsWith("uconf-")) {
                     try { buildAuthClient().deleteUserConfig(id.removePrefix("uconf-")) }
-                    catch (e: DeviceRevokedException) { triggerAuthReset(); return@launch }
-                    catch (e: AuthInvalidException) { triggerAuthReset(); return@launch }
+                    catch (e: DeviceRevokedException) { triggerAuthReset(revoked = true); return@launch }
+                    catch (e: AuthInvalidException) { triggerAuthReset(revoked = false); return@launch }
                     catch (_: Exception) {}
                 }
                 WgVpnService.instance?.deleteTunnel(id)
                 _uiState.update { s ->
                     s.copy(
                         tunnels = s.tunnels.filter { it.id != id },
-                        selectedTunnelId = if (s.selectedTunnelId == id) null else s.selectedTunnelId
+                        selectedTunnelId = if (s.selectedTunnelId == id) null else s.selectedTunnelId,
+                        deletePendingId = null
                     )
                 }
-            } catch (e: Exception) { setError(e.message) }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(deletePendingId = null) }
+                setError(e.message)
+            }
         }
     }
 
@@ -329,8 +349,8 @@ class TunnelViewModel(application: Application) : AndroidViewModel(application) 
         _uiState.update { TunnelUiState() }
     }
 
-    private fun triggerAuthReset() {
-        viewModelScope.launch { onAuthInvalid?.invoke() }
+    private fun triggerAuthReset(revoked: Boolean) {
+        viewModelScope.launch { onAuthFailure?.invoke(revoked) }
     }
 
     // Called by ManagedViewModel after it removes its tunnel
@@ -340,7 +360,8 @@ class TunnelViewModel(application: Application) : AndroidViewModel(application) 
             s.copy(
                 tunnels = s.tunnels.filter { it.id != tunnelId },
                 selectedTunnelId = if (s.selectedTunnelId == tunnelId) null else s.selectedTunnelId,
-                stats = s.stats - tunnelId
+                stats = s.stats - tunnelId,
+                connectedAt = s.connectedAt - tunnelId
             )
         }
     }
@@ -354,9 +375,14 @@ class TunnelViewModel(application: Application) : AndroidViewModel(application) 
             } else {
                 s.tunnels + tunnel
             }
-            s.copy(tunnels = newList, selectedTunnelId = tunnel.id)
+            val connectedAt = if (tunnel.status == TunnelStatus.CONNECTED && tunnel.id !in s.connectedAt)
+                s.connectedAt + (tunnel.id to System.currentTimeMillis()) else s.connectedAt
+            s.copy(tunnels = newList, connectedAt = connectedAt)
         }
     }
+
+    /** Last-used connection key persisted across launches ("server:<id>" / "tunnel:<id>"). */
+    fun lastConnectionKey(): String = settings.lastConnection
 
     private fun startStatsPolling(tunnelId: String) {
         stopStatsPolling(tunnelId)

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Status-bar icon: the ProIdentity aperture mark (monochrome, 256-unit geometry). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="256"
+    android:viewportHeight="256">
+    <path
+        android:pathData="M178,128 L153,171.3 L103,171.3 L78,128 L103,84.7 L153,84.7 Z"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="20"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M178,128 L192.2,199.3 M153,171.3 L98.3,219.3 M103,171.3 L34.1,148 M78,128 L63.8,56.7 M103,84.7 L157.7,36.7 M153,84.7 L221.9,108"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="18"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M128,112 a16,16 0 1,1 0,32 a16,16 0 1,1 0,-32 Z"
+        android:fillColor="#FFFFFFFF" />
+</vector>

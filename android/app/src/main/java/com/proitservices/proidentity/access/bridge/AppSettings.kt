@@ -80,6 +80,28 @@ class AppSettings(context: Context) {
         get() = prefs.getBoolean("setupDone", false)
         set(v) = prefs.edit().putBoolean("setupDone", v).apply()
 
+    /** Key of the connection the user last connected ("server:<id>" or "tunnel:<id>"). */
+    var lastConnection: String
+        get() = prefs.getString("lastConnection", "") ?: ""
+        set(v) = prefs.edit().putString("lastConnection", v).apply()
+
+    /** Imported (standalone) configs as JSON [{id, name, config}]; encrypted at rest. */
+    var importedTunnels: String
+        get() = prefs.getString("importedTunnels", "") ?: ""
+        set(v) = prefs.edit().putString("importedTunnels", v).apply()
+
+    /**
+     * Ends the login session only. Server URL, device registration (ID + keys),
+     * username and setup state are kept so the user can sign back in with just
+     * a password / 2FA — the soft re-login path.
+     */
+    fun clearSession() {
+        prefs.edit()
+            .putString("token", "")
+            .putBoolean("isAdmin", false)
+            .apply()
+    }
+
     fun wipeAll() {
         prefs.edit().clear().apply()
     }

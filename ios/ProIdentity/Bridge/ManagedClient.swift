@@ -60,8 +60,7 @@ class ManagedClient {
             throw APIError.authInvalid
         }
         guard (200..<300).contains(http.statusCode) else {
-            let msg = String(data: data, encoding: .utf8) ?? "HTTP \(http.statusCode)"
-            throw APIError.serverError(msg)
+            throw APIError.serverError(Self.errorMessage(data, status: http.statusCode))
         }
 
         if let key = aesKey {
@@ -86,8 +85,24 @@ class ManagedClient {
             "device_name": deviceName,
             "client_public_key": publicKey
         ])
-        let (data, _) = try await session.data(for: req)
+        let (data, response) = try await session.data(for: req)
+        if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
+            throw APIError.serverError(Self.errorMessage(data, status: http.statusCode))
+        }
         return try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
+    }
+
+    /// The server replies {"error": "..."}; show that instead of raw JSON.
+    private static func errorMessage(_ data: Data, status: Int) -> String {
+        if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let msg = json["error"] as? String, !msg.isEmpty {
+            return msg.prefix(1).uppercased() + msg.dropFirst()
+        }
+        if let text = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !text.isEmpty, text.count < 200, !text.hasPrefix("<") {
+            return text
+        }
+        return "The server returned an error (HTTP \(status))."
     }
 
     func login(username: String, password: String, totpCode: String, pushAuthID: String = "", aesKey: SymmetricKey) async throws -> [String: Any] {

@@ -16,3 +16,6 @@ local.properties
 *.aab
 app/build/
 app/release/
+
+# Release signing (never commit)
+keystore.properties

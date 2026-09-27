@@ -38,7 +38,9 @@ data class ManagedSettings(
     val isAdmin: Boolean = false,
     val loggedIn: Boolean = false,
     val vpnName: String = "",
-    val totpEnabled: Boolean = false
+    val totpEnabled: Boolean = false,
+    /** "managed", "standalone", or "" before setup. */
+    val mode: String = ""
 )
 
 data class ServerStatus(

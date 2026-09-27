@@ -20,6 +20,8 @@ import kotlinx.coroutines.launch
 
 enum class SetupStep { MODE, SERVER, REGISTER, LOGIN, DONE }
 
+enum class StartRoute { ONBOARDING, SIGN_IN, HOME }
+
 data class SetupUiState(
     val step: SetupStep = SetupStep.MODE,
     val serverUrl: String = "",
@@ -32,7 +34,9 @@ data class SetupUiState(
     val pushStatus: String = "idle",
     val loginMode: String = "credentials", // "credentials", "totp", "push"
     val isLoading: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    /** True when signing back in after an expired session (device + server kept). */
+    val isReauth: Boolean = false
 )
 
 class SetupViewModel(application: Application) : AndroidViewModel(application) {
@@ -47,8 +51,42 @@ class SetupViewModel(application: Application) : AndroidViewModel(application) {
 
     fun checkSetup(): Boolean = settings.setupDone
 
+    /** Where the app should open: setup, sign-in (managed but signed out), or home. */
+    fun startRoute(): StartRoute = when {
+        !settings.setupDone -> StartRoute.ONBOARDING
+        settings.mode == "managed" && settings.token.isEmpty() -> StartRoute.SIGN_IN
+        else -> StartRoute.HOME
+    }
+
     fun resetWizard() {
         _uiState.update { SetupUiState(step = SetupStep.MODE, deviceName = defaultDeviceName()) }
+    }
+
+    /**
+     * Soft re-login: the session ended but the device is still registered.
+     * Go straight to sign-in with the server and last username kept.
+     */
+    fun beginReauth() {
+        _uiState.value = SetupUiState(
+            step = SetupStep.LOGIN,
+            serverUrl = settings.serverURL,
+            deviceName = defaultDeviceName(),
+            username = settings.username,
+            isReauth = true
+        )
+    }
+
+    /** Resume an interrupted onboarding at the first step whose prerequisites are met. */
+    fun resumeOnboarding() {
+        val step = when {
+            settings.mode != "managed" -> SetupStep.MODE
+            settings.serverURL.isEmpty() -> SetupStep.SERVER
+            settings.deviceID.isEmpty() -> SetupStep.REGISTER
+            else -> SetupStep.LOGIN
+        }
+        _uiState.update {
+            it.copy(step = step, serverUrl = settings.serverURL, isReauth = false, error = null)
+        }
     }
 
     fun determineStartStep(): SetupStep {

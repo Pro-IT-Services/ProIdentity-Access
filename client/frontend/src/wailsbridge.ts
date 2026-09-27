@@ -206,35 +206,31 @@ export async function managedCompleteSetup(): Promise<void> {
   await (await App()).ManagedCompleteSetup()
 }
 
-export type UpdateCheckResult = {
+/** The service's client-update status (the service installs updates itself). */
+export type UpdateState = {
+  state: 'idle' | 'checking' | 'up_to_date' | 'available' | 'downloading' | 'installing' | 'failed'
+  supported: boolean
   current_version: string
-  latest_version: string
-  available: boolean
-  mandatory: boolean
-  platform: string
-  filename: string
-  url: string
-  sha256: string
-  size: number
-  published_at: string
+  latest_version?: string
+  mandatory?: boolean
+  notes?: string
+  progress?: number
+  error?: string
 }
 
-export async function checkForUpdate(): Promise<UpdateCheckResult> {
-  if (!isWails()) {
-    return {
-      current_version: '0.5.5',
-      latest_version: '0.5.5',
-      available: false,
-      mandatory: false,
-      platform: 'windows-amd64',
-      filename: '',
-      url: '',
-      sha256: '',
-      size: 0,
-      published_at: '',
-    }
-  }
-  return await (await App()).CheckForUpdate() as UpdateCheckResult
+export async function checkForUpdate(): Promise<UpdateState> {
+  if (!isWails()) return { state: 'up_to_date', supported: true, current_version: '0.0.0-dev' }
+  return await (await App()).CheckForUpdate() as UpdateState
+}
+
+export async function installUpdate(): Promise<void> {
+  if (!isWails()) return
+  await (await App()).InstallUpdate()
+}
+
+export async function getUpdateState(): Promise<UpdateState> {
+  if (!isWails()) return { state: 'idle', supported: true, current_version: '0.0.0-dev' }
+  return await (await App()).UpdateState() as UpdateState
 }
 
 // --- OpenVPN API ---

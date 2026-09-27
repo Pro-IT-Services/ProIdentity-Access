@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { AlertCircle, Download, Loader2, LogOut, Server, ShieldCheck, RefreshCw, Trash2, User } from 'lucide-react'
 import { useManagedStore } from '../stores/useManagedStore'
-import { checkForUpdate, type UpdateCheckResult } from '../wailsbridge'
+import { useUpdateStore } from '../stores/useUpdateStore'
 import { Sheet } from './ui/Sheet'
 import { Button } from './ui/Button'
 import { Input } from './ui/Input'
@@ -26,15 +26,15 @@ export function SettingsSheet({ open, onClose, onReRunSetup, onSignIn }: Props) 
   const [savingURL, setSavingURL] = useState(false)
   const [confirmUninstall, setConfirmUninstall] = useState(false)
   const [uninstalling, setUninstalling] = useState(false)
-  const [checkingUpdate, setCheckingUpdate] = useState(false)
-  const [updateInfo, setUpdateInfo] = useState<UpdateCheckResult | null>(null)
-  const [updateError, setUpdateError] = useState('')
+  const {
+    status: update, checking: checkingUpdate, installing: installingUpdate,
+    error: updateError, check: checkUpdate, install: installUpdate,
+  } = useUpdateStore()
 
   useEffect(() => {
     if (!open) return
     setUrl(settings.server_url)
     setConfirmUninstall(false)
-    setUpdateError('')
     clearError()
   }, [open, settings.server_url, clearError])
 
@@ -50,18 +50,6 @@ export function SettingsSheet({ open, onClose, onReRunSetup, onSignIn }: Props) 
   const handleUninstall = async () => {
     setUninstalling(true)
     try { await UninstallApp(true) } catch (e) { console.warn('uninstall failed', e); setUninstalling(false) }
-  }
-
-  const handleCheckUpdate = async () => {
-    setCheckingUpdate(true)
-    setUpdateError('')
-    try {
-      setUpdateInfo(await checkForUpdate())
-    } catch (e: any) {
-      setUpdateError(String(e?.message ?? e))
-    } finally {
-      setCheckingUpdate(false)
-    }
   }
 
   return (
@@ -142,25 +130,36 @@ export function SettingsSheet({ open, onClose, onReRunSetup, onSignIn }: Props) 
 
         {/* Updates */}
         <Section title="Updates" icon={Download}>
-          {updateInfo ? (
-            <div className="space-y-1.5">
-              <Row label="Installed" value={updateInfo.current_version || 'unknown'} />
-              <Row label="Latest" value={updateInfo.latest_version || 'none published'} />
+          <div className="space-y-1.5">
+            <Row label="Installed" value={update?.current_version || '—'} />
+            {update?.latest_version && <Row label="Latest" value={update.latest_version} />}
+            {update && (
               <Row label="Status" value={
-                updateInfo.available
-                  ? <span className="text-success">update available</span>
-                  : <span className="text-muted-foreground">up to date</span>
+                update.state === 'available' ? <span className="text-success">update available</span>
+                : update.state === 'downloading' ? <span>downloading {update.progress ?? 0}%</span>
+                : update.state === 'installing' ? <span>installing…</span>
+                : update.state === 'failed' ? <span className="text-destructive">failed</span>
+                : update.state === 'up_to_date' ? <span className="text-muted-foreground">up to date</span>
+                : <span className="text-muted-foreground">not checked yet</span>
               } />
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">Check the connected server for a published Windows client update.</p>
+            )}
+          </div>
+          {!settings.server_url && (
+            <p className="text-xs text-muted-foreground">Updates come from your organization's server. Set the server URL above first.</p>
           )}
+          {updateError && <p className="text-xs text-destructive">{updateError}</p>}
           <div className="flex items-center gap-2 pt-1">
-            <Button size="sm" variant="outline" onClick={handleCheckUpdate} disabled={!settings.server_url || checkingUpdate}>
+            <Button size="sm" variant="outline" onClick={() => checkUpdate()} disabled={!settings.server_url || checkingUpdate || installingUpdate}>
               {checkingUpdate ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
               Check
             </Button>
+            {update?.state === 'available' && (
+              <Button size="sm" onClick={installUpdate} disabled={installingUpdate}>
+                <Download className="w-3.5 h-3.5" /> Install {update.latest_version}
+              </Button>
+            )}
           </div>
+          <p className="text-xs text-muted-foreground">Updates are installed by the ProIdentity service, so no admin rights are needed.</p>
         </Section>
 
         {/* Danger */}

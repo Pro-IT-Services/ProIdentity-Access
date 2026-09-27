@@ -68,6 +68,19 @@ class AppSettings {
         Key.allCases.forEach { delete($0) }
     }
 
+    /// Soft sign-out: drop the session token but keep server, device
+    /// registration and username so the user only has to sign in again.
+    func clearSession() {
+        [Key.token, .isAdmin].forEach { delete($0) }
+    }
+
+    /// Last connection the user used ("server:<id>" / "tunnel:<id>").
+    /// An identifier, not a secret — UserDefaults is fine.
+    var lastConnection: String {
+        get { UserDefaults.standard.string(forKey: "last_connection") ?? "" }
+        set { UserDefaults.standard.set(newValue, forKey: "last_connection") }
+    }
+
     func resetToRegister() {
         // Keep serverURL and mode, clear everything else
         [Key.token, .username, .isAdmin, .vpnName, .totpEnabled,

@@ -10,6 +10,7 @@ import (
 	"wg-client/internal/daemon"
 	"wg-client/internal/daemon/platform"
 	"wg-client/internal/ipc"
+	"wg-client/internal/update"
 )
 
 func main() {
@@ -35,7 +36,7 @@ func main() {
 	}
 
 	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
-	log.Printf("ProIdentity Access Daemon starting (platform: %s)", runtime.GOOS)
+	log.Printf("ProIdentity Access Daemon %s starting (platform: %s)", update.Version, runtime.GOOS)
 
 	// Extract wintun.dll next to the executable before any WireGuard init (Windows only).
 	if err := daemon.EnsureWintun(); err != nil {
@@ -62,11 +63,19 @@ func main() {
 	ipc.RemoveTokenFile()
 	server = ipc.NewServer(manager, "")
 
+	// Client updates are downloaded, verified and installed by this service
+	// (LocalSystem / root), so users without admin rights can update.
+	updater := daemon.NewUpdater(filepath.Join(filepath.Dir(storageDir), "updates"),
+		func(evt ipc.Event) { server.Broadcast(evt) },
+		func() []ipc.Principal { return server.ConnectedPrincipals() })
+	server.SetUpdater(updater)
+
 	runFn := func() error {
 		if err := server.Start(); err != nil {
 			return err
 		}
 		log.Println("Daemon ready")
+		updater.ResumeAfterUpdate()
 		// Block until stopped
 		select {}
 	}

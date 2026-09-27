@@ -11,6 +11,7 @@ class VPNManager {
 
     private let storageKey = "wg_tunnels"
     private var providerManagers: [String: NETunnelProviderManager] = [:]
+    private var observers: [String: NSObjectProtocol] = [:]
     var onStateChanged: ((String, String) -> Void)? // (tunnelID, state)
 
     // MARK: - Config storage (Keychain)
@@ -53,7 +54,7 @@ class VPNManager {
 
     // MARK: - Import tunnel
     func importTunnel(name: String, configContent: String) throws -> [String: Any] {
-        guard var config = WireGuardConfig.parse(name: name, config: configContent) else {
+        guard let config = WireGuardConfig.parse(name: name, config: configContent) else {
             throw VPNError.invalidConfig
         }
         var current = configs
@@ -64,9 +65,13 @@ class VPNManager {
 
     // MARK: - Delete tunnel
     func deleteTunnel(id: String) async throws {
+        stopObserving(id)
         if let mgr = providerManagers[id] {
             try? await mgr.removeFromPreferences()
             providerManagers.removeValue(forKey: id)
+        } else if let mgr = try? await NETunnelProviderManager.loadAllFromPreferences()
+                    .first(where: { Self.tunnelID(of: $0) == id }) {
+            try? await mgr.removeFromPreferences()
         }
         configs = configs.filter { $0.id != id }
     }
@@ -94,11 +99,77 @@ class VPNManager {
         onStateChanged?(id, "disconnected")
     }
 
-    // MARK: - Stats (bytes, last handshake)
-    func getStats(id: String) -> [String: Any] {
-        // Real stats require querying the tunnel provider via IPC.
-        // Return zeros when not available.
-        return ["tunnel_id": id, "rx_bytes": 0, "tx_bytes": 0, "last_handshake": ""]
+    // MARK: - Live state
+
+    func status(id: String) -> String {
+        guard let mgr = providerManagers[id] else { return "disconnected" }
+        return Self.statusString(mgr.connection.status)
+    }
+
+    /// When the system reports the tunnel came up (drives the session timer).
+    func connectedDate(id: String) -> Date? {
+        providerManagers[id]?.connection.connectedDate
+    }
+
+    /// Re-attach to tunnels the system still has — e.g. still connected after
+    /// the app was relaunched — so the UI shows the real state.
+    func restoreState() async {
+        guard let managers = try? await NETunnelProviderManager.loadAllFromPreferences() else { return }
+        let known = Set(configs.map(\.id))
+        for mgr in managers {
+            guard let id = Self.tunnelID(of: mgr), known.contains(id), providerManagers[id] == nil else { continue }
+            providerManagers[id] = mgr
+            observeManager(mgr, tunnelID: id)
+            onStateChanged?(id, Self.statusString(mgr.connection.status))
+        }
+    }
+
+    /// Live counters. The tunnel extension answers "stats" with the WireGuard
+    /// runtime configuration (rx_bytes / tx_bytes / last_handshake_time_sec).
+    func fetchStats(id: String) async -> TunnelStats? {
+        guard let session = providerManagers[id]?.connection as? NETunnelProviderSession,
+              session.status == .connected else { return nil }
+        return await withCheckedContinuation { (cont: CheckedContinuation<TunnelStats?, Never>) in
+            let once = ResumeOnce(cont)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) { once.resume(nil) }
+            do {
+                try session.sendProviderMessage(Data("stats".utf8)) { data in
+                    once.resume(data.flatMap { String(data: $0, encoding: .utf8) }.map(Self.parseRuntime))
+                }
+            } catch {
+                once.resume(nil)
+            }
+        }
+    }
+
+    private static func parseRuntime(_ uapi: String) -> TunnelStats {
+        var rx: Int64 = 0, tx: Int64 = 0, handshake: Int64 = 0
+        for line in uapi.split(separator: "\n") {
+            let parts = line.split(separator: "=", maxSplits: 1)
+            guard parts.count == 2 else { continue }
+            let value = Int64(parts[1]) ?? 0
+            switch parts[0] {
+            case "rx_bytes": rx += value
+            case "tx_bytes": tx += value
+            case "last_handshake_time_sec": handshake = max(handshake, value)
+            default: break
+            }
+        }
+        return TunnelStats(
+            rxBytes: rx, txBytes: tx,
+            lastHandshake: handshake > 0 ? Date(timeIntervalSince1970: TimeInterval(handshake)) : nil
+        )
+    }
+
+    private static func statusString(_ status: NEVPNStatus) -> String {
+        switch status {
+        case .connected:     return "connected"
+        case .connecting:    return "connecting"
+        case .reasserting:   return "connecting"
+        case .invalid:       return "error"
+        case .disconnecting, .disconnected: return "disconnected"
+        @unknown default:    return "disconnected"
+        }
     }
 
     // MARK: - Managed tunnel (from server config)
@@ -108,10 +179,26 @@ class VPNManager {
         }
         config.isManaged = true
         config.managedServerID = serverID
-        var current = configs.filter { $0.managedServerID != serverID } // replace existing
+        var current = configs
+        if let existing = current.first(where: { $0.managedServerID == serverID }) {
+            config.id = existing.id // keep the same VPN profile across sessions
+        }
+        current.removeAll { $0.managedServerID == serverID }
         current.append(config)
         configs = current
         return config
+    }
+
+    /// Imported (non-managed) tunnels, in import order.
+    var importedConfigs: [WireGuardConfig] { configs.filter { !$0.isManaged } }
+
+    /// Stops and removes every server-assigned tunnel (used on sign-out);
+    /// imported tunnels are left alone.
+    func removeManagedTunnels() async {
+        for cfg in configs where cfg.isManaged {
+            disconnectTunnel(id: cfg.id)
+            try? await deleteTunnel(id: cfg.id)
+        }
     }
 
     func tunnelIDForServer(_ serverID: String) -> String? {
@@ -120,7 +207,7 @@ class VPNManager {
 
     func activeServerIDs() -> [String] {
         configs.filter { cfg in
-            guard let sid = cfg.managedServerID else { return false }
+            guard cfg.managedServerID != nil else { return false }
             return providerManagers[cfg.id]?.connection.status == .connected
         }.compactMap { $0.managedServerID }
     }
@@ -133,23 +220,24 @@ class VPNManager {
             manager.removeFromPreferences { _ in }
         }
         providerManagers.removeAll()
+        observers.keys.forEach(stopObserving)
         deleteKeychainData(for: storageKey)
         UserDefaults.standard.removeObject(forKey: storageKey)
     }
 
     // MARK: - Private helpers
     private func loadOrCreateManager(for config: WireGuardConfig) async throws -> NETunnelProviderManager {
-        if let existing = providerManagers[config.id] { return existing }
-
-        let managers = try await NETunnelProviderManager.loadAllFromPreferences()
-        if let existing = managers.first(where: { ($0.localizedDescription ?? "") == config.id }) {
-            providerManagers[config.id] = existing
-            return existing
+        var mgr = providerManagers[config.id]
+        if mgr == nil {
+            let managers = try await NETunnelProviderManager.loadAllFromPreferences()
+            mgr = managers.first(where: { Self.tunnelID(of: $0) == config.id })
         }
+        let manager = mgr ?? NETunnelProviderManager()
+        // The profile name shown in iOS Settings > VPN.
+        manager.localizedDescription = config.name
 
-        let mgr = NETunnelProviderManager()
-        mgr.localizedDescription = config.id
-
+        // Always re-apply the configuration: managed tunnels get a fresh key
+        // and address for every session but keep the same profile.
         let proto = NETunnelProviderProtocol()
         proto.providerBundleIdentifier = "com.proidentity.ios.tunnel" // Network Extension bundle ID
         proto.serverAddress = config.peers.first?.endpoint ?? "WireGuard"
@@ -157,28 +245,35 @@ class VPNManager {
             "wg-config": config.toConfigString(),
             "tunnel-id": config.id
         ]
-        mgr.protocolConfiguration = proto
-        mgr.isEnabled = true
+        manager.protocolConfiguration = proto
+        manager.isEnabled = true
 
-        try await mgr.saveToPreferences()
-        try await mgr.loadFromPreferences()
-        providerManagers[config.id] = mgr
-        return mgr
+        try await manager.saveToPreferences()
+        try await manager.loadFromPreferences()
+        providerManagers[config.id] = manager
+        return manager
+    }
+
+    /// Profiles store their tunnel id in the provider configuration; older
+    /// builds used the id as the profile name.
+    private static func tunnelID(of mgr: NETunnelProviderManager) -> String? {
+        let proto = mgr.protocolConfiguration as? NETunnelProviderProtocol
+        return proto?.providerConfiguration?["tunnel-id"] as? String ?? mgr.localizedDescription
     }
 
     private func observeManager(_ mgr: NETunnelProviderManager, tunnelID: String) {
-        NotificationCenter.default.addObserver(forName: .NEVPNStatusDidChange, object: mgr.connection, queue: .main) { [weak self] _ in
-            let status: String
-            switch mgr.connection.status {
-            case .connected:     status = "connected"
-            case .connecting:    status = "connecting"
-            case .disconnecting: status = "disconnected"
-            case .disconnected:  status = "disconnected"
-            case .invalid:       status = "error"
-            case .reasserting:   status = "connecting"
-            @unknown default:    status = "disconnected"
-            }
-            self?.onStateChanged?(tunnelID, status)
+        // One observer per tunnel; reconnecting used to stack duplicate observers.
+        if let old = observers[tunnelID] { NotificationCenter.default.removeObserver(old) }
+        observers[tunnelID] = NotificationCenter.default.addObserver(
+            forName: .NEVPNStatusDidChange, object: mgr.connection, queue: .main
+        ) { [weak self] _ in
+            self?.onStateChanged?(tunnelID, Self.statusString(mgr.connection.status))
+        }
+    }
+
+    private func stopObserving(_ tunnelID: String) {
+        if let old = observers.removeValue(forKey: tunnelID) {
+            NotificationCenter.default.removeObserver(old)
         }
     }
 
@@ -242,6 +337,24 @@ class VPNManager {
         if let mtu = c.iface.mtu { d["mtu"] = mtu }
         if let port = c.iface.listenPort { d["listen_port"] = port }
         return d
+    }
+}
+
+struct TunnelStats {
+    let rxBytes: Int64
+    let txBytes: Int64
+    let lastHandshake: Date?
+}
+
+/// Resumes a continuation exactly once (reply vs. timeout race).
+private final class ResumeOnce<T>: @unchecked Sendable {
+    private let lock = NSLock()
+    private var continuation: CheckedContinuation<T, Never>?
+    init(_ continuation: CheckedContinuation<T, Never>) { self.continuation = continuation }
+    func resume(_ value: T) {
+        lock.lock(); defer { lock.unlock() }
+        continuation?.resume(returning: value)
+        continuation = nil
     }
 }
 

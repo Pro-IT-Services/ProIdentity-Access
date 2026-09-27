@@ -12,6 +12,7 @@ import (
 
 	"wg-client/internal/config"
 	"wg-client/internal/ipc"
+	"wg-client/internal/update"
 
 	"github.com/google/uuid"
 )
@@ -228,7 +229,7 @@ func (m *TunnelManager) GetStats(principal ipc.Principal, id string) (*ipc.Stats
 func (m *TunnelManager) DaemonStatus() (*ipc.StatusResult, error) {
 	return &ipc.StatusResult{
 		Running:       true,
-		DaemonVersion: "0.1.0",
+		DaemonVersion: update.Version,
 	}, nil
 }
 

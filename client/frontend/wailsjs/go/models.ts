@@ -118,6 +118,32 @@ export namespace ipc {
 		    return a;
 		}
 	}
+	export class UpdateState {
+	    state: string;
+	    supported: boolean;
+	    current_version: string;
+	    latest_version?: string;
+	    mandatory?: boolean;
+	    notes?: string;
+	    progress?: number;
+	    error?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new UpdateState(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.state = source["state"];
+	        this.supported = source["supported"];
+	        this.current_version = source["current_version"];
+	        this.latest_version = source["latest_version"];
+	        this.mandatory = source["mandatory"];
+	        this.notes = source["notes"];
+	        this.progress = source["progress"];
+	        this.error = source["error"];
+	    }
+	}
 
 }
 
@@ -195,38 +221,6 @@ export namespace main {
 	        this.custom_ip = source["custom_ip"];
 	        this.remembered_user = source["remembered_user"];
 	        this.has_saved_password = source["has_saved_password"];
-	    }
-	}
-	export class UpdateCheckResult {
-	    current_version: string;
-	    latest_version: string;
-	    version?: string;
-	    available: boolean;
-	    mandatory: boolean;
-	    platform: string;
-	    filename: string;
-	    url: string;
-	    sha256: string;
-	    size: number;
-	    published_at: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new UpdateCheckResult(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.current_version = source["current_version"];
-	        this.latest_version = source["latest_version"];
-	        this.version = source["version"];
-	        this.available = source["available"];
-	        this.mandatory = source["mandatory"];
-	        this.platform = source["platform"];
-	        this.filename = source["filename"];
-	        this.url = source["url"];
-	        this.sha256 = source["sha256"];
-	        this.size = source["size"];
-	        this.published_at = source["published_at"];
 	    }
 	}
 

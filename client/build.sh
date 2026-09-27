@@ -74,13 +74,13 @@ echo "[2/4] App — wails build (darwin/$(uname -m))"
 cd "$REPO_ROOT"
 # -s skips the frontend build inside wails; step 1 already handled it
 rm -rf "$BIN_DIR/ProIdentity.app" "$BIN_DIR/ProIdentity Access.app"
-wails build -s
+wails build -s -ldflags "-X wg-client/internal/update.Version=$VERSION"
 [ -d "$BIN_DIR/ProIdentity Access.app" ] || { echo "ERROR: ProIdentity Access.app not found" >&2; exit 1; }
 
 # ── Step 3 — Daemon ───────────────────────────────────────────────────────────
 echo "[3/4] Daemon — go build"
 cd "$REPO_ROOT"
-go build -ldflags="-s -w" -o "$BIN_DIR/proidentity-daemon" ./cmd/daemon/
+go build -ldflags="-s -w -X wg-client/internal/update.Version=$VERSION" -o "$BIN_DIR/proidentity-daemon" ./cmd/daemon/
 [ -f "$BIN_DIR/proidentity-daemon" ] || { echo "ERROR: proidentity-daemon not found" >&2; exit 1; }
 
 # ── Step 4 — .pkg installer ───────────────────────────────────────────────────

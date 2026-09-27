@@ -122,11 +122,32 @@ type StatusResult struct {
 	Running       bool   `json:"running"`
 }
 
+// UpdateState is the daemon's client-update status. The daemon downloads,
+// verifies and installs updates itself (it runs as LocalSystem / root), so
+// users without admin rights can update.
+type UpdateState struct {
+	// idle, checking, up_to_date, available, downloading, installing, failed
+	State          string `json:"state"`
+	Supported      bool   `json:"supported"`
+	CurrentVersion string `json:"current_version"`
+	LatestVersion  string `json:"latest_version,omitempty"`
+	Mandatory      bool   `json:"mandatory,omitempty"`
+	Notes          string `json:"notes,omitempty"`
+	Progress       int    `json:"progress,omitempty"` // 0–100 while downloading
+	Error          string `json:"error,omitempty"`
+}
+
+// UpdateParams names the management server that publishes client updates.
+type UpdateParams struct {
+	ServerURL string `json:"server_url"`
+}
+
 // Event type constants
 const (
 	EventTunnelChanged  = "tunnel.changed"  // payload: TunnelInfo
 	EventStatsUpdate    = "stats.update"    // payload: StatsInfo
 	EventOpenVPNChanged = "openvpn.changed" // payload: OpenVPNStatus
+	EventUpdateState    = "update.state"    // payload: UpdateState (visible to every user)
 )
 
 // RPC method names
@@ -144,6 +165,10 @@ const (
 	MethodConnectOpenVPN    = "openvpn.connect"
 	MethodDisconnectOpenVPN = "openvpn.disconnect"
 	MethodListOpenVPN       = "openvpn.list"
+
+	MethodUpdateCheck   = "update.check"   // params: UpdateParams → UpdateState
+	MethodUpdateInstall = "update.install" // params: UpdateParams; installs with system rights
+	MethodUpdateStatus  = "update.status"  // → UpdateState
 )
 
 // Error codes

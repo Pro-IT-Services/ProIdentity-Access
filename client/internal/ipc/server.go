@@ -28,9 +28,17 @@ type Handler interface {
 	ListOpenVPN(principal Principal) ([]OpenVPNStatus, error)
 }
 
+// UpdateHandler checks for and installs client updates with system rights.
+type UpdateHandler interface {
+	CheckUpdate(principal Principal, serverURL string) (*UpdateState, error)
+	InstallUpdate(principal Principal, serverURL string) error
+	UpdateStatus() UpdateState
+}
+
 // Server listens on the IPC socket and dispatches RPC calls to a Handler.
 type Server struct {
 	handler  Handler
+	updater  UpdateHandler
 	listener net.Listener
 	token    string // optional legacy session auth token
 
@@ -45,6 +53,24 @@ func NewServer(h Handler, token string) *Server {
 		token:   token,
 		clients: make(map[net.Conn]Principal),
 	}
+}
+
+// SetUpdater enables the update.* methods.
+func (s *Server) SetUpdater(u UpdateHandler) { s.updater = u }
+
+// ConnectedPrincipals lists the users with a GUI connected right now.
+func (s *Server) ConnectedPrincipals() []Principal {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	seen := map[string]bool{}
+	var out []Principal
+	for _, p := range s.clients {
+		if p.Valid() && !seen[p.UserID] {
+			seen[p.UserID] = true
+			out = append(out, p)
+		}
+	}
+	return out
 }
 
 // Start begins listening and serving connections.
@@ -292,6 +318,29 @@ func (s *Server) dispatch(req Request, principal Principal) Response {
 			return errResponse(req.ID, ErrCodeInternal, err.Error())
 		}
 		return okResponse(req.ID, sessions)
+
+	case MethodUpdateCheck, MethodUpdateInstall, MethodUpdateStatus:
+		if s.updater == nil {
+			return errResponse(req.ID, ErrCodeInternal, "updates are not available")
+		}
+		if req.Method == MethodUpdateStatus {
+			return okResponse(req.ID, s.updater.UpdateStatus())
+		}
+		var p UpdateParams
+		if err := json.Unmarshal(req.Params, &p); err != nil {
+			return errResponse(req.ID, ErrCodeBadParams, "bad params")
+		}
+		if req.Method == MethodUpdateCheck {
+			st, err := s.updater.CheckUpdate(principal, p.ServerURL)
+			if err != nil {
+				return errResponse(req.ID, ErrCodeInternal, err.Error())
+			}
+			return okResponse(req.ID, st)
+		}
+		if err := s.updater.InstallUpdate(principal, p.ServerURL); err != nil {
+			return errResponse(req.ID, ErrCodeInternal, err.Error())
+		}
+		return okResponse(req.ID, true)
 
 	default:
 		return errResponse(req.ID, -32601, fmt.Sprintf("unknown method %q", req.Method))

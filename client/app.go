@@ -42,6 +42,8 @@ type App struct {
 	mUserConfigs       map[string]string         // "uconf:{serverID}" → config name
 	mUserConfigTunnels map[string]string         // "uconf:{serverID}" → ephemeral daemon tunnel ID (connected only)
 	mPollCancel        context.CancelFunc        // cancels background poll loop
+
+	quitForUpdate sync.Once // quit once when the service starts installing an update
 }
 
 func NewApp() *App {
@@ -111,6 +113,11 @@ func (a *App) forwardDaemonEvents() {
 			if json.Unmarshal(evt.Payload, &st) == nil {
 				runtime.EventsEmit(a.ctx, evt.Type, st)
 				signalTrayRefresh()
+			}
+		case ipc.EventUpdateState:
+			var st ipc.UpdateState
+			if json.Unmarshal(evt.Payload, &st) == nil {
+				a.onUpdateState(st)
 			}
 		}
 	}

@@ -1,99 +1,76 @@
 package main
 
 import (
-	"encoding/json"
-	"fmt"
-	"net/http"
-	"runtime"
-	"strconv"
+	"errors"
 	"strings"
 	"time"
+
+	"github.com/wailsapp/wails/v2/pkg/runtime"
+
+	"wg-client/internal/ipc"
+	"wg-client/internal/update"
 )
 
-var appVersion = "0.5.5"
+// Updates are checked, downloaded, verified and installed by the daemon, which
+// runs as LocalSystem / root. Users without admin rights can therefore update;
+// the app only names the management server and shows the prompt.
 
-type UpdateCheckResult struct {
-	CurrentVersion string `json:"current_version"`
-	LatestVersion  string `json:"latest_version"`
-	Version        string `json:"version,omitempty"`
-	Available      bool   `json:"available"`
-	Mandatory      bool   `json:"mandatory"`
-	Platform       string `json:"platform"`
-	FileName       string `json:"filename"`
-	URL            string `json:"url"`
-	SHA256         string `json:"sha256"`
-	Size           int64  `json:"size"`
-	PublishedAt    string `json:"published_at"`
-}
-
-func (a *App) CheckForUpdate() (*UpdateCheckResult, error) {
-	if runtime.GOOS != "windows" {
-		return &UpdateCheckResult{CurrentVersion: appVersion}, nil
-	}
-
+func (a *App) updateServerURL() (string, error) {
 	a.mMu.Lock()
-	serverURL := ""
-	if a.mSettings != nil {
-		serverURL = strings.TrimRight(a.mSettings.ServerURL, "/")
+	defer a.mMu.Unlock()
+	if a.mSettings == nil || strings.TrimSpace(a.mSettings.ServerURL) == "" {
+		return "", errors.New("no management server is configured")
 	}
-	a.mMu.Unlock()
-	if serverURL == "" {
-		return nil, fmt.Errorf("server URL is not configured")
-	}
+	return strings.TrimRight(a.mSettings.ServerURL, "/"), nil
+}
 
-	req, err := http.NewRequest("GET", serverURL+"/api/v1/client-updates/windows/latest", nil)
+// AppVersion is the installed client version.
+func (a *App) AppVersion() string { return update.Version }
+
+// CheckForUpdate asks the service whether the management server publishes a
+// newer, correctly signed client for this platform.
+func (a *App) CheckForUpdate() (*ipc.UpdateState, error) {
+	serverURL, err := a.updateServerURL()
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("User-Agent", "ProIdentity-Access/"+appVersion)
+	if !a.client.IsConnected() {
+		return nil, errors.New("the ProIdentity service is not running")
+	}
+	return a.client.CheckUpdate(serverURL)
+}
 
-	c := &http.Client{Timeout: 15 * time.Second}
-	res, err := c.Do(req)
+// InstallUpdate asks the service to download and install the update. The app
+// quits when installation starts and is reopened afterwards.
+func (a *App) InstallUpdate() error {
+	serverURL, err := a.updateServerURL()
 	if err != nil {
-		return nil, fmt.Errorf("check update: %w", err)
+		return err
 	}
-	defer res.Body.Close()
-	if res.StatusCode >= 400 {
-		return nil, fmt.Errorf("check update: HTTP %d", res.StatusCode)
+	if !a.client.IsConnected() {
+		return errors.New("the ProIdentity service is not running")
 	}
-
-	var m UpdateCheckResult
-	if err := json.NewDecoder(res.Body).Decode(&m); err != nil {
-		return nil, err
-	}
-	if m.LatestVersion == "" {
-		m.LatestVersion = m.Version
-	}
-	m.CurrentVersion = appVersion
-	m.Available = m.LatestVersion != "" && versionGreater(m.LatestVersion, appVersion)
-	return &m, nil
+	return a.client.InstallUpdate(serverURL)
 }
 
-func versionGreater(a, b string) bool {
-	ap := parseVersion(a)
-	bp := parseVersion(b)
-	for i := 0; i < len(ap) || i < len(bp); i++ {
-		av, bv := 0, 0
-		if i < len(ap) {
-			av = ap[i]
-		}
-		if i < len(bp) {
-			bv = bp[i]
-		}
-		if av != bv {
-			return av > bv
-		}
+// UpdateState returns the service's current update state.
+func (a *App) UpdateState() (*ipc.UpdateState, error) {
+	if !a.client.IsConnected() {
+		return &ipc.UpdateState{State: "idle", CurrentVersion: update.Version}, nil
 	}
-	return false
+	return a.client.UpdateStatus()
 }
 
-func parseVersion(v string) []int {
-	v = strings.TrimPrefix(strings.TrimSpace(v), "v")
-	parts := strings.Split(v, ".")
-	out := make([]int, 0, len(parts))
-	for _, p := range parts {
-		n, _ := strconv.Atoi(p)
-		out = append(out, n)
+// onUpdateState forwards update progress to the UI. When installation starts
+// the app quits so the installer can replace it; the service reopens it.
+func (a *App) onUpdateState(st ipc.UpdateState) {
+	runtime.EventsEmit(a.ctx, ipc.EventUpdateState, st)
+	if st.State == "installing" {
+		a.quitForUpdate.Do(func() {
+			go func() {
+				time.Sleep(1500 * time.Millisecond)
+				runtime.Quit(a.ctx)
+			}()
+		})
 	}
-	return out
 }

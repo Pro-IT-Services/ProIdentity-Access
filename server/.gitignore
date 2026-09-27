@@ -6,4 +6,5 @@ internal/api/ui/dist/*
 *.sum
 go.sum
 
-internal/api/client_updates/windows/*.msi
+internal/api/client_updates/*/*.msi
+internal/api/client_updates/*/*.pkg

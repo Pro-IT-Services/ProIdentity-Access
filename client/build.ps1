@@ -115,7 +115,7 @@ Push-Location $Root
 # -s skips the frontend build inside wails; step 1 already handled it
 Remove-Item "$BinDir\ProIdentity.exe" -Force -ErrorAction SilentlyContinue
 Remove-Item "$BinDir\ProIdentity Access.exe" -Force -ErrorAction SilentlyContinue
-wails build -platform windows/amd64 -s -ldflags "-X main.appVersion=$Version"
+wails build -platform windows/amd64 -s -ldflags "-X wg-client/internal/update.Version=$Version"
 if ($LASTEXITCODE -ne 0) { Pop-Location; exit 1 }
 Pop-Location
 
@@ -131,7 +131,7 @@ Write-Host "[3/4] Daemon -- go build (windows/amd64)" -ForegroundColor Green
 Push-Location $Root
 $env:GOOS   = "windows"
 $env:GOARCH = "amd64"
-go build -ldflags="-s -w" -o "build\bin\ProIdentity Daemon.exe" .\cmd\daemon
+go build -ldflags="-s -w -X wg-client/internal/update.Version=$Version" -o "build\bin\ProIdentity Daemon.exe" .\cmd\daemon
 $rc = $LASTEXITCODE
 Remove-Item Env:\GOOS, Env:\GOARCH -ErrorAction SilentlyContinue
 Pop-Location
@@ -166,35 +166,9 @@ $msiPath = Resolve-Path $OutMsi
 $msiSize = "{0:N1} MB" -f ((Get-Item $msiPath).Length / 1MB)
 
 if (-not $SkipServerPackage) {
-    $serverRoot = Resolve-Path "$Root\..\server" -ErrorAction SilentlyContinue
-    if ($serverRoot) {
-        $updatesDir = Join-Path $serverRoot "internal\api\client_updates\windows"
-        New-Item -ItemType Directory -Force -Path $updatesDir | Out-Null
-
-        $fileName = Split-Path $msiPath -Leaf
-        $serverMsi = Join-Path $updatesDir $fileName
-        Copy-Item -LiteralPath $msiPath -Destination $serverMsi -Force
-
-        $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $msiPath).Hash.ToLowerInvariant()
-        $manifest = [ordered]@{
-            version      = $Version
-            latest_version = $Version
-            platform     = "windows-amd64"
-            filename     = $fileName
-            url          = "/api/v1/client-updates/windows/$fileName"
-            sha256       = $hash
-            size         = (Get-Item -LiteralPath $msiPath).Length
-            published_at = (Get-Date).ToUniversalTime().ToString("o")
-            mandatory    = $false
-        }
-        $manifestJson = $manifest | ConvertTo-Json
-        [System.IO.File]::WriteAllText(
-            (Join-Path $updatesDir "latest.json"),
-            $manifestJson,
-            [System.Text.UTF8Encoding]::new($false)
-        )
-        Write-Host "  Published client update package to server embed directory" -ForegroundColor Green
-    }
+    # Signed update feed for the clients' services (see publish-update.ps1).
+    # Fails the build if the release signing key is missing.
+    & "$Root\publish-update.ps1" -File $msiPath -Platform "windows-amd64" -Version $Version
 }
 
 Write-Host ""

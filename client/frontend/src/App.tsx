@@ -3,6 +3,7 @@ import { useTunnelStore } from './stores/useTunnelStore'
 import { useManagedStore } from './stores/useManagedStore'
 import { useSetupStore } from './stores/useSetupStore'
 import { useTrafficHistory } from './stores/useTrafficHistory'
+import { useUpdateStore } from './stores/useUpdateStore'
 import { Topbar } from './components/Topbar'
 import { MissionControl } from './components/mission/MissionControl'
 import { ConnectionsList } from './components/ConnectionsList'
@@ -10,6 +11,7 @@ import { ConfigDisclosure } from './components/ConfigDisclosure'
 import { ImportSheet } from './components/ImportSheet'
 import { LoginSheet } from './components/LoginSheet'
 import { SettingsSheet } from './components/SettingsSheet'
+import { UpdatePrompt } from './components/UpdatePrompt'
 import { TotpPromptSheet } from './components/TotpPromptSheet'
 import { TrayMiniDashboard } from './components/tray/TrayMiniDashboard'
 import { Sheet } from './components/ui/Sheet'
@@ -17,13 +19,14 @@ import SetupWizard from './components/SetupWizard'
 import ErrorBoundary from './components/ErrorBoundary'
 import { ToastContainer, toast } from './components/ui/Toast'
 import {
-  checkForUpdate,
+  getUpdateState,
   managedConnectServerPush,
   managedCreatePushAuth,
   managedDisconnectByTunnelID,
   managedPollPushAuth,
 } from './wailsbridge'
 import type { ServerInfo, StatsInfo, TunnelInfo } from './types'
+import type { UpdateState } from './wailsbridge'
 import {
   ScreenGetAll,
   WindowCenter,
@@ -142,20 +145,30 @@ export default function App() {
     return () => clearInterval(t)
   }, [settings.logged_in])
 
+  // Client updates: the ProIdentity service downloads, verifies and installs
+  // them with system rights; the app only checks and asks the user.
   useEffect(() => {
     if (!settings.server_url || !settings.logged_in) return
-    let cancelled = false
-    const t = setTimeout(() => {
-      checkForUpdate()
-        .then(info => {
-          if (!cancelled && info.available) {
-            toast(`ProIdentity ${info.latest_version} is available. Open Settings to install it.`, 'info', 12_000)
-          }
-        })
-        .catch(() => {})
-    }, 5000)
-    return () => { cancelled = true; clearTimeout(t) }
+    const check = () => useUpdateStore.getState().check({ silent: true })
+    const first = setTimeout(check, 5_000)
+    const every = setInterval(check, 6 * 60 * 60 * 1000)
+    return () => { clearTimeout(first); clearInterval(every) }
   }, [settings.server_url, settings.logged_in])
+
+  useEffect(() => {
+    getUpdateState()
+      .then(st => {
+        if (st.state === 'failed') useUpdateStore.getState().applyEvent(st)
+        const key = 'proidentity.lastVersion'
+        let last = ''
+        try { last = localStorage.getItem(key) ?? '' } catch { /* ignore */ }
+        if (last && st.current_version && last !== st.current_version && st.state !== 'failed') {
+          toast(`ProIdentity Access was updated to ${st.current_version}.`, 'info', 8_000)
+        }
+        try { localStorage.setItem(key, st.current_version) } catch { /* ignore */ }
+      })
+      .catch(() => {})
+  }, [])
 
   const openTrayPopover = useCallback(() => {
     const isMac = /Macintosh|MacIntel|MacPPC|Mac68K/.test(navigator.userAgent)
@@ -198,6 +211,10 @@ export default function App() {
       if (!stats) return
       updateStats(stats)
       pushSample(stats.tunnel_id, Date.now(), stats.rx_bytes, stats.tx_bytes)
+    })
+    rt.EventsOn('update.state', (...args: unknown[]) => {
+      const st = args[0] as UpdateState
+      if (st) useUpdateStore.getState().applyEvent(st)
     })
     rt.EventsOn('servers.changed', () => {
       if (useManagedStore.getState().settings.logged_in) loadServers()
@@ -597,6 +614,7 @@ export default function App() {
         }}
       />
 
+      <UpdatePrompt />
       <ToastContainer />
     </div>
   )

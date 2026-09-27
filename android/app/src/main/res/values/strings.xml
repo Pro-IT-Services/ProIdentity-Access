@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">ProIdentity Access</string>
-    <string name="vpn_notification_title">VPN Active</string>
-    <string name="vpn_notification_text">WireGuard tunnel is running</string>
-    <string name="channel_id">wg_vpn</string>
-    <string name="channel_name">VPN Status</string>
+    <string name="vpn_channel_name">VPN connection</string>
+    <string name="vpn_channel_description">Shows while a VPN connection is active, with a button to disconnect.</string>
+    <string name="vpn_notification_connected">Connected to %1$s</string>
+    <string name="vpn_notification_connected_many">Connected to %1$d networks</string>
+    <string name="vpn_notification_public">VPN connected</string>
+    <string name="vpn_notification_disconnect">Disconnect</string>
 </resources>

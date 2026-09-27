@@ -58,8 +58,8 @@ func (s *Server) buildRouter() *chi.Mux {
 	r.Route("/api/v1", func(r chi.Router) {
 		// Registration is always plaintext (key exchange hasn't happened yet)
 		r.With(rateLimit(10, time.Minute)).Post("/register", s.handleRegister)
-		r.Get("/client-updates/windows/latest", s.handleClientUpdateManifest)
-		r.Get("/client-updates/windows/{file}", s.handleClientUpdateDownload)
+		r.Get("/client-updates/{platform}/latest", s.handleClientUpdateManifest)
+		r.Get("/client-updates/{platform}/{file}", s.handleClientUpdateDownload)
 
 		// Public routes — decrypt if device-encrypted, but no auth required
 		r.Group(func(r chi.Router) {

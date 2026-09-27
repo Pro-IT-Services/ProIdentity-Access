@@ -148,6 +148,24 @@ func (c *Client) ListOpenVPN() ([]OpenVPNStatus, error) {
 
 // readerLoop is the single goroutine that reads all incoming data.
 // It dispatches responses to pending call channels and events to eventCh.
+// CheckUpdate asks the daemon to look for a newer client on serverURL.
+func (c *Client) CheckUpdate(serverURL string) (*UpdateState, error) {
+	var st UpdateState
+	return &st, c.call(MethodUpdateCheck, UpdateParams{ServerURL: serverURL}, &st)
+}
+
+// InstallUpdate asks the daemon to download, verify and install the update.
+// It returns once the install has started; progress arrives as update.state events.
+func (c *Client) InstallUpdate(serverURL string) error {
+	return c.call(MethodUpdateInstall, UpdateParams{ServerURL: serverURL}, nil)
+}
+
+// UpdateStatus returns the daemon's current update state.
+func (c *Client) UpdateStatus() (*UpdateState, error) {
+	var st UpdateState
+	return &st, c.call(MethodUpdateStatus, nil, &st)
+}
+
 func (c *Client) readerLoop(conn net.Conn) {
 	scanner := bufio.NewScanner(conn)
 	scanner.Buffer(make([]byte, 1<<20), 1<<20)
