@@ -2,6 +2,8 @@ package daemon
 
 import (
 	"bufio"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -52,6 +54,8 @@ type ovpnSession struct {
 	password string
 	stopped  bool
 
+	mgmtPassword string         // per-session management password
+	mgmtPwPath   string
 	logPipe      *io.PipeWriter // openvpn stdout/stderr → watchOutput
 	lastLogError string         // last error-looking log line
 	hint         string         // what a still-retrying attempt is waiting on
@@ -115,9 +119,16 @@ func (m *OpenVPNManager) ConnectOpenVPN(ownerID string, p ipc.OpenVPNConnectPara
 		_ = os.Remove(cfgPath)
 		return nil, fmt.Errorf("the OpenVPN component is missing from this installation; reinstall ProIdentity Access")
 	}
+	mgmtPassword, mgmtPwPath, err := writeManagementPassword(cfgPath)
+	if err != nil {
+		_ = os.Remove(cfgPath)
+		return nil, fmt.Errorf("management password: %w", err)
+	}
 	args := []string{
 		"--config", cfgPath,
-		"--management", "127.0.0.1", strconv.Itoa(port),
+		// The management port is on localhost; a per-session password (file
+		// readable only by this service) keeps other local users out of it.
+		"--management", "127.0.0.1", strconv.Itoa(port), mgmtPwPath,
 		"--management-hold",
 		"--management-query-passwords",
 		"--auth-nocache",
@@ -139,11 +150,12 @@ func (m *OpenVPNManager) ConnectOpenVPN(ownerID string, p ipc.OpenVPNConnectPara
 		id: paramsID(p), ownerID: ownerID, name: p.Name, devType: devType,
 		status: ipc.StatusConnecting, cmd: cmd, cfgPath: cfgPath,
 		username: p.Username, password: p.Password,
-		logPipe: logW,
+		logPipe: logW, mgmtPassword: mgmtPassword, mgmtPwPath: mgmtPwPath,
 	}
 
 	if err := cmd.Start(); err != nil {
 		_ = os.Remove(cfgPath)
+		_ = os.Remove(mgmtPwPath)
 		return nil, fmt.Errorf("start openvpn (%s): %w", bin, err)
 	}
 
@@ -248,7 +260,11 @@ func (m *OpenVPNManager) reap(sess *ovpnSession) {
 		sess.status = ipc.StatusDisconnected
 	}
 	cfgPath := sess.cfgPath
+	pwPath := sess.mgmtPwPath
 	sess.mu.Unlock()
+	if pwPath != "" {
+		_ = os.Remove(pwPath)
+	}
 
 	if cfgPath != "" {
 		_ = os.Remove(cfgPath) // remove the profile (embedded keys) from disk
@@ -275,6 +291,8 @@ func (m *OpenVPNManager) drive(sess *ovpnSession, port int) {
 	sess.mgmt = conn
 	sess.mu.Unlock()
 
+	// Authenticate first (openvpn prompts "ENTER PASSWORD:").
+	_, _ = conn.Write([]byte(sess.mgmtPassword + "\n"))
 	// Enable notifications and release the start hold.
 	_, _ = conn.Write([]byte("state on\n"))
 	_, _ = conn.Write([]byte("bytecount 5\n"))
@@ -347,6 +365,7 @@ func (m *OpenVPNManager) handleState(sess *ovpnSession, payload string) {
 	switch state {
 	case "CONNECTED":
 		sess.status = ipc.StatusConnected
+		sess.errMsg = "" // clear an earlier "still trying" notice
 		if len(f) >= 4 && f[3] != "" {
 			sess.ip = f[3]
 		}
@@ -366,6 +385,21 @@ func (m *OpenVPNManager) handleState(sess *ovpnSession, payload string) {
 	if changed {
 		m.emit(sess)
 	}
+}
+
+// writeManagementPassword stores a random management password next to the
+// profile (same service-only temp folder, mode 0600).
+func writeManagementPassword(cfgPath string) (string, string, error) {
+	buf := make([]byte, 24)
+	if _, err := rand.Read(buf); err != nil {
+		return "", "", err
+	}
+	pw := hex.EncodeToString(buf)
+	path := strings.TrimSuffix(cfgPath, filepath.Ext(cfgPath)) + ".mgmt"
+	if err := os.WriteFile(path, []byte(pw+"\n"), 0o600); err != nil {
+		return "", "", err
+	}
+	return pw, path, nil
 }
 
 // quoted returns the first '...' quoted word of a management line.

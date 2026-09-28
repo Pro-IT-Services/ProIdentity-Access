@@ -103,6 +103,12 @@ func (m *OpenVPNManager) watchOutput(sess *ovpnSession, r io.Reader) {
 			sess.lastLogError = trimLogPrefix(line)
 			sess.mu.Unlock()
 		}
+		// Remember where it's trying to connect, so a timeout can name it.
+		if addr, proto := remoteAttempt(line); addr != "" {
+			sess.mu.Lock()
+			sess.hint = fmt.Sprintf("Can't reach the VPN server at %s (%s). Check that the server is running and that its firewall allows this port.", addr, proto)
+			sess.mu.Unlock()
+		}
 		d, ok := diagnose(line)
 		if !ok {
 			continue
@@ -120,16 +126,31 @@ func (m *OpenVPNManager) watchOutput(sess *ovpnSession, r io.Reader) {
 			go m.stop(sess)
 			continue
 		}
-		// Retrying on its own; tell the user what it's waiting on.
+		// Retrying on its own; tell the user what it's waiting on (keep the
+		// more specific "can't reach <address>" hint if there is one).
 		sess.mu.Lock()
-		sess.hint = d.message
+		if !strings.HasPrefix(sess.hint, "Can't reach the VPN server at") {
+			sess.hint = d.message
+		}
 		sess.mu.Unlock()
 	}
 }
 
 // watchConnectTimeout ends an attempt that doesn't connect in time.
 func (m *OpenVPNManager) watchConnectTimeout(sess *ovpnSession) {
-	time.Sleep(connectTimeout)
+	// Early notice: say what it's waiting on while it keeps trying.
+	time.Sleep(20 * time.Second)
+	sess.mu.Lock()
+	early := !sess.stopped && sess.status == ipc.StatusConnecting && sess.hint != ""
+	if early {
+		sess.errMsg = sess.hint
+	}
+	sess.mu.Unlock()
+	if early {
+		m.emit(sess)
+	}
+
+	time.Sleep(connectTimeout - 20*time.Second)
 	sess.mu.Lock()
 	stuck := !sess.stopped && sess.status == ipc.StatusConnecting
 	msg := sess.hint
@@ -147,6 +168,26 @@ func (m *OpenVPNManager) watchConnectTimeout(sess *ovpnSession) {
 	sess.setError(msg)
 	m.emit(sess)
 	m.stop(sess)
+}
+
+// remoteAttempt extracts the server address from openvpn's connect lines:
+//
+//	Attempting to establish TCP connection with [AF_INET]203.0.113.10:1194
+//	UDP link remote: [AF_INET]203.0.113.10:1194
+func remoteAttempt(line string) (addr, proto string) {
+	for _, p := range []struct{ marker, proto string }{
+		{"Attempting to establish TCP connection with ", "TCP"},
+		{"UDP link remote: ", "UDP"},
+	} {
+		if i := strings.Index(line, p.marker); i >= 0 {
+			a := strings.TrimSpace(line[i+len(p.marker):])
+			if j := strings.Index(a, "]"); j >= 0 {
+				a = a[j+1:]
+			}
+			return a, p.proto
+		}
+	}
+	return "", ""
 }
 
 // trimLogPrefix drops openvpn's timestamp ("2026-09-28 19:05:01 ").

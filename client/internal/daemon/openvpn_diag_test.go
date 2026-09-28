@@ -43,3 +43,17 @@ func TestTrimLogPrefix(t *testing.T) {
 		t.Fatalf("got %q", got)
 	}
 }
+
+func TestRemoteAttemptNamesTheServer(t *testing.T) {
+	addr, proto := remoteAttempt("2026-09-28 19:15:15 Attempting to establish TCP connection with [AF_INET]203.0.113.10:1194")
+	if addr != "203.0.113.10:1194" || proto != "TCP" {
+		t.Fatalf("got %q %q", addr, proto)
+	}
+	addr, proto = remoteAttempt("2026-09-28 19:15:15 UDP link remote: [AF_INET6]2001:db8::1:1194")
+	if addr != "2001:db8::1:1194" || proto != "UDP" {
+		t.Fatalf("got %q %q", addr, proto)
+	}
+	if a, _ := remoteAttempt("2026-09-28 19:15:15 Initialization Sequence Completed"); a != "" {
+		t.Fatal("unexpected match")
+	}
+}
