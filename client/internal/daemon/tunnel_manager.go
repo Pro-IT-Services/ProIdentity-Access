@@ -2,6 +2,7 @@ package daemon
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -48,6 +49,7 @@ func NewTunnelManager(storageDir string, broadcast func(ipc.Event)) (*TunnelMana
 		encKeys:    make(map[string][]byte),
 		openvpn:    NewOpenVPNManager(broadcast),
 	}
+	m.openvpn.conflict = m.findConflict
 	return m, nil
 }
 
@@ -165,6 +167,14 @@ func (m *TunnelManager) ConnectTunnel(principal ipc.Principal, id string) error 
 	m.mu.RUnlock()
 	if !ok || !m.tunnelVisibleToOwner(t, ownerID) {
 		return fmt.Errorf("tunnel %s not found", id)
+	}
+	// Two VPNs routing the same network can't work: refuse with the reason.
+	if msg, bad := m.findConflict(id, ownerID, tunnelNetworks(t.Info())); bad {
+		info := t.Info()
+		info.Status = ipc.StatusError
+		info.Error = msg
+		m.emitChanged(info)
+		return errors.New(msg)
 	}
 
 	go func() {

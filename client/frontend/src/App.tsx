@@ -4,9 +4,11 @@ import { useManagedStore } from './stores/useManagedStore'
 import { useSetupStore } from './stores/useSetupStore'
 import { useTrafficHistory } from './stores/useTrafficHistory'
 import { useUpdateStore } from './stores/useUpdateStore'
+import { useOpenVPNStore, openvpnAsTunnel, isOpenVPNTunnel, isLive, OVPN_PREFIX } from './stores/useOpenVPNStore'
 import { Topbar } from './components/Topbar'
 import { MissionControl } from './components/mission/MissionControl'
 import { ConnectionsList } from './components/ConnectionsList'
+import { ActiveConnections } from './components/ActiveConnections'
 import { ConfigDisclosure } from './components/ConfigDisclosure'
 import { ImportSheet } from './components/ImportSheet'
 import { LoginSheet } from './components/LoginSheet'
@@ -23,10 +25,11 @@ import {
   managedConnectServerPush,
   managedCreatePushAuth,
   managedDisconnectByTunnelID,
+  managedDisconnectOpenVPN,
   managedPollPushAuth,
 } from './wailsbridge'
 import type { ServerInfo, StatsInfo, TunnelInfo } from './types'
-import type { UpdateState } from './wailsbridge'
+import type { OpenVPNStatus, UpdateState } from './wailsbridge'
 import {
   ScreenGetAll,
   WindowCenter,
@@ -82,6 +85,16 @@ function synthFromServer(srv: ServerInfo, status: TunnelInfo['status']): TunnelI
   }
 }
 
+// A failed connect can be reported twice (the API call's error and the
+// service's status event); show each message once.
+let lastFailure = { msg: '', at: 0 }
+function toastFailure(msg: string) {
+  const now = Date.now()
+  if (msg === lastFailure.msg && now - lastFailure.at < 5000) return
+  lastFailure = { msg, at: now }
+  toast(msg, 'warning', 10_000)
+}
+
 function isSynth(t: TunnelInfo | null): boolean {
   return !!t && t.id.startsWith('__synth_')
 }
@@ -92,6 +105,7 @@ export default function App() {
   const { setupDone, checkSetup } = useSetupStore()
   const pushSample = useTrafficHistory(s => s.pushSample)
   const resetHistory = useTrafficHistory(s => s.reset)
+  const ovpnSessions = useOpenVPNStore(s => s.sessions)
 
   const [showImport, setShowImport]       = useState(false)
   const [showConns, setShowConns]         = useState(false)
@@ -133,6 +147,7 @@ export default function App() {
   useEffect(() => {
     refresh()
     loadSettings()
+    useOpenVPNStore.getState().load()
     const t = setInterval(refresh, 5000)
     return () => clearInterval(t)
   }, [])
@@ -204,13 +219,36 @@ export default function App() {
     if (!rt?.EventsOn) return
     rt.EventsOn('tunnel.changed', (...args: unknown[]) => {
       const info = args[0] as TunnelInfo
-      if (info) updateTunnel(info)
+      if (!info) return
+      const prev = useTunnelStore.getState().tunnels.find(t => t.id === info.id)
+      updateTunnel(info)
+      if (info.status === 'error' && info.error && (prev?.status !== 'error' || prev.error !== info.error)) {
+        toastFailure(info.error)
+      }
     })
     rt.EventsOn('stats.update', (...args: unknown[]) => {
       const stats = args[0] as StatsInfo
       if (!stats) return
       updateStats(stats)
       pushSample(stats.tunnel_id, Date.now(), stats.rx_bytes, stats.tx_bytes)
+    })
+    // The only openvpn.changed subscription (see useOpenVPNStore).
+    rt.EventsOn('openvpn.changed', (...args: unknown[]) => {
+      const st = args[0] as OpenVPNStatus
+      if (!st?.id) return
+      const prev = useOpenVPNStore.getState().sessions[st.id]
+      useOpenVPNStore.getState().apply(st)
+      // Feed the same counters and chart the WireGuard tunnels use.
+      if (st.status === 'connected') {
+        const id = OVPN_PREFIX + st.id
+        updateStats({ tunnel_id: id, rx_bytes: st.rx_bytes, tx_bytes: st.tx_bytes, last_handshake: st.connected_at ?? 0 })
+        pushSample(id, Date.now(), st.rx_bytes, st.tx_bytes)
+      }
+      // Say why it failed even when the connections sheet is closed (e.g.
+      // "... is already connected and also uses 172.16.0.0/24").
+      if (st.status === 'error' && st.error && (prev?.status !== 'error' || prev.error !== st.error)) {
+        toastFailure(`${st.name}: ${st.error}`)
+      }
     })
     rt.EventsOn('update.state', (...args: unknown[]) => {
       const st = args[0] as UpdateState
@@ -257,10 +295,11 @@ export default function App() {
   // Garbage-collect throughput history for tunnels that have been removed.
   useEffect(() => {
     const ids = new Set(tunnels.map(t => t.id))
+    for (const s of Object.values(ovpnSessions)) if (isLive(s)) ids.add(OVPN_PREFIX + s.id)
     Object.keys(useTrafficHistory.getState().history).forEach(id => {
       if (!ids.has(id)) resetHistory(id)
     })
-  }, [tunnels])
+  }, [tunnels, ovpnSessions])
 
   // Resolve focused tunnel — real first, then synthesized from pending or
   // last-known server so the main UI is never empty unless you've truly never
@@ -271,9 +310,15 @@ export default function App() {
   }, [servers, lastServerId])
 
   const focusedTunnel = useMemo<TunnelInfo | null>(() => {
-    // 1. Live tunnel takes precedence.
-    const live = tunnels.find(t => ['connected', 'connecting', 'reconnecting', 'error'].includes(t.status as any))
+    // 1. Live tunnel takes precedence: WireGuard, then OpenVPN, then a
+    //    WireGuard tunnel that failed (so its error stays visible).
+    const live = tunnels.find(t => ['connected', 'connecting', 'reconnecting'].includes(t.status as any))
     if (live) return live
+    const ovpn = Object.values(ovpnSessions).filter(isLive)
+    const ovpnLive = ovpn.find(s => s.status === 'connected') ?? ovpn[0]
+    if (ovpnLive) return openvpnAsTunnel(ovpnLive)
+    const failed = tunnels.find(t => t.status === 'error')
+    if (failed) return failed
 
     // 2. Optimistic pending — set synchronously by the Connect button.
     if (pendingServerId) {
@@ -298,7 +343,7 @@ export default function App() {
     }
 
     return null
-  }, [tunnels, servers, selectedId, pendingServerId, preferredManagedServer])
+  }, [tunnels, ovpnSessions, servers, selectedId, pendingServerId, preferredManagedServer])
 
   // When a real tunnel for the pending server materializes (or the connect
   // succeeded and the server now has a tunnelId), clear the optimistic flag.
@@ -331,7 +376,7 @@ export default function App() {
 
   // Sync selected id with focused (so the connections list highlights right).
   useEffect(() => {
-    if (focusedTunnel && !isSynth(focusedTunnel) && focusedTunnel.id !== selectedId) {
+    if (focusedTunnel && !isSynth(focusedTunnel) && !isOpenVPNTunnel(focusedTunnel) && focusedTunnel.id !== selectedId) {
       setSelected(focusedTunnel.id)
     }
   }, [focusedTunnel?.id])
@@ -408,6 +453,7 @@ export default function App() {
         setPendingServerId(null)
         setPushApprovingServer(null)
         console.warn('connect failed', e)
+        if (msg.includes("Can't connect:")) toastFailure(msg.slice(msg.indexOf("Can't connect:")))
       }
     }
   }, [connectServer, loadServers, rememberLastServer])
@@ -419,6 +465,7 @@ export default function App() {
       if (preferredManagedServer) await connectManaged(preferredManagedServer)
       return
     }
+    if (isOpenVPNTunnel(t)) return // started from the connections sheet
     if (isSynth(t)) {
       const serverId = t.id.replace('__synth_', '')
       const srv = servers.find(s => s.server.id === serverId)?.server ?? preferredManagedServer
@@ -433,17 +480,32 @@ export default function App() {
     }
   }, [focusedTunnel, servers, preferredManagedServer, connectManaged, connect])
 
+  // Disconnect any live connection by id (WireGuard tunnel or `ovpn:` session).
+  const disconnectById = useCallback(async (id: string) => {
+    try {
+      if (id.startsWith(OVPN_PREFIX)) {
+        await managedDisconnectOpenVPN(id.slice(OVPN_PREFIX.length))
+        await useOpenVPNStore.getState().load()
+        return
+      }
+      const t = useTunnelStore.getState().tunnels.find(x => x.id === id)
+      if (t?.is_managed) {
+        await managedDisconnectByTunnelID(id)
+        await loadServers()
+      } else {
+        await disconnect(id)
+      }
+    } catch (e: any) {
+      toast(String(e?.message ?? e), 'warning', 6000)
+    }
+  }, [disconnect, loadServers])
+
   const handleDisconnect = useCallback(async () => {
     const t = focusedTunnel
     if (!t || isSynth(t)) return
     setPendingServerId(null)
-    if (t.is_managed) {
-      await managedDisconnectByTunnelID(t.id)
-      await loadServers()
-    } else {
-      await disconnect(t.id)
-    }
-  }, [focusedTunnel, disconnect, loadServers])
+    await disconnectById(t.id)
+  }, [focusedTunnel, disconnectById])
 
   // Called by the connections list the instant Connect is clicked, before
   // the awaited API call returns.
@@ -535,10 +597,10 @@ export default function App() {
         onSignOut={settings.logged_in ? () => logout() : undefined}
         onOpenConnections={() => setShowConns(true)}
         onOpenConfig={() => setShowConfig(true)}
-        configEnabled={!!focusedTunnel && !isSynth(focusedTunnel)}
+        configEnabled={!!focusedTunnel && !isSynth(focusedTunnel) && !isOpenVPNTunnel(focusedTunnel)}
       />
 
-      <main className="relative flex-1 overflow-hidden flex flex-col">
+      <main className="relative flex-1 overflow-hidden flex">
         <ErrorBoundary>
           <MissionControl
             tunnel={focusedTunnel}
@@ -547,6 +609,7 @@ export default function App() {
             onConnect={handleConnect}
             onDisconnect={handleDisconnect}
           />
+          <ActiveConnections focusedId={focusedTunnel?.id} onDisconnect={disconnectById} />
         </ErrorBoundary>
       </main>
 
@@ -576,7 +639,7 @@ export default function App() {
         widthPx={460}
       >
         <ErrorBoundary>
-          {focusedTunnel && !isSynth(focusedTunnel)
+          {focusedTunnel && !isSynth(focusedTunnel) && !isOpenVPNTunnel(focusedTunnel)
             ? <ConfigDisclosure tunnel={focusedTunnel} />
             : <p className="text-sm text-muted-foreground">No tunnel selected.</p>}
         </ErrorBoundary>

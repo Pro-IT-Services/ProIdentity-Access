@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
+import { useOpenVPNStore } from '../stores/useOpenVPNStore'
 import { Loader2, Power, Trash2, ShieldCheck, Plus, Search } from 'lucide-react'
 import {
-  managedListOpenVPNProfiles, managedListOpenVPNSessions,
+  managedListOpenVPNProfiles,
   managedConnectOpenVPN, managedDisconnectOpenVPN,
   importOpenVPNProfile, deleteLocalOpenVPNProfile,
-  type OpenVPNProfileView, type OpenVPNStatus,
+  type OpenVPNProfileView,
 } from '../wailsbridge'
 import { toast } from './ui/Toast'
 
@@ -20,18 +21,12 @@ function fmtBytes(n: number): string {
 
 export function OpenVPNPanel() {
   const [profiles, setProfiles] = useState<OpenVPNProfileView[]>([])
-  const [sessions, setSessions] = useState<Record<string, OpenVPNStatus>>({})
+  const sessions = useOpenVPNStore(s => s.sessions)
+  const reloadSessions = useOpenVPNStore(s => s.load)
   const [openForm, setOpenForm] = useState<string | null>(null)
   const [importOpen, setImportOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [loaded, setLoaded] = useState(false)
-
-  const reloadSessions = () =>
-    managedListOpenVPNSessions().then(list => {
-      const m: Record<string, OpenVPNStatus> = {}
-      for (const s of list) m[s.id] = s
-      setSessions(m)
-    }).catch(() => {})
 
   const load = () => {
     Promise.all([
@@ -40,16 +35,6 @@ export function OpenVPNPanel() {
     ]).finally(() => setLoaded(true))
   }
   useEffect(() => { load() }, [])
-
-  useEffect(() => {
-    const rt = (window as any).runtime
-    if (!rt?.EventsOn) return
-    rt.EventsOn('openvpn.changed', (...args: unknown[]) => {
-      const st = args[0] as OpenVPNStatus
-      if (st?.id) setSessions(prev => ({ ...prev, [st.id]: st }))
-    })
-    return () => rt.EventsOff?.('openvpn.changed')
-  }, [])
 
   const disconnect = async (p: OpenVPNProfileView) => {
     try { await managedDisconnectOpenVPN(sid(p)); reloadSessions() }
@@ -106,7 +91,6 @@ export function OpenVPNPanel() {
                         <span className="uppercase">{p.dev_type}</span>
                         {p.requires_totp && <span className="inline-flex items-center gap-0.5 text-primary"><ShieldCheck className="w-3 h-3" /> TOTP</span>}
                         <span>{p.source === 'local' ? 'imported' : 'assigned'}</span>
-                        {st?.status === 'error' && <span className="text-destructive truncate">{st.error || 'error'}</span>}
                       </div>
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">
@@ -129,6 +113,9 @@ export function OpenVPNPanel() {
                       )}
                     </div>
                   </div>
+                  {st?.status === 'error' && (
+                    <p className="text-[11px] text-destructive mt-1.5 break-words">{st.error || 'Connection failed.'}</p>
+                  )}
                   {connected && st?.ip && (
                     <p className="text-[11px] text-success mt-1.5">connected · {st.ip} · ↓{fmtBytes(st.rx_bytes)} ↑{fmtBytes(st.tx_bytes)}</p>
                   )}

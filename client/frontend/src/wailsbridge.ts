@@ -262,6 +262,12 @@ export type OpenVPNStatus = {
   rx_bytes: number
   tx_bytes: number
   error?: string
+  /** Server address it connects to, e.g. "203.0.113.10:1194 (UDP)". */
+  remote?: string
+  /** Networks this connection routes (profile + pushed by the server). */
+  networks?: string[]
+  /** Unix seconds when it connected, 0 when not connected. */
+  connected_at?: number
 }
 
 export async function managedListOpenVPNProfiles(): Promise<OpenVPNProfileView[]> {

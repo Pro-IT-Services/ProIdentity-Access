@@ -88,6 +88,10 @@ type OpenVPNStatus struct {
 	RxBytes int64        `json:"rx_bytes"`
 	TxBytes int64        `json:"tx_bytes"`
 	Error   string       `json:"error,omitempty"`
+	// Details for the "connected now" view.
+	Remote      string   `json:"remote,omitempty"`       // server address:port it connects to
+	Networks    []string `json:"networks,omitempty"`     // networks routed through it ("all traffic" for a full tunnel)
+	ConnectedAt int64    `json:"connected_at,omitempty"` // unix seconds
 }
 
 // --- Method parameter / result types ---

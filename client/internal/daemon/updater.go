@@ -37,8 +37,8 @@ type Updater struct {
 	http       *http.Client
 
 	// Replaceable in tests; production uses the platform implementations.
-	verify  func(*update.Manifest) error
-	prepare func(dir string) error
+	verify      func(*update.Manifest) error
+	prepare     func(dir string) error
 	run         func(pkg, version, dir string, principals []ipc.Principal, onFail func(error)) error
 	activeUsers func() []string
 	openApp     func(userIDs []string)
@@ -47,9 +47,9 @@ type Updater struct {
 	mu      sync.Mutex
 	state   ipc.UpdateState
 	busy    bool
-	source  string              // management server that publishes updates (last one the app used)
-	snoozes map[string]snooze   // user ID -> "Later" choice
-	opened  map[string]string   // user ID -> version the app was opened for (once per version per boot)
+	source  string            // management server that publishes updates (last one the app used)
+	snoozes map[string]snooze // user ID -> "Later" choice
+	opened  map[string]string // user ID -> version the app was opened for (once per version per boot)
 }
 
 // snooze is a user's "Later" for one version.
@@ -414,9 +414,9 @@ func cleanUpdateDir(dir string) {
 const relaunchMarker = "relaunch.json"
 
 type relaunchInfo struct {
-	Version  string   `json:"version"`
-	UserIDs  []string `json:"user_ids"`
-	Started  string   `json:"started"`
+	Version string   `json:"version"`
+	UserIDs []string `json:"user_ids"`
+	Started string   `json:"started"`
 }
 
 func writeRelaunchMarker(dir, version string, principals []ipc.Principal) {

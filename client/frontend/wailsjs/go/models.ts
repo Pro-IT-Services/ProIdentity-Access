@@ -10,6 +10,9 @@ export namespace ipc {
 	    rx_bytes: number;
 	    tx_bytes: number;
 	    error?: string;
+	    remote?: string;
+	    networks?: string[];
+	    connected_at?: number;
 	
 	    static createFrom(source: any = {}) {
 	        return new OpenVPNStatus(source);
@@ -26,6 +29,9 @@ export namespace ipc {
 	        this.rx_bytes = source["rx_bytes"];
 	        this.tx_bytes = source["tx_bytes"];
 	        this.error = source["error"];
+	        this.remote = source["remote"];
+	        this.networks = source["networks"];
+	        this.connected_at = source["connected_at"];
 	    }
 	}
 	export class PeerInfo {

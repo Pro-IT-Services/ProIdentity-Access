@@ -3,6 +3,7 @@ import { Settings, Plus, MoreHorizontal, LogOut, LogIn, ListTree, Info } from 'l
 import { LogoMark } from './brand/LogoMark'
 import { useTunnelStore } from '../stores/useTunnelStore'
 import { useManagedStore } from '../stores/useManagedStore'
+import { useActiveConnections } from '../lib/activeConnections'
 import { StatusDot } from './ui/StatusDot'
 import { cn } from '../lib/cn'
 
@@ -17,7 +18,8 @@ interface TopbarProps {
 }
 
 export function Topbar({ onImport, onSettings, onSignIn, onSignOut, onOpenConnections, onOpenConfig, configEnabled }: TopbarProps) {
-  const { tunnels, daemonOnline } = useTunnelStore()
+  const { daemonOnline } = useTunnelStore()
+  const conns = useActiveConnections()
   const { settings } = useManagedStore()
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -32,7 +34,9 @@ export function Topbar({ onImport, onSettings, onSignIn, onSignOut, onOpenConnec
     return () => document.removeEventListener('mousedown', onClick)
   }, [menuOpen])
 
-  const active = tunnels.find(t => t.status === 'connected') || tunnels.find(t => t.status === 'connecting')
+  // WireGuard and OpenVPN alike.
+  const active = conns.find(c => c.status === 'connected') || conns[0]
+  const others = conns.length - 1
 
   return (
     <div className="drag relative z-50 h-12 flex-shrink-0 flex items-center px-4 border-b border-border bg-background/80 backdrop-blur" style={{ paddingLeft: 'var(--titlebar-height)' }}>
@@ -48,9 +52,10 @@ export function Topbar({ onImport, onSettings, onSignIn, onSignOut, onOpenConnec
       <div className="flex items-center gap-2 text-xs min-w-0">
         {active ? (
           <>
-            <StatusDot status={active.status as any} pulse />
-            <span className="text-muted-foreground">connected to</span>
+            <StatusDot status={active.status} pulse />
+            <span className="text-muted-foreground">{active.status === 'connected' ? 'connected to' : 'connecting to'}</span>
             <span className="font-medium truncate">{active.name}</span>
+            {others > 0 && <span className="text-muted-foreground shrink-0">+{others} more</span>}
           </>
         ) : (
           <>

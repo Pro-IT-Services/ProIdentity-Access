@@ -106,8 +106,15 @@ func (m *OpenVPNManager) watchOutput(sess *ovpnSession, r io.Reader) {
 		// Remember where it's trying to connect, so a timeout can name it.
 		if addr, proto := remoteAttempt(line); addr != "" {
 			sess.mu.Lock()
+			sess.remote = addr + " (" + proto + ")"
 			sess.hint = fmt.Sprintf("Can't reach the VPN server at %s (%s). Check that the server is running and that its firewall allows this port.", addr, proto)
 			sess.mu.Unlock()
+		}
+		// The server told us its networks: remember them, and stop right away
+		// if another live VPN already uses any of them.
+		if pushed, ok := parsePushReply(line); ok {
+			m.onPushedNetworks(sess, pushed)
+			continue
 		}
 		d, ok := diagnose(line)
 		if !ok {
@@ -134,6 +141,26 @@ func (m *OpenVPNManager) watchOutput(sess *ovpnSession, r io.Reader) {
 		}
 		sess.mu.Unlock()
 	}
+}
+
+func (m *OpenVPNManager) onPushedNetworks(sess *ovpnSession, pushed netSet) {
+	sess.mu.Lock()
+	sess.networks = sess.profileNets.merge(pushed)
+	nets, id, owner := sess.networks, sess.id, sess.ownerID
+	sess.mu.Unlock()
+
+	m.mu.Lock()
+	m.known[id] = nets
+	m.mu.Unlock()
+
+	if msg, bad := m.checkConflict(id, owner, nets); bad {
+		log.Printf("openvpn %s: %s", id, msg)
+		sess.setFinalError(msg)
+		m.emit(sess)
+		go m.stop(sess)
+		return
+	}
+	m.emit(sess)
 }
 
 // watchConnectTimeout ends an attempt that doesn't connect in time.

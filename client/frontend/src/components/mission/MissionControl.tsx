@@ -10,7 +10,7 @@ import type { Status } from '../ui/StatusDot'
 import { StatusOrb } from './StatusOrb'
 import { EndpointLine } from './EndpointLine'
 import { GridBackground } from './GridBackground'
-import { formatBytes, formatHandshake } from '../../lib/format'
+import { formatBytes, formatHandshake, formatSince } from '../../lib/format'
 import { cn } from '../../lib/cn'
 
 interface Props {
@@ -197,7 +197,9 @@ export function MissionControl({ tunnel, onOpenConnections, onImport, onConnect,
         {/* Footnote */}
         {isConnected && tStats && (
           <p className="text-[11px] text-muted-foreground tabular-nums">
-            handshake {formatHandshake(tStats.last_handshake)}
+            {tunnel.id.startsWith('ovpn:')
+              ? <>OpenVPN · connected {formatSince(tStats.last_handshake) || 'now'}</>
+              : <>handshake {formatHandshake(tStats.last_handshake)}</>}
             {(tStats.rx_bytes + tStats.tx_bytes > 0) && (
               <> · {formatBytes(tStats.rx_bytes + tStats.tx_bytes)} total</>
             )}

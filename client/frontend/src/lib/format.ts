@@ -24,6 +24,16 @@ export function formatHandshake(unixSec: number | null | undefined): string {
   return `${Math.floor(diff / 86400)}d ago`
 }
 
+/** "42s", "5m", "2h 05m", "3d 4h" since unixSec; "" if zero/null */
+export function formatSince(unixSec: number | null | undefined): string {
+  if (!unixSec) return ''
+  const d = Math.max(0, Math.floor(Date.now() / 1000 - unixSec))
+  if (d < 60) return `${d}s`
+  if (d < 3600) return `${Math.floor(d / 60)}m`
+  if (d < 86400) return `${Math.floor(d / 3600)}h ${String(Math.floor((d % 3600) / 60)).padStart(2, '0')}m`
+  return `${Math.floor(d / 86400)}d ${Math.floor((d % 86400) / 3600)}h`
+}
+
 /** Cap a string with mid-truncation for keys: "abc...xyz=". Safe for nullish input. */
 export function midTruncate(s: string | null | undefined, head = 8, tail = 6): string {
   if (s == null || s === '') return '—'

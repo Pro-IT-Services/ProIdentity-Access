@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -29,10 +30,17 @@ type OpenVPNManager struct {
 	mu        sync.Mutex
 	sessions  map[string]*ovpnSession
 	broadcast func(ipc.Event)
+
+	// known remembers each profile's networks from its last connection, so an
+	// overlapping profile is refused before it even starts next time.
+	known map[string]netSet
+	// conflict reports a live connection already using any of n (set by the
+	// TunnelManager, which also sees WireGuard tunnels).
+	conflict func(except, ownerID string, n netSet) (string, bool)
 }
 
 func NewOpenVPNManager(broadcast func(ipc.Event)) *OpenVPNManager {
-	return &OpenVPNManager{sessions: make(map[string]*ovpnSession), broadcast: broadcast}
+	return &OpenVPNManager{sessions: make(map[string]*ovpnSession), broadcast: broadcast, known: map[string]netSet{}}
 }
 
 type ovpnSession struct {
@@ -54,8 +62,13 @@ type ovpnSession struct {
 	password string
 	stopped  bool
 
-	mgmtPassword string         // per-session management password
+	mgmtPassword string // per-session management password
 	mgmtPwPath   string
+	profileNets  netSet         // networks written in the profile
+	networks     netSet         // profile + pushed by the server
+	remote       string         // server address being used
+	connectedAt  time.Time      // when the tunnel came up
+	errFinal     bool           // an error that later messages must not replace
 	logPipe      *io.PipeWriter // openvpn stdout/stderr → watchOutput
 	lastLogError string         // last error-looking log line
 	hint         string         // what a still-retrying attempt is waiting on
@@ -67,6 +80,7 @@ func (s *ovpnSession) snapshot() ipc.OpenVPNStatus {
 	return ipc.OpenVPNStatus{
 		ID: s.id, OwnerID: s.ownerID, Name: s.name, Status: s.status,
 		DevType: s.devType, IP: s.ip, RxBytes: s.rx, TxBytes: s.tx, Error: s.errMsg,
+		Remote: s.remote, Networks: s.networks.prefixStrings(), ConnectedAt: unixOrZero(s.connectedAt),
 	}
 }
 
@@ -101,6 +115,16 @@ func (m *OpenVPNManager) ConnectOpenVPN(ownerID string, p ipc.OpenVPNConnectPara
 	// adapter comes up statically (cross-platform; avoids OS-specific tooling).
 	if devType == "tap" && strings.TrimSpace(p.CustomIP) != "" {
 		cfg = strings.TrimRight(cfg, "\n") + "\nifconfig " + strings.TrimSpace(p.CustomIP) + " 255.255.255.0\n"
+	}
+
+	// Refuse right away if this profile's networks (from the profile, or learnt
+	// on a previous connection) are already used by another live VPN.
+	profileNets := profileNetworks(cfg)
+	m.mu.Lock()
+	want := profileNets.merge(m.known[paramsID(p)])
+	m.mu.Unlock()
+	if msg, bad := m.checkConflict(paramsID(p), ownerID, want); bad {
+		return nil, errors.New(msg)
 	}
 
 	cfgPath, err := writeTempConfig(paramsID(p), cfg)
@@ -151,6 +175,7 @@ func (m *OpenVPNManager) ConnectOpenVPN(ownerID string, p ipc.OpenVPNConnectPara
 		status: ipc.StatusConnecting, cmd: cmd, cfgPath: cfgPath,
 		username: p.Username, password: p.Password,
 		logPipe: logW, mgmtPassword: mgmtPassword, mgmtPwPath: mgmtPwPath,
+		profileNets: profileNets, networks: profileNets,
 	}
 
 	if err := cmd.Start(); err != nil {
@@ -371,6 +396,9 @@ func (m *OpenVPNManager) handleState(sess *ovpnSession, payload string) {
 	case "CONNECTED":
 		sess.status = ipc.StatusConnected
 		sess.errMsg = "" // clear an earlier "still trying" notice
+		if sess.connectedAt.IsZero() {
+			sess.connectedAt = time.Now()
+		}
 		if len(f) >= 4 && f[3] != "" {
 			sess.ip = f[3]
 		}
@@ -407,6 +435,55 @@ func writeManagementPassword(cfgPath string) (string, string, error) {
 	return pw, path, nil
 }
 
+// setFinalError sets an error that later messages (e.g. openvpn's own
+// "NETSH: command failed" as it shuts down) must not replace.
+func (s *ovpnSession) setFinalError(msg string) {
+	s.mu.Lock()
+	s.status = ipc.StatusError
+	s.errMsg = msg
+	s.errFinal = true
+	s.mu.Unlock()
+}
+
+func (m *OpenVPNManager) checkConflict(id, ownerID string, n netSet) (string, bool) {
+	if m.conflict == nil || n.empty() {
+		return "", false
+	}
+	return m.conflict(id, ownerID, n)
+}
+
+// liveNet is one running connection's claim, for conflict checks.
+type liveNet struct {
+	id, name, ownerID string
+	nets              netSet
+}
+
+// liveNetworks lists connecting/connected sessions other than except.
+func (m *OpenVPNManager) liveNetworks(except string) []liveNet {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	var out []liveNet
+	for id, s := range m.sessions {
+		if id == except {
+			continue
+		}
+		s.mu.Lock()
+		live := !s.stopped && (s.status == ipc.StatusConnecting || s.status == ipc.StatusConnected)
+		if live && !s.networks.empty() {
+			out = append(out, liveNet{id: id, name: s.name, ownerID: s.ownerID, nets: s.networks})
+		}
+		s.mu.Unlock()
+	}
+	return out
+}
+
+func unixOrZero(t time.Time) int64 {
+	if t.IsZero() {
+		return 0
+	}
+	return t.Unix()
+}
+
 // quoted returns the first '...' quoted word of a management line.
 func quoted(line string) string {
 	i := strings.IndexByte(line, '\'')
@@ -422,6 +499,10 @@ func quoted(line string) string {
 
 func (s *ovpnSession) setError(msg string) {
 	s.mu.Lock()
+	if s.errFinal {
+		s.mu.Unlock()
+		return
+	}
 	s.status = ipc.StatusError
 	s.errMsg = msg
 	s.mu.Unlock()
