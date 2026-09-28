@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"os/exec"
@@ -50,6 +51,10 @@ type ovpnSession struct {
 	username string
 	password string
 	stopped  bool
+
+	logPipe      *io.PipeWriter // openvpn stdout/stderr → watchOutput
+	lastLogError string         // last error-looking log line
+	hint         string         // what a still-retrying attempt is waiting on
 }
 
 func (s *ovpnSession) snapshot() ipc.OpenVPNStatus {
@@ -126,11 +131,15 @@ func (m *OpenVPNManager) ConnectOpenVPN(ownerID string, p ipc.OpenVPNConnectPara
 	args = append(args, extra...)
 	cmd := exec.Command(bin, args...)
 	cmd.Dir = filepath.Dir(cfgPath)
+	logR, logW := io.Pipe()
+	cmd.Stdout = logW
+	cmd.Stderr = logW
 
 	sess := &ovpnSession{
 		id: paramsID(p), ownerID: ownerID, name: p.Name, devType: devType,
 		status: ipc.StatusConnecting, cmd: cmd, cfgPath: cfgPath,
 		username: p.Username, password: p.Password,
+		logPipe: logW,
 	}
 
 	if err := cmd.Start(); err != nil {
@@ -143,8 +152,10 @@ func (m *OpenVPNManager) ConnectOpenVPN(ownerID string, p ipc.OpenVPNConnectPara
 	m.mu.Unlock()
 	m.emit(sess)
 
+	go m.watchOutput(sess, logR)
 	go m.reap(sess)
 	go m.drive(sess, port)
+	go m.watchConnectTimeout(sess)
 
 	st := sess.snapshot()
 	return &st, nil
@@ -228,6 +239,9 @@ func (m *OpenVPNManager) stop(sess *ovpnSession) {
 // reap waits for the process to exit and finalizes the session.
 func (m *OpenVPNManager) reap(sess *ovpnSession) {
 	_ = sess.cmd.Wait()
+	if sess.logPipe != nil {
+		_ = sess.logPipe.Close()
+	}
 
 	sess.mu.Lock()
 	if sess.status != ipc.StatusError {
@@ -281,9 +295,27 @@ func (m *OpenVPNManager) handleMgmtLine(sess *ovpnSession, conn net.Conn, line s
 		_, _ = conn.Write([]byte("password \"Auth\" " + mgmtEscape(sess.password) + "\n"))
 
 	case strings.HasPrefix(line, ">PASSWORD:Verification Failed"):
-		sess.setError("authentication failed")
+		sess.setError("The server rejected the username or password.")
 		m.emit(sess)
 		m.stop(sess)
+
+	// Prompts the app can't answer: say so instead of waiting forever.
+	case strings.HasPrefix(line, ">PASSWORD:Need 'Private Key'"):
+		sess.setError("This profile's private key is protected by a passphrase, which isn't supported. Ask your administrator for a profile without one.")
+		m.emit(sess)
+		go m.stop(sess)
+	case strings.HasPrefix(line, ">PASSWORD:Need 'HTTP Proxy'"):
+		sess.setError("This profile needs an HTTP proxy password, which isn't supported.")
+		m.emit(sess)
+		go m.stop(sess)
+	case strings.HasPrefix(line, ">NEED-OK:"):
+		// e.g. a confirmation OpenVPN would ask a person; accept it.
+		if name := quoted(line); name != "" {
+			_, _ = conn.Write([]byte("needok " + name + " ok\n"))
+		}
+	case strings.HasPrefix(line, ">FATAL:"):
+		sess.setError("OpenVPN stopped: " + strings.TrimPrefix(line, ">FATAL:"))
+		m.emit(sess)
 
 	case strings.HasPrefix(line, ">STATE:"):
 		m.handleState(sess, strings.TrimPrefix(line, ">STATE:"))
@@ -334,6 +366,19 @@ func (m *OpenVPNManager) handleState(sess *ovpnSession, payload string) {
 	if changed {
 		m.emit(sess)
 	}
+}
+
+// quoted returns the first '...' quoted word of a management line.
+func quoted(line string) string {
+	i := strings.IndexByte(line, '\'')
+	if i < 0 {
+		return ""
+	}
+	j := strings.IndexByte(line[i+1:], '\'')
+	if j < 0 {
+		return ""
+	}
+	return line[i+1 : i+1+j]
 }
 
 func (s *ovpnSession) setError(msg string) {

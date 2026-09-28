@@ -1,6 +1,6 @@
 # Versioning
 
-Current version: **0.7.4**
+Current version: **0.7.5**
 
 Version is defined in `wails.json` → `info.productVersion`.  
 The build script (`build.ps1` / `build.bat`) reads it from there automatically.
@@ -18,7 +18,7 @@ The build script (`build.ps1` / `build.bat`) reads it from there automatically.
 Edit **one** line in `wails.json`:
 
 ```json
-"productVersion": "0.7.4"
+"productVersion": "0.7.5"
 ```
 
 Then build and commit:
@@ -26,13 +26,14 @@ Then build and commit:
 ```
 build.bat
 git add wails.json
-git commit -m "Bump version to 0.7.4"
+git commit -m "Bump version to 0.7.5"
 ```
 
 ## Changelog
 
 | Version | Type    | Description                                                  |
 |---------|---------|--------------------------------------------------------------|
+| 0.7.5   | patch   | OpenVPN: clear error instead of endless Connecting (wrong password, unreachable server, certificate, adapter, unsupported option), unanswerable prompts reported, 90 s connect timeout, per-connection logs |
 | 0.7.4   | patch   | The service checks for updates every 10 minutes and shows the prompt to signed-in users (opening the app if needed); the app reopens after an update; Later is remembered per user |
 | 0.7.3   | patch   | OpenVPN bundled in the installers (official 2.7.7 on Windows with ovpn-dco and TAP drivers; self-contained build on macOS); no separate OpenVPN install needed |
 | 0.7.2   | patch   | Version aligned with the 0.7.2 mobile apps (Android/iOS redesign, VPN notification); no desktop changes since 0.7.0 |
