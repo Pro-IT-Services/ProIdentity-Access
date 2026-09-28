@@ -1,0 +1,82 @@
+ProIdentity Access - third-party software
+=========================================
+
+ProIdentity Access includes the following third-party software. Each component
+is a separate program or driver shipped unmodified alongside ProIdentity Access,
+and remains under its own license. Full license texts are in
+openvpn\license.txt (Windows) or /Library/ProIdentity/openvpn/COPYING and COPYRIGHT.GPL (macOS).
+
+
+OpenVPN 2.7.7
+-------------
+Copyright (C) 2002-2026 OpenVPN Inc <sales@openvpn.net>
+License: GNU General Public License version 2 (GPLv2), with the OpenSSL
+linking exception described in its COPYING file.
+
+Used for OpenVPN connections. Runs as a separate process started by the
+ProIdentity service.
+
+Windows: the official OpenVPN Inc. build (openvpn.exe, tapctl.exe and their
+libraries), taken unmodified from
+  https://swupdate.openvpn.org/community/releases/OpenVPN-2.7.7-I001-amd64.msi
+macOS: built unmodified from the official source release.
+
+Corresponding source code:
+  https://swupdate.openvpn.org/community/releases/openvpn-2.7.7.tar.gz
+  https://github.com/OpenVPN/openvpn/tree/v2.7.7
+  https://github.com/OpenVPN/openvpn-build (Windows build scripts)
+
+Written offer: for three years from the date you received this software,
+Pro-IT-Services will provide the complete corresponding source code of the
+GPL-licensed components above on request, for no more than the cost of
+distribution. Contact support@proidentity.cloud.
+
+
+ovpn-dco-win 2.8.7 (Windows)
+----------------------------
+Copyright (C) OpenVPN Inc
+License: MIT
+Data-channel-offload network driver used for OpenVPN TUN connections.
+Source: https://github.com/OpenVPN/ovpn-dco-win/tree/2.8.7
+
+
+tap-windows6 9.27.0 (Windows)
+-----------------------------
+Copyright (C) 2002-2014 OpenVPN Technologies, Inc.; installer helper (C) WireGuard LLC
+License: GPLv2 (tap-windows.h also MIT) - https://github.com/OpenVPN/tap-windows6/blob/9.27.0/COPYING
+TAP network driver used for OpenVPN TAP connections and as a fallback.
+Covered by the written offer above.
+Source: https://github.com/OpenVPN/tap-windows6/tree/9.27.0
+
+
+OpenSSL 3
+---------
+Copyright (c) 1998-2026 The OpenSSL Project Authors
+License: Apache License 2.0 - https://www.openssl.org/source/license.html
+Source: https://www.openssl.org/source/
+
+
+pkcs11-helper (Windows)
+-----------------------
+Copyright (c) 2005-2026 Alon Bar-Lev
+License: BSD (dual-licensed BSD/GPL) - https://github.com/OpenSC/pkcs11-helper
+
+
+LZO 2.10 and LZ4
+----------------
+LZO: Copyright (C) Markus F.X.J. Oberhumer. License: GPLv2.
+     Source: https://www.oberhumer.com/opensource/lzo/
+LZ4: Copyright (c) Yann Collet. License: BSD 2-Clause.
+     Source: https://github.com/lz4/lz4
+
+
+Microsoft Visual C++ Runtime (vcruntime140.dll, Windows)
+--------------------------------------------------------
+Redistributed as part of the OpenVPN Inc. build under the Microsoft Visual C++
+redistributable license.
+
+
+WireGuard / Wintun
+------------------
+WireGuard implementation: https://git.zx2c4.com/wireguard-go (MIT)
+Wintun driver: https://www.wintun.net (Wintun license, redistribution permitted)

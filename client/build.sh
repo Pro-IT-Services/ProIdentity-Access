@@ -96,6 +96,15 @@ mkdir -p "$PKG_ROOT/Library/LaunchAgents"
 cp -R "$BIN_DIR/ProIdentity Access.app" "$PKG_ROOT/Applications/"
 cp    "$BIN_DIR/proidentity-daemon"    "$PKG_ROOT/Library/ProIdentity/proidentity-daemon"
 cp    "$REPO_ROOT/LICENSE"             "$PKG_ROOT/Library/ProIdentity/LICENSE"
+cp    "$REPO_ROOT/installer/THIRD-PARTY-NOTICES.txt" "$PKG_ROOT/Library/ProIdentity/THIRD-PARTY-NOTICES.txt"
+
+# Bundled OpenVPN (built from official sources, GPLv2, separate program)
+bash "$REPO_ROOT/tools/build-openvpn-macos.sh"
+mkdir -p "$PKG_ROOT/Library/ProIdentity/openvpn"
+cp "$REPO_ROOT/build/third_party/openvpn-macos/openvpn"       "$PKG_ROOT/Library/ProIdentity/openvpn/openvpn"
+cp "$REPO_ROOT/build/third_party/openvpn-macos/COPYING"       "$PKG_ROOT/Library/ProIdentity/openvpn/COPYING"
+cp "$REPO_ROOT/build/third_party/openvpn-macos/COPYRIGHT.GPL" "$PKG_ROOT/Library/ProIdentity/openvpn/COPYRIGHT.GPL"
+chmod 755 "$PKG_ROOT/Library/ProIdentity/openvpn/openvpn"
 cp    "$REPO_ROOT/installer/darwin/launch_agent/com.proitservices.proidentity.access-ui.plist" \
       "$PKG_ROOT/Library/LaunchAgents/com.proitservices.proidentity.access-ui.plist"
 

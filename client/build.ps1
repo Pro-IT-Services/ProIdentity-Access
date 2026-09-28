@@ -148,11 +148,16 @@ if (-not (Test-Path "$BinDir\ProIdentity Daemon.exe")) {
 Write-Host "[4/4] Installer -- wix build (x64)" -ForegroundColor Green
 $OutMsi = "$Root\build\ProIdentity-Access-$Version.msi"
 
+# Bundled OpenVPN runtime + drivers (official, pinned, signature-checked).
+& "$Root\tools\fetch-openvpn.ps1"
+$OpenVPNDir = "$Root\build\third_party\openvpn-windows"
+
 Push-Location "$Root\installer"
 wix build "Product.wxs" `
     -ext WixToolset.UI.wixext `
     -ext WixToolset.Util.wixext `
     -d Version=$Version `
+    -d OpenVPNDir=$OpenVPNDir `
     -arch x64 `
     -o $OutMsi
 $rc = $LASTEXITCODE

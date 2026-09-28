@@ -105,7 +105,11 @@ func (m *OpenVPNManager) ConnectOpenVPN(ownerID string, p ipc.OpenVPNConnectPara
 		return nil, fmt.Errorf("allocate management port: %w", err)
 	}
 
-	bin := openvpnBinaryPath()
+	bin, ok := openvpnBinaryPath()
+	if !ok {
+		_ = os.Remove(cfgPath)
+		return nil, fmt.Errorf("the OpenVPN component is missing from this installation; reinstall ProIdentity Access")
+	}
 	args := []string{
 		"--config", cfgPath,
 		"--management", "127.0.0.1", strconv.Itoa(port),
@@ -114,11 +118,12 @@ func (m *OpenVPNManager) ConnectOpenVPN(ownerID string, p ipc.OpenVPNConnectPara
 		"--auth-nocache",
 		"--verb", "3",
 	}
-	// On Windows, drive TUN through Wintun so a plain "dev tun" profile connects
-	// without the TAP-Windows driver installed. TAP profiles still require it.
-	if runtime.GOOS == "windows" && devType == "tun" {
-		args = append(args, "--windows-driver", "wintun")
+	extra, err := prepareOpenVPNAdapter(bin, devType, m.activeOfType(devType, paramsID(p)))
+	if err != nil {
+		_ = os.Remove(cfgPath)
+		return nil, err
 	}
+	args = append(args, extra...)
 	cmd := exec.Command(bin, args...)
 	cmd.Dir = filepath.Dir(cfgPath)
 
@@ -143,6 +148,22 @@ func (m *OpenVPNManager) ConnectOpenVPN(ownerID string, p ipc.OpenVPNConnectPara
 
 	st := sess.snapshot()
 	return &st, nil
+}
+
+// activeOfType counts running sessions of devType other than id (each needs
+// its own network adapter on Windows).
+func (m *OpenVPNManager) activeOfType(devType, id string) int {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	n := 0
+	for sid, s := range m.sessions {
+		s.mu.Lock()
+		if sid != id && s.devType == devType && !s.stopped {
+			n++
+		}
+		s.mu.Unlock()
+	}
+	return n
 }
 
 // DisconnectOpenVPN stops a session the caller owns.
@@ -361,42 +382,30 @@ func freeLocalPort() (int, error) {
 	return l.Addr().(*net.TCPAddr).Port, nil
 }
 
-// openvpnBinaryPath finds the openvpn binary: bundled next to the daemon, then
-// a standard install location, then PATH. This lets the client drive an
-// OpenVPN Community install with no extra configuration.
-func openvpnBinaryPath() string {
-	name := "openvpn"
-	if runtime.GOOS == "windows" {
-		name = "openvpn.exe"
-	}
-
+// openvpnBinaryPath finds the OpenVPN runtime shipped with this installation:
+// Windows <install>\openvpn\bin\openvpn.exe, macOS /Library/ProIdentity/openvpn/openvpn.
+//
+// This service runs as SYSTEM / root, so it only runs a binary from a location
+// ordinary users can't write to: never PATH, Homebrew or /usr/local.
+func openvpnBinaryPath() (string, bool) {
 	var candidates []string
 	if exe, err := os.Executable(); err == nil {
 		dir := filepath.Dir(exe)
-		candidates = append(candidates, filepath.Join(dir, name), filepath.Join(dir, "openvpn", name))
-	}
-	switch runtime.GOOS {
-	case "windows":
-		candidates = append(candidates,
-			`C:\Program Files\OpenVPN\bin\openvpn.exe`,
-			`C:\Program Files (x86)\OpenVPN\bin\openvpn.exe`,
-		)
-	case "darwin":
-		candidates = append(candidates,
-			"/opt/homebrew/sbin/openvpn",
-			"/usr/local/sbin/openvpn",
-			"/usr/local/opt/openvpn/sbin/openvpn",
-		)
-	default: // linux
-		candidates = append(candidates, "/usr/sbin/openvpn", "/usr/bin/openvpn")
-	}
-
-	for _, cand := range candidates {
-		if st, err := os.Stat(cand); err == nil && !st.IsDir() {
-			return cand
+		if runtime.GOOS == "windows" {
+			candidates = append(candidates, filepath.Join(dir, "openvpn", "bin", "openvpn.exe"))
+		} else {
+			candidates = append(candidates, filepath.Join(dir, "openvpn", "openvpn"))
 		}
 	}
-	return name // last resort: rely on PATH
+	if runtime.GOOS == "linux" {
+		candidates = append(candidates, "/usr/sbin/openvpn", "/usr/bin/openvpn")
+	}
+	for _, cand := range candidates {
+		if st, err := os.Stat(cand); err == nil && !st.IsDir() {
+			return cand, true
+		}
+	}
+	return "", false
 }
 
 // writeTempConfig writes the profile to a per-session file with tight perms.

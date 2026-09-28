@@ -40,6 +40,10 @@
 
     <Feature Id="MainFeature" Level="1">
       <ComponentGroupRef Id="ProductComponents" />
+      <ComponentGroupRef Id="OpenVPNComponents" />
+      <!-- Official OpenVPN Inc. driver modules: install/remove the drivers. -->
+      <MergeRef Id="OvpnDco" />
+      <MergeRef Id="TapWindows" />
     </Feature>
 
   </Package>
@@ -50,13 +54,58 @@
   <Fragment>
     <!-- C:\Program Files\ProIdentity\ -->
     <StandardDirectory Id="ProgramFiles64Folder">
-      <Directory Id="INSTALLDIR" Name="ProIdentity Access" />
+      <Directory Id="INSTALLDIR" Name="ProIdentity Access">
+        <!-- Bundled OpenVPN runtime (GPLv2, separate program; see THIRD-PARTY-NOTICES.txt) -->
+        <Directory Id="OPENVPNDIR" Name="openvpn">
+          <Directory Id="OPENVPNBIN" Name="bin" />
+          <Directory Id="OPENVPNSSL" Name="ssl">
+            <Directory Id="OPENVPNMODULES" Name="modules" />
+          </Directory>
+        </Directory>
+        <Merge Id="OvpnDco" SourceFile="$(var.OpenVPNDir)\msm\ovpn-dco-amd64.msm" Language="0" DiskId="1" />
+        <Merge Id="TapWindows" SourceFile="$(var.OpenVPNDir)\msm\tap-windows-amd64.msm" Language="0" DiskId="1" />
+      </Directory>
     </StandardDirectory>
 
     <!-- Start Menu\ProIdentity\ -->
     <StandardDirectory Id="ProgramMenuFolder">
       <Directory Id="AppMenuDir" Name="ProIdentity Access" />
     </StandardDirectory>
+  </Fragment>
+
+  <!-- ═══════════════════════════════════════════
+       Bundled OpenVPN (official OpenVPN Inc. build, unmodified)
+       ═══════════════════════════════════════════ -->
+  <Fragment>
+    <ComponentGroup Id="OpenVPNComponents">
+      <Component Id="OpenVPNExe" Directory="OPENVPNBIN" Guid="*">
+        <File Id="OpenVPNExeFile" Source="$(var.OpenVPNDir)\bin\openvpn.exe" KeyPath="yes" />
+      </Component>
+      <Component Id="OpenVPNTapctl" Directory="OPENVPNBIN" Guid="*">
+        <File Id="OpenVPNTapctlFile" Source="$(var.OpenVPNDir)\bin\tapctl.exe" KeyPath="yes" />
+      </Component>
+      <Component Id="OpenVPNLibCrypto" Directory="OPENVPNBIN" Guid="*">
+        <File Id="OpenVPNLibCryptoFile" Source="$(var.OpenVPNDir)\bin\libcrypto-3-x64.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="OpenVPNLibSsl" Directory="OPENVPNBIN" Guid="*">
+        <File Id="OpenVPNLibSslFile" Source="$(var.OpenVPNDir)\bin\libssl-3-x64.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="OpenVPNPkcs11" Directory="OPENVPNBIN" Guid="*">
+        <File Id="OpenVPNPkcs11File" Source="$(var.OpenVPNDir)\bin\libpkcs11-helper-1.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="OpenVPNVcRuntime" Directory="OPENVPNBIN" Guid="*">
+        <File Id="OpenVPNVcRuntimeFile" Source="$(var.OpenVPNDir)\bin\vcruntime140.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="OpenVPNLegacyProvider" Directory="OPENVPNMODULES" Guid="*">
+        <File Id="OpenVPNLegacyFile" Source="$(var.OpenVPNDir)\ssl\modules\legacy.dll" KeyPath="yes" />
+      </Component>
+      <Component Id="OpenVPNLicense" Directory="OPENVPNDIR" Guid="*">
+        <File Id="OpenVPNLicenseFile" Source="$(var.OpenVPNDir)\license.txt" KeyPath="yes" />
+      </Component>
+      <Component Id="ThirdPartyNoticesComp" Directory="INSTALLDIR" Guid="*">
+        <File Id="ThirdPartyNotices" Source="THIRD-PARTY-NOTICES.txt" KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
   </Fragment>
 
   <!-- ═══════════════════════════════════════════
