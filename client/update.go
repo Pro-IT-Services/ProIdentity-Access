@@ -53,6 +53,15 @@ func (a *App) InstallUpdate() error {
 	return a.client.InstallUpdate(serverURL)
 }
 
+// SnoozeUpdate records "Later" for version with the service, so it doesn't
+// reopen the app to offer this version again for a while.
+func (a *App) SnoozeUpdate(version string) error {
+	if !a.client.IsConnected() {
+		return nil
+	}
+	return a.client.SnoozeUpdate(version)
+}
+
 // UpdateState returns the service's current update state.
 func (a *App) UpdateState() (*ipc.UpdateState, error) {
 	if !a.client.IsConnected() {

@@ -76,6 +76,8 @@ export function ManagedSaveServerURL(arg1:string):Promise<void>;
 
 export function ManagedSetMode(arg1:string):Promise<void>;
 
+export function SnoozeUpdate(arg1:string):Promise<void>;
+
 export function UninstallApp(arg1:boolean):Promise<void>;
 
 export function UpdateState():Promise<ipc.UpdateState>;

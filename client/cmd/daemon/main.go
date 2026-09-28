@@ -69,6 +69,7 @@ func main() {
 		func(evt ipc.Event) { server.Broadcast(evt) },
 		func() []ipc.Principal { return server.ConnectedPrincipals() })
 	server.SetUpdater(updater)
+	stopUpdates := make(chan struct{})
 
 	runFn := func() error {
 		if err := server.Start(); err != nil {
@@ -76,12 +77,14 @@ func main() {
 		}
 		log.Println("Daemon ready")
 		updater.ResumeAfterUpdate()
+		go updater.Run(stopUpdates)
 		// Block until stopped
 		select {}
 	}
 
 	stopFn := func() {
 		log.Println("Shutting down...")
+		close(stopUpdates)
 		manager.StopAll()
 		server.Stop()
 		ipc.RemoveTokenFile()

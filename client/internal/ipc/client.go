@@ -160,6 +160,12 @@ func (c *Client) InstallUpdate(serverURL string) error {
 	return c.call(MethodUpdateInstall, UpdateParams{ServerURL: serverURL}, nil)
 }
 
+// SnoozeUpdate records "Later" for version for the calling user, so the
+// service doesn't reopen the app to offer it again for a while.
+func (c *Client) SnoozeUpdate(version string) error {
+	return c.call(MethodUpdateSnooze, UpdateParams{Version: version}, nil)
+}
+
 // UpdateStatus returns the daemon's current update state.
 func (c *Client) UpdateStatus() (*UpdateState, error) {
 	var st UpdateState

@@ -145,20 +145,20 @@ export default function App() {
     return () => clearInterval(t)
   }, [settings.logged_in])
 
-  // Client updates: the ProIdentity service downloads, verifies and installs
-  // them with system rights; the app only checks and asks the user.
+  // Client updates: the ProIdentity service checks every few minutes on its
+  // own and installs with system rights. The app checks once at sign-in, which
+  // also tells the service which server publishes updates.
   useEffect(() => {
     if (!settings.server_url || !settings.logged_in) return
-    const check = () => useUpdateStore.getState().check({ silent: true })
-    const first = setTimeout(check, 5_000)
-    const every = setInterval(check, 6 * 60 * 60 * 1000)
-    return () => { clearTimeout(first); clearInterval(every) }
+    const first = setTimeout(() => useUpdateStore.getState().check({ silent: true }), 5_000)
+    return () => clearTimeout(first)
   }, [settings.server_url, settings.logged_in])
 
   useEffect(() => {
     getUpdateState()
       .then(st => {
-        if (st.state === 'failed') useUpdateStore.getState().applyEvent(st)
+        // Opened by the service to offer an update, or reporting a failed one.
+        if (st.state === 'failed' || st.state === 'available') useUpdateStore.getState().applyEvent(st)
         const key = 'proidentity.lastVersion'
         let last = ''
         try { last = localStorage.getItem(key) ?? '' } catch { /* ignore */ }
@@ -472,6 +472,20 @@ export default function App() {
     WindowSetAlwaysOnTop(false)
     WindowHide()
   }, [])
+
+  // When the update prompt appears (the service found an update), bring the
+  // full window forward even if the app sits in the tray or behind other
+  // windows. Briefly "always on top" gets past Windows' focus-steal guard.
+  const updatePromptOpen = useUpdateStore(s => s.shouldPrompt())
+  useEffect(() => {
+    if (!updatePromptOpen) return
+    restoreMainWindow()
+    WindowShow()
+    WindowUnminimise()
+    WindowSetAlwaysOnTop(true)
+    const t = setTimeout(() => WindowSetAlwaysOnTop(false), 1500)
+    return () => clearTimeout(t)
+  }, [updatePromptOpen, restoreMainWindow])
 
   if (!setupChecked) return null
   if (!setupDone) {

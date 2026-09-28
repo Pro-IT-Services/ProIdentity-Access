@@ -1,6 +1,6 @@
 # Versioning
 
-Current version: **0.7.3**
+Current version: **0.7.4**
 
 Version is defined in `wails.json` → `info.productVersion`.  
 The build script (`build.ps1` / `build.bat`) reads it from there automatically.
@@ -18,7 +18,7 @@ The build script (`build.ps1` / `build.bat`) reads it from there automatically.
 Edit **one** line in `wails.json`:
 
 ```json
-"productVersion": "0.7.3"
+"productVersion": "0.7.4"
 ```
 
 Then build and commit:
@@ -26,13 +26,14 @@ Then build and commit:
 ```
 build.bat
 git add wails.json
-git commit -m "Bump version to 0.7.3"
+git commit -m "Bump version to 0.7.4"
 ```
 
 ## Changelog
 
 | Version | Type    | Description                                                  |
 |---------|---------|--------------------------------------------------------------|
+| 0.7.4   | patch   | The service checks for updates every 10 minutes and shows the prompt to signed-in users (opening the app if needed); the app reopens after an update; Later is remembered per user |
 | 0.7.3   | patch   | OpenVPN bundled in the installers (official 2.7.7 on Windows with ovpn-dco and TAP drivers; self-contained build on macOS); no separate OpenVPN install needed |
 | 0.7.2   | patch   | Version aligned with the 0.7.2 mobile apps (Android/iOS redesign, VPN notification); no desktop changes since 0.7.0 |
 | 0.7.0   | minor   | OpenVPN profiles (import or assigned by admin, TUN/TAP), soft re-login after session expiry, longer sessions, security hardening |
@@ -51,8 +52,9 @@ git commit -m "Bump version to 0.7.3"
 
 Installed clients update themselves: the ProIdentity **service** (LocalSystem on
 Windows, root on macOS) downloads the installer from the organization's server,
-verifies it and installs it, so users without admin rights can update. The app
-checks at sign-in and every 6 hours and asks the user before installing.
+verifies it and installs it, so users without admin rights can update. The service
+checks every 10 minutes and shows the prompt to every signed-in user, opening the
+app if it isn't running; Later postpones for 24 hours (not for mandatory updates).
 
 Every update is signed with the **release signing key**. The service installs
 only packages whose manifest is signed with that key, built for its platform,

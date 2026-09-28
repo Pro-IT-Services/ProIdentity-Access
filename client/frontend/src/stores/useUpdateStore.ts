@@ -63,6 +63,8 @@ export const useUpdateStore = create<UpdateStore>((set, get) => ({
     const v = get().status?.latest_version
     if (v) {
       try { localStorage.setItem(SNOOZE_KEY, JSON.stringify({ version: v, until: Date.now() + SNOOZE_MS })) } catch { /* private mode */ }
+      // Tell the service too, so it doesn't reopen the app to offer this version.
+      api.snoozeUpdate(v).catch(() => {})
     }
     set({ dismissed: true })
   },
@@ -82,7 +84,8 @@ export const useUpdateStore = create<UpdateStore>((set, get) => ({
     if (status.state === 'failed') return !dismissed
     if (status.state !== 'available') return false
     if (status.mandatory) return true
-    if (dismissed) return false
+    // "Later" is a 24 h snooze per version (also held by the service), so a
+    // long-running app prompts again once it expires.
     const snooze = readSnooze()
     return !(snooze && snooze.version === status.latest_version && snooze.until > Date.now())
   },

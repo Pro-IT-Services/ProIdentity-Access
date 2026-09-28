@@ -39,13 +39,30 @@ type Updater struct {
 	// Replaceable in tests; production uses the platform implementations.
 	verify  func(*update.Manifest) error
 	prepare func(dir string) error
-	run     func(pkg, version, dir string, principals []ipc.Principal, onFail func(error)) error
-	pause   time.Duration
+	run         func(pkg, version, dir string, principals []ipc.Principal, onFail func(error)) error
+	activeUsers func() []string
+	openApp     func(userIDs []string)
+	pause       time.Duration
 
-	mu    sync.Mutex
-	state ipc.UpdateState
-	busy  bool
+	mu      sync.Mutex
+	state   ipc.UpdateState
+	busy    bool
+	source  string              // management server that publishes updates (last one the app used)
+	snoozes map[string]snooze   // user ID -> "Later" choice
+	opened  map[string]string   // user ID -> version the app was opened for (once per version per boot)
 }
+
+// snooze is a user's "Later" for one version.
+type snooze struct {
+	Version string    `json:"version"`
+	Until   time.Time `json:"until"`
+}
+
+// SnoozeDuration is how long "Later" hides a (non-mandatory) update.
+const SnoozeDuration = 24 * time.Hour
+
+// CheckInterval is how often the service looks for updates on its own.
+const CheckInterval = 10 * time.Minute
 
 // NewUpdater stores downloads under dir (created with system-only access).
 func NewUpdater(dir string, emit func(ipc.Event), principals func() []ipc.Principal) *Updater {
@@ -69,8 +86,13 @@ func NewUpdater(dir string, emit func(ipc.Event), principals func() []ipc.Princi
 	u.verify = func(m *update.Manifest) error { return m.Verify() }
 	u.prepare = prepareUpdateDir
 	u.run = runInstaller
+	u.activeUsers = activeUserIDs
+	u.openApp = relaunchApp
 	u.pause = 3 * time.Second
 	u.state = ipc.UpdateState{State: "idle", Supported: updatesSupported, CurrentVersion: update.Version}
+	u.snoozes = map[string]snooze{}
+	u.opened = map[string]string{}
+	u.loadPrefs()
 	return u
 }
 
@@ -98,6 +120,9 @@ func (u *Updater) CheckUpdate(_ ipc.Principal, serverURL string) (*ipc.UpdateSta
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	m, err := u.fetchManifest(ctx, serverURL)
+	if err == nil || errors.Is(err, errNotNewer) || errors.Is(err, errNoUpdatePublished) {
+		u.rememberSource(serverURL)
+	}
 	switch {
 	case errors.Is(err, errNoUpdatePublished):
 		return u.set(ipc.UpdateState{State: "up_to_date"}), nil
@@ -125,7 +150,7 @@ func (u *Updater) InstallUpdate(p ipc.Principal, serverURL string) error {
 
 	log.Printf("update: install requested by %s", p.Username)
 	go func() {
-		err := u.install(serverURL)
+		err := u.install(serverURL, p)
 		u.mu.Lock()
 		u.busy = false
 		u.mu.Unlock()
@@ -137,7 +162,7 @@ func (u *Updater) InstallUpdate(p ipc.Principal, serverURL string) error {
 	return nil
 }
 
-func (u *Updater) install(serverURL string) error {
+func (u *Updater) install(serverURL string, requester ipc.Principal) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Minute)
 	defer cancel()
 
@@ -164,6 +189,10 @@ func (u *Updater) install(serverURL string) error {
 		return err
 	}
 
+	// Record whose app to reopen now: announcing "installing" makes the apps
+	// quit, after which they are no longer connected.
+	reopen := u.appUsers(requester)
+
 	st := base
 	st.State = "installing"
 	u.set(st)
@@ -171,13 +200,13 @@ func (u *Updater) install(serverURL string) error {
 
 	// Give the GUIs a moment to quit before the installer replaces their files.
 	time.Sleep(u.pause)
-	return u.run(final, m.Version, u.dir, u.principals(), func(err error) {
+	return u.run(final, m.Version, u.dir, reopen, func(err error) {
 		// Called only if the installer failed while this daemon was still running.
 		log.Printf("update: installer failed: %v", err)
 		u.set(ipc.UpdateState{State: "failed", LatestVersion: m.Version, Error: "The installer failed. See the update log on this computer."})
 		// The app quit for the install; bring it back.
 		if info, ok := readRelaunchMarker(u.dir); ok {
-			go relaunchApp(info.UserIDs)
+			go u.openApp(info.UserIDs)
 		}
 	})
 }
@@ -429,5 +458,11 @@ func (u *Updater) ResumeAfterUpdate() {
 		u.set(ipc.UpdateState{State: "failed", LatestVersion: info.Version,
 			Error: "The last update did not complete. The previous version is still installed."})
 	}
-	go relaunchApp(info.UserIDs)
+	users := info.UserIDs
+	if len(users) == 0 {
+		// Written by a version that captured the list too late (<= 0.7.3):
+		// reopen the app for whoever is signed in.
+		users = u.activeUsers()
+	}
+	go u.openApp(users)
 }

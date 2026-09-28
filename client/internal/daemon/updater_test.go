@@ -247,3 +247,115 @@ func TestPackageURLCannotDowngradeToHTTP(t *testing.T) {
 		t.Fatalf("relative URL resolved to %v (%v)", u, err)
 	}
 }
+
+// Regression: the app quits when "installing" is announced, so the users to
+// reopen it for must be captured before that, or nothing gets relaunched.
+func TestInstallReopensAppForRequesterEvenAfterAppsQuit(t *testing.T) {
+	pub, priv, _ := ed25519.GenerateKey(rand.Reader)
+	f := newFeed(t, "0.7.3", []byte("installer"), priv)
+	h := newHarness(t, pub)
+	h.u.principals = func() []ipc.Principal { return nil } // every app already quit
+	var got []ipc.Principal
+	h.u.run = func(pkg, version, dir string, users []ipc.Principal, _ func(error)) error {
+		got = users
+		return nil
+	}
+
+	if err := h.u.InstallUpdate(ipc.Principal{UserID: "S-1-5-21-alice", Username: "alice"}, f.serve(t).URL); err != nil {
+		t.Fatal(err)
+	}
+	h.wait(t)
+	if len(got) != 1 || got[0].UserID != "S-1-5-21-alice" {
+		t.Fatalf("app would be reopened for %v, want alice", got)
+	}
+}
+
+func TestPeriodicCheckOpensAppForUsersWithoutIt(t *testing.T) {
+	pub, priv, _ := ed25519.GenerateKey(rand.Reader)
+	f := newFeed(t, "0.7.3", []byte("installer"), priv)
+	h := newHarness(t, pub)
+	h.u.principals = func() []ipc.Principal { return []ipc.Principal{{UserID: "running"}} }
+	h.u.activeUsers = func() []string { return []string{"running", "idle", "snoozed"} }
+	opened := make(chan string, 8)
+	h.u.openApp = func(ids []string) { opened <- ids[0] }
+
+	if _, err := h.u.CheckUpdate(ipc.Principal{}, f.serve(t).URL); err != nil { // remembers the server
+		t.Fatal(err)
+	}
+	h.u.SnoozeUpdate(ipc.Principal{UserID: "snoozed"}, "0.7.3")
+
+	h.u.periodicCheck()
+	h.u.periodicCheck() // the same version is offered only once per boot
+	time.Sleep(50 * time.Millisecond)
+	close(opened)
+	var got []string
+	for id := range opened {
+		got = append(got, id)
+	}
+	if len(got) != 1 || got[0] != "idle" {
+		t.Fatalf("opened the app for %v, want only [idle]", got)
+	}
+}
+
+func TestMandatoryUpdateIgnoresLater(t *testing.T) {
+	pub, priv, _ := ed25519.GenerateKey(rand.Reader)
+	f := newFeed(t, "0.7.3", []byte("installer"), nil)
+	f.manifest.Mandatory = true
+	f.manifest.Sign(priv)
+	h := newHarness(t, pub)
+	h.u.principals = func() []ipc.Principal { return nil }
+	h.u.activeUsers = func() []string { return []string{"bob"} }
+	opened := make(chan string, 2)
+	h.u.openApp = func(ids []string) { opened <- ids[0] }
+
+	h.u.CheckUpdate(ipc.Principal{}, f.serve(t).URL)
+	h.u.SnoozeUpdate(ipc.Principal{UserID: "bob"}, "0.7.3")
+	h.u.periodicCheck()
+	select {
+	case id := <-opened:
+		if id != "bob" {
+			t.Fatalf("opened for %q", id)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("mandatory update was not offered after Later")
+	}
+}
+
+func TestUpdatePrefsSurviveRestart(t *testing.T) {
+	pub, priv, _ := ed25519.GenerateKey(rand.Reader)
+	f := newFeed(t, "0.7.3", []byte("installer"), priv)
+	h := newHarness(t, pub)
+	srv := f.serve(t)
+	h.u.CheckUpdate(ipc.Principal{}, srv.URL)
+	h.u.SnoozeUpdate(ipc.Principal{UserID: "carol"}, "0.7.3")
+
+	again := NewUpdater(h.u.dir, nil, func() []ipc.Principal { return nil })
+	if again.source != srv.URL {
+		t.Fatalf("server not remembered: %q", again.source)
+	}
+	if !again.snoozed("carol", "0.7.3") || again.snoozed("carol", "0.7.4") {
+		t.Fatal("Later not remembered per version")
+	}
+}
+
+// An update installed by an older service may leave an empty reopen list;
+// the new service then reopens the app for the signed-in users.
+func TestResumeAfterUpdateFallsBackToSignedInUsers(t *testing.T) {
+	pub, _, _ := ed25519.GenerateKey(rand.Reader)
+	h := newHarness(t, pub)
+	os.MkdirAll(h.u.dir, 0o700)
+	writeRelaunchMarker(h.u.dir, update.Version, nil)
+	h.u.activeUsers = func() []string { return []string{"S-1-5-21-dave"} }
+	opened := make(chan []string, 1)
+	h.u.openApp = func(ids []string) { opened <- ids }
+
+	h.u.ResumeAfterUpdate()
+	select {
+	case ids := <-opened:
+		if len(ids) != 1 || ids[0] != "S-1-5-21-dave" {
+			t.Fatalf("reopened for %v", ids)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("app not reopened after update")
+	}
+}

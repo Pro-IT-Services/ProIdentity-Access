@@ -33,6 +33,7 @@ type UpdateHandler interface {
 	CheckUpdate(principal Principal, serverURL string) (*UpdateState, error)
 	InstallUpdate(principal Principal, serverURL string) error
 	UpdateStatus() UpdateState
+	SnoozeUpdate(principal Principal, version string) error
 }
 
 // Server listens on the IPC socket and dispatches RPC calls to a Handler.
@@ -319,7 +320,7 @@ func (s *Server) dispatch(req Request, principal Principal) Response {
 		}
 		return okResponse(req.ID, sessions)
 
-	case MethodUpdateCheck, MethodUpdateInstall, MethodUpdateStatus:
+	case MethodUpdateCheck, MethodUpdateInstall, MethodUpdateStatus, MethodUpdateSnooze:
 		if s.updater == nil {
 			return errResponse(req.ID, ErrCodeInternal, "updates are not available")
 		}
@@ -329,6 +330,12 @@ func (s *Server) dispatch(req Request, principal Principal) Response {
 		var p UpdateParams
 		if err := json.Unmarshal(req.Params, &p); err != nil {
 			return errResponse(req.ID, ErrCodeBadParams, "bad params")
+		}
+		if req.Method == MethodUpdateSnooze {
+			if err := s.updater.SnoozeUpdate(principal, p.Version); err != nil {
+				return errResponse(req.ID, ErrCodeInternal, err.Error())
+			}
+			return okResponse(req.ID, true)
 		}
 		if req.Method == MethodUpdateCheck {
 			st, err := s.updater.CheckUpdate(principal, p.ServerURL)

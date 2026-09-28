@@ -17,3 +17,5 @@ func runInstaller(string, string, string, []ipc.Principal, func(error)) error {
 }
 
 func relaunchApp([]string) {}
+
+func activeUserIDs() []string { return nil }

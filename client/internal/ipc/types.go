@@ -139,7 +139,8 @@ type UpdateState struct {
 
 // UpdateParams names the management server that publishes client updates.
 type UpdateParams struct {
-	ServerURL string `json:"server_url"`
+	ServerURL string `json:"server_url,omitempty"`
+	Version   string `json:"version,omitempty"` // update.snooze
 }
 
 // Event type constants
@@ -169,6 +170,7 @@ const (
 	MethodUpdateCheck   = "update.check"   // params: UpdateParams → UpdateState
 	MethodUpdateInstall = "update.install" // params: UpdateParams; installs with system rights
 	MethodUpdateStatus  = "update.status"  // → UpdateState
+	MethodUpdateSnooze  = "update.snooze"  // params: UpdateParams{Version}; "Later" for this user
 )
 
 // Error codes

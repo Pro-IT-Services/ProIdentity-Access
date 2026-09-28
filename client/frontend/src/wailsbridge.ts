@@ -228,6 +228,11 @@ export async function installUpdate(): Promise<void> {
   await (await App()).InstallUpdate()
 }
 
+export async function snoozeUpdate(version: string): Promise<void> {
+  if (!isWails()) return
+  await (await App()).SnoozeUpdate(version)
+}
+
 export async function getUpdateState(): Promise<UpdateState> {
   if (!isWails()) return { state: 'idle', supported: true, current_version: '0.0.0-dev' }
   return await (await App()).UpdateState() as UpdateState

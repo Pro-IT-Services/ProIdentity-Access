@@ -138,6 +138,23 @@ func relaunchApp(userIDs []string) {
 	}
 }
 
+// activeUserIDs lists the SIDs of users with an active (signed-in, unlocked
+// or locked console/RDP) session.
+func activeUserIDs() []string {
+	var out []string
+	for _, session := range activeSessions() {
+		var token windows.Token
+		if err := windows.WTSQueryUserToken(session, &token); err != nil {
+			continue
+		}
+		if sid := tokenSID(token); sid != "" {
+			out = append(out, sid)
+		}
+		token.Close()
+	}
+	return out
+}
+
 func activeSessions() []uint32 {
 	var info *windows.WTS_SESSION_INFO
 	var count uint32

@@ -10,6 +10,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
+	"syscall"
 
 	"wg-client/internal/ipc"
 )
@@ -91,6 +93,16 @@ func launchdPlist(label string, args []string, logPath string) []byte {
 </plist>
 `)
 	return b.Bytes()
+}
+
+// activeUserIDs returns the uid of the user at the console (the one who can
+// see a prompt), if any.
+func activeUserIDs() []string {
+	var st syscall.Stat_t
+	if err := syscall.Stat("/dev/console", &st); err != nil || st.Uid == 0 {
+		return nil
+	}
+	return []string{strconv.FormatUint(uint64(st.Uid), 10)}
 }
 
 // relaunchApp starts the app's launch agent for users who had it open. After

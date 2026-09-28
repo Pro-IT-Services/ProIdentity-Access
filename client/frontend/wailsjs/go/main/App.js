@@ -146,6 +146,10 @@ export function ManagedSetMode(arg1) {
   return window['go']['main']['App']['ManagedSetMode'](arg1);
 }
 
+export function SnoozeUpdate(arg1) {
+  return window['go']['main']['App']['SnoozeUpdate'](arg1);
+}
+
 export function UninstallApp(arg1) {
   return window['go']['main']['App']['UninstallApp'](arg1);
 }
