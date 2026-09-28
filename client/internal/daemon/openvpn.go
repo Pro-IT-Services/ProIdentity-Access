@@ -47,7 +47,7 @@ type ovpnSession struct {
 	errMsg  string
 
 	cmd     *exec.Cmd
-	mgmt    net.Conn
+	mgmt    *mgmtChannel
 	cfgPath string
 
 	username string
@@ -239,9 +239,9 @@ func (m *OpenVPNManager) stop(sess *ovpnSession) {
 	sess.mu.Unlock()
 
 	if mgmt != nil {
-		_, _ = mgmt.Write([]byte("signal SIGTERM\n"))
+		mgmt.write("signal SIGTERM")
 		time.Sleep(300 * time.Millisecond)
-		_ = mgmt.Close()
+		mgmt.close()
 	}
 	if cmd != nil && cmd.Process != nil {
 		_ = cmd.Process.Kill()
@@ -287,30 +287,35 @@ func (m *OpenVPNManager) drive(sess *ovpnSession, port int) {
 		m.stop(sess)
 		return
 	}
+	ch := newMgmtChannel(conn)
+	defer ch.close()
 	sess.mu.Lock()
-	sess.mgmt = conn
+	sess.mgmt = ch
 	sess.mu.Unlock()
 
-	// Authenticate first (openvpn prompts "ENTER PASSWORD:").
-	_, _ = conn.Write([]byte(sess.mgmtPassword + "\n"))
-	// Enable notifications and release the start hold.
-	_, _ = conn.Write([]byte("state on\n"))
-	_, _ = conn.Write([]byte("bytecount 5\n"))
-	_, _ = conn.Write([]byte("hold release\n"))
+	// One command at a time (see mgmtChannel): authenticate (openvpn prompts
+	// "ENTER PASSWORD:"), enable notifications, release the start hold.
+	ch.send(sess.mgmtPassword)
+	ch.send("state on")
+	ch.send("bytecount 5")
+	ch.send("hold release")
 
 	sc := bufio.NewScanner(conn)
 	sc.Buffer(make([]byte, 0, 64*1024), 1<<20)
 	for sc.Scan() {
-		line := strings.TrimRight(sc.Text(), "\r")
-		m.handleMgmtLine(sess, conn, line)
+		line, isReply := ch.reply(strings.TrimRight(sc.Text(), "\r"))
+		if isReply || line == "" {
+			continue
+		}
+		m.handleMgmtLine(sess, ch, line)
 	}
 }
 
-func (m *OpenVPNManager) handleMgmtLine(sess *ovpnSession, conn net.Conn, line string) {
+func (m *OpenVPNManager) handleMgmtLine(sess *ovpnSession, ch *mgmtChannel, line string) {
 	switch {
 	case strings.HasPrefix(line, ">PASSWORD:Need 'Auth'"):
-		_, _ = conn.Write([]byte("username \"Auth\" " + mgmtEscape(sess.username) + "\n"))
-		_, _ = conn.Write([]byte("password \"Auth\" " + mgmtEscape(sess.password) + "\n"))
+		ch.send(`username "Auth" ` + mgmtEscape(sess.username))
+		ch.send(`password "Auth" ` + mgmtEscape(sess.password))
 
 	case strings.HasPrefix(line, ">PASSWORD:Verification Failed"):
 		sess.setError("The server rejected the username or password.")
@@ -329,7 +334,7 @@ func (m *OpenVPNManager) handleMgmtLine(sess *ovpnSession, conn net.Conn, line s
 	case strings.HasPrefix(line, ">NEED-OK:"):
 		// e.g. a confirmation OpenVPN would ask a person; accept it.
 		if name := quoted(line); name != "" {
-			_, _ = conn.Write([]byte("needok " + name + " ok\n"))
+			ch.send("needok " + name + " ok")
 		}
 	case strings.HasPrefix(line, ">FATAL:"):
 		sess.setError("OpenVPN stopped: " + strings.TrimPrefix(line, ">FATAL:"))

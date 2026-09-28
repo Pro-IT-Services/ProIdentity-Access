@@ -1,6 +1,6 @@
 # Versioning
 
-Current version: **0.7.6**
+Current version: **0.7.7**
 
 Version is defined in `wails.json` → `info.productVersion`.  
 The build script (`build.ps1` / `build.bat`) reads it from there automatically.
@@ -18,7 +18,7 @@ The build script (`build.ps1` / `build.bat`) reads it from there automatically.
 Edit **one** line in `wails.json`:
 
 ```json
-"productVersion": "0.7.6"
+"productVersion": "0.7.7"
 ```
 
 Then build and commit:
@@ -26,13 +26,14 @@ Then build and commit:
 ```
 build.bat
 git add wails.json
-git commit -m "Bump version to 0.7.6"
+git commit -m "Bump version to 0.7.7"
 ```
 
 ## Changelog
 
 | Version | Type    | Description                                                  |
 |---------|---------|--------------------------------------------------------------|
+| 0.7.7   | patch   | Fix OpenVPN stuck on Connecting: management commands are sent one at a time (pipelined commands, including the password, were dropped by openvpn) |
 | 0.7.6   | patch   | OpenVPN: names the unreachable server and port (shown after 20 s while retrying); management interface protected with a per-session password |
 | 0.7.5   | patch   | OpenVPN: clear error instead of endless Connecting (wrong password, unreachable server, certificate, adapter, unsupported option), unanswerable prompts reported, 90 s connect timeout, per-connection logs |
 | 0.7.4   | patch   | The service checks for updates every 10 minutes and shows the prompt to signed-in users (opening the app if needed); the app reopens after an update; Later is remembered per user |
