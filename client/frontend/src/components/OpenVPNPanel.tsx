@@ -1,4 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { WindowSetTitle } from '../../wailsjs/runtime/runtime'
+import { MonoChip } from './ui/MonoChip'
 import { useOpenVPNStore } from '../stores/useOpenVPNStore'
 import { Loader2, Power, Trash2, ShieldCheck, Plus, Search } from 'lucide-react'
 import {
@@ -140,6 +142,25 @@ export function OpenVPNPanel() {
   )
 }
 
+const APP_TITLE = 'ProIdentity Access'
+
+function setWindowTitle(title: string) {
+  try { WindowSetTitle(title) } catch { /* not running inside Wails */ }
+}
+
+/**
+ * Password managers that fill desktop apps (RoboForm on Windows) match a saved
+ * login by the program and its window title, e.g. `exe://ProIdentity Access/*Office VPN*`.
+ * While a connect form is open the title carries the profile's autofill name.
+ */
+function useAutofillTitle(name: string) {
+  useEffect(() => {
+    if (!name) return
+    setWindowTitle(`${name} - ${APP_TITLE}`)
+    return () => setWindowTitle(APP_TITLE)
+  }, [name])
+}
+
 function ConnectForm({ profile, onDone }: { profile: OpenVPNProfileView; onDone: () => void }) {
   const [username, setUsername] = useState(profile.remembered_user ?? '')
   const [password, setPassword] = useState('')
@@ -150,9 +171,16 @@ function ConnectForm({ profile, onDone }: { profile: OpenVPNProfileView; onDone:
   const [error, setError] = useState('')
   const needsCreds = profile.auth_user_pass
   const needsIP = profile.dev_type === 'tap' && profile.allow_custom_ip
+  const autofill = profile.autofill_name || profile.name
+  const totpRef = useRef<HTMLInputElement>(null)
+  useAutofillTitle(autofill)
 
   const submit = async (e: React.FormEvent) => {
-    e.preventDefault(); setBusy(true); setError('')
+    e.preventDefault()
+    // A filled-in login ends with Enter after the password; the code still
+    // has to be typed, so go there instead of failing.
+    if (profile.requires_totp && !totp.trim()) { totpRef.current?.focus(); return }
+    setBusy(true); setError('')
     try {
       await managedConnectOpenVPN(profile.id, profile.source, username, password, totp, customIP, remember)
       onDone()
@@ -161,17 +189,25 @@ function ConnectForm({ profile, onDone }: { profile: OpenVPNProfileView; onDone:
   }
 
   return (
-    <form onSubmit={submit} className="mt-3 pt-3 border-t border-border space-y-2">
+    <form onSubmit={submit} autoComplete="on" aria-label={`Sign in to ${autofill}`} className="mt-3 pt-3 border-t border-border space-y-2">
       {error && <p className="text-xs text-destructive">{error}</p>}
       {needsCreds && (
         <>
-          <input value={username} onChange={e => setUsername(e.target.value)} placeholder="Username" className={inputCls} autoFocus />
-          <input type="password" value={password} onChange={e => setPassword(e.target.value)}
+          <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground" title="Save your login in your password manager under this name. On Windows, RoboForm can match it to this window.">
+            Autofill name <MonoChip value={autofill} bare />
+          </p>
+          <input id="ovpn-username" name="username" autoComplete="username" aria-label="Username"
+            value={username} onChange={e => setUsername(e.target.value)}
+            onFocus={e => e.currentTarget.select()}
+            placeholder="Username" className={inputCls} autoFocus />
+          <input id="ovpn-password" name="password" type="password" autoComplete="current-password" aria-label="Password"
+            value={password} onChange={e => setPassword(e.target.value)}
             placeholder={profile.has_saved_password ? 'Password (saved — leave blank to reuse)' : 'Password'} className={inputCls} />
         </>
       )}
       {profile.requires_totp && (
-        <input value={totp} onChange={e => setTotp(e.target.value)} placeholder="TOTP code (from your authenticator)" inputMode="numeric" className={inputCls} />
+        <input ref={totpRef} id="ovpn-otp" name="otp" autoComplete="one-time-code" aria-label="TOTP code"
+          value={totp} onChange={e => setTotp(e.target.value)} placeholder="TOTP code (from your authenticator)" inputMode="numeric" className={inputCls} />
       )}
       {needsIP && (
         <input value={customIP} onChange={e => setCustomIP(e.target.value)} placeholder="Custom TAP IP (optional), e.g. 10.9.0.15" className={`${inputCls} font-mono`} />

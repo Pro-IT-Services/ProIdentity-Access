@@ -47,6 +47,7 @@ func (s *Server) handleAdminListOpenVPNProfiles(w http.ResponseWriter, r *http.R
 	type row struct {
 		ID            string  `db:"id"              json:"id"`
 		Name          string  `db:"name"            json:"name"`
+		AutofillName  *string `db:"autofill_name"   json:"autofill_name,omitempty"`
 		Description   *string `db:"description"     json:"description,omitempty"`
 		RequiresTOTP  bool    `db:"requires_totp"   json:"requires_totp"`
 		AuthUserPass  bool    `db:"auth_user_pass"  json:"auth_user_pass"`
@@ -57,7 +58,7 @@ func (s *Server) handleAdminListOpenVPNProfiles(w http.ResponseWriter, r *http.R
 	}
 	rows := []row{}
 	err := s.db.Select(&rows, `
-		SELECT p.id, p.name, p.description, p.requires_totp, p.auth_user_pass,
+		SELECT p.id, p.name, p.autofill_name, p.description, p.requires_totp, p.auth_user_pass,
 		       p.dev_type, p.allow_custom_ip, p.created_at,
 		       (SELECT COUNT(*) FROM openvpn_profile_assignments a WHERE a.profile_id = p.id) AS assigned_count
 		FROM openvpn_profiles p
@@ -74,6 +75,7 @@ func (s *Server) handleAdminCreateOpenVPNProfile(w http.ResponseWriter, r *http.
 	claims := claimsFrom(r)
 	var req struct {
 		Name          string `json:"name"`
+		AutofillName  string `json:"autofill_name"` // password-manager search text; empty = name
 		Description   string `json:"description"`
 		Config        string `json:"config"` // base64 of raw .ovpn
 		RequiresTOTP  bool   `json:"requires_totp"`
@@ -87,6 +89,11 @@ func (s *Server) handleAdminCreateOpenVPNProfile(w http.ResponseWriter, r *http.
 	req.Name = strings.TrimSpace(req.Name)
 	if req.Name == "" || len(req.Name) > maxOVPNNameBytes {
 		jsonError(w, http.StatusBadRequest, "name must be 1-255 characters")
+		return
+	}
+	req.AutofillName = strings.TrimSpace(req.AutofillName)
+	if len(req.AutofillName) > maxOVPNNameBytes {
+		jsonError(w, http.StatusBadRequest, "autofill name must be at most 255 characters")
 		return
 	}
 	raw, ok := decodeOVPNConfig(req.Config)
@@ -110,9 +117,9 @@ func (s *Server) handleAdminCreateOpenVPNProfile(w http.ResponseWriter, r *http.
 
 	_, err = s.db.Exec(`
 		INSERT INTO openvpn_profiles
-			(id, name, description, config_encrypted, requires_totp, auth_user_pass, dev_type, allow_custom_ip, created_by)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		id, req.Name, ovpnNull(req.Description), blob,
+			(id, name, autofill_name, description, config_encrypted, requires_totp, auth_user_pass, dev_type, allow_custom_ip, created_by)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		id, req.Name, ovpnNull(req.AutofillName), ovpnNull(req.Description), blob,
 		req.RequiresTOTP, meta.AuthUserPass, devType, req.AllowCustomIP, claims.UserID,
 	)
 	if err != nil {
@@ -131,6 +138,7 @@ func (s *Server) handleAdminUpdateOpenVPNProfile(w http.ResponseWriter, r *http.
 	id := chi.URLParam(r, "id")
 	var req struct {
 		Name          string `json:"name"`
+		AutofillName  string `json:"autofill_name"` // password-manager search text; empty = name
 		Description   string `json:"description"`
 		RequiresTOTP  bool   `json:"requires_totp"`
 		AllowCustomIP bool   `json:"allow_custom_ip"`
@@ -144,6 +152,11 @@ func (s *Server) handleAdminUpdateOpenVPNProfile(w http.ResponseWriter, r *http.
 	req.Name = strings.TrimSpace(req.Name)
 	if req.Name == "" || len(req.Name) > maxOVPNNameBytes {
 		jsonError(w, http.StatusBadRequest, "name must be 1-255 characters")
+		return
+	}
+	req.AutofillName = strings.TrimSpace(req.AutofillName)
+	if len(req.AutofillName) > maxOVPNNameBytes {
+		jsonError(w, http.StatusBadRequest, "autofill name must be at most 255 characters")
 		return
 	}
 
@@ -166,9 +179,9 @@ func (s *Server) handleAdminUpdateOpenVPNProfile(w http.ResponseWriter, r *http.
 		}
 		_, err = s.db.Exec(`
 			UPDATE openvpn_profiles
-			SET name=?, description=?, requires_totp=?, allow_custom_ip=?, dev_type=?, auth_user_pass=?, config_encrypted=?
+			SET name=?, autofill_name=?, description=?, requires_totp=?, allow_custom_ip=?, dev_type=?, auth_user_pass=?, config_encrypted=?
 			WHERE id=?`,
-			req.Name, ovpnNull(req.Description), req.RequiresTOTP, req.AllowCustomIP, devType, authUserPass, blob, id)
+			req.Name, ovpnNull(req.AutofillName), ovpnNull(req.Description), req.RequiresTOTP, req.AllowCustomIP, devType, authUserPass, blob, id)
 		if err != nil {
 			jsonError(w, http.StatusInternalServerError, err.Error())
 			return
@@ -180,9 +193,9 @@ func (s *Server) handleAdminUpdateOpenVPNProfile(w http.ResponseWriter, r *http.
 	// Metadata-only update (keeps stored config + its detected auth flag).
 	res, err := s.db.Exec(`
 		UPDATE openvpn_profiles
-		SET name=?, description=?, requires_totp=?, allow_custom_ip=?, dev_type=COALESCE(NULLIF(?,''), dev_type)
+		SET name=?, autofill_name=?, description=?, requires_totp=?, allow_custom_ip=?, dev_type=COALESCE(NULLIF(?,''), dev_type)
 		WHERE id=?`,
-		req.Name, ovpnNull(req.Description), req.RequiresTOTP, req.AllowCustomIP, strings.ToLower(strings.TrimSpace(req.DevType)), id)
+		req.Name, ovpnNull(req.AutofillName), ovpnNull(req.Description), req.RequiresTOTP, req.AllowCustomIP, strings.ToLower(strings.TrimSpace(req.DevType)), id)
 	if err != nil {
 		jsonError(w, http.StatusInternalServerError, err.Error())
 		return

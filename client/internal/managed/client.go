@@ -302,6 +302,7 @@ func (c *Client) GetUserConfigKey() ([]byte, error) {
 type OpenVPNProfileInfo struct {
 	ID            string `json:"id"`
 	Name          string `json:"name"`
+	AutofillName  string `json:"autofill_name,omitempty"` // password-manager search text set by the admin
 	Description   string `json:"description,omitempty"`
 	RequiresTOTP  bool   `json:"requires_totp"`
 	AuthUserPass  bool   `json:"auth_user_pass"`

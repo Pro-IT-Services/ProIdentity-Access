@@ -1,6 +1,6 @@
 # Versioning
 
-Current version: **0.7.8**
+Current version: **0.7.9**
 
 Version is defined in `wails.json` → `info.productVersion`.  
 The build script (`build.ps1` / `build.bat`) reads it from there automatically.
@@ -18,7 +18,7 @@ The build script (`build.ps1` / `build.bat`) reads it from there automatically.
 Edit **one** line in `wails.json`:
 
 ```json
-"productVersion": "0.7.8"
+"productVersion": "0.7.9"
 ```
 
 Then build and commit:
@@ -26,13 +26,14 @@ Then build and commit:
 ```
 build.bat
 git add wails.json
-git commit -m "Bump version to 0.7.8"
+git commit -m "Bump version to 0.7.9"
 ```
 
 ## Changelog
 
 | Version | Type    | Description                                                  |
 |---------|---------|--------------------------------------------------------------|
+| 0.7.9   | patch   | Password-manager autofill for OpenVPN sign-in: the window title carries the profile's autofill name while its connect form is open (RoboForm matches `exe://ProIdentity Access/*name*`); admin can set a separate autofill name per server profile, imported profiles use their name; standard username/password field attributes; Enter after the password moves to the TOTP field |
 | 0.7.8   | patch   | Connected VPNs: the main screen shows OpenVPN connections too, plus a "Connected now" list (IP, routed networks, server, duration, traffic, Disconnect); two connections that use the same network are refused with a message naming the one in the way |
 | 0.7.7   | patch   | Fix OpenVPN stuck on Connecting: management commands are sent one at a time (pipelined commands, including the password, were dropped by openvpn) |
 | 0.7.6   | patch   | OpenVPN: names the unreachable server and port (shown after 20 s while retrying); management interface protected with a per-session password |

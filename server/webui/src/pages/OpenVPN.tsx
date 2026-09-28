@@ -86,6 +86,7 @@ export default function OpenVPN() {
                 {p.requires_totp && <Tag tone="ok"><ShieldCheck className="w-3 h-3" /> TOTP</Tag>}
                 {p.auth_user_pass && <Tag>user/pass</Tag>}
                 {p.dev_type === 'tap' && p.allow_custom_ip && <Tag>custom IP</Tag>}
+                {p.autofill_name && <Tag>autofill: {p.autofill_name}</Tag>}
                 <Tag>{p.assigned_count} assigned</Tag>
               </div>
             </button>
@@ -99,8 +100,11 @@ export default function OpenVPN() {
   )
 }
 
+const AUTOFILL_HINT = 'Text your password manager searches for. While the connect form is open, the desktop app shows it in its window title, so a RoboForm login matched to exe://ProIdentity Access/*text* fills it. Leave empty to use the display name.'
+
 function UploadSheet({ open, onClose, onSaved }: { open: boolean; onClose: () => void; onSaved: () => void }) {
   const [name, setName] = useState('')
+  const [autofillName, setAutofillName] = useState('')
   const [description, setDescription] = useState('')
   const [file, setFile] = useState<File | null>(null)
   const [requiresTotp, setRequiresTotp] = useState(false)
@@ -109,7 +113,7 @@ function UploadSheet({ open, onClose, onSaved }: { open: boolean; onClose: () =>
   const [error, setError] = useState('')
 
   useEffect(() => {
-    if (open) { setName(''); setDescription(''); setFile(null); setRequiresTotp(false); setAllowCustomIp(false); setError('') }
+    if (open) { setName(''); setAutofillName(''); setDescription(''); setFile(null); setRequiresTotp(false); setAllowCustomIp(false); setError('') }
   }, [open])
 
   const submit = async (e: React.FormEvent) => {
@@ -118,7 +122,7 @@ function UploadSheet({ open, onClose, onSaved }: { open: boolean; onClose: () =>
     setBusy(true); setError('')
     try {
       const config = await fileToBase64(file)
-      await api.adminCreateOpenVPN({ name, description: description || undefined, config, requires_totp: requiresTotp, allow_custom_ip: allowCustomIp })
+      await api.adminCreateOpenVPN({ name, autofill_name: autofillName || undefined, description: description || undefined, config, requires_totp: requiresTotp, allow_custom_ip: allowCustomIp })
       onSaved()
     } catch (err: any) { setError(err.message ?? 'Upload failed') }
     finally { setBusy(false) }
@@ -140,6 +144,9 @@ function UploadSheet({ open, onClose, onSaved }: { open: boolean; onClose: () =>
               </Field>
               <Field label="Description" hint="Optional">
                 <Input value={description} onChange={e => setDescription(e.target.value)} placeholder="Legacy site-to-site profile" />
+              </Field>
+              <Field label="Autofill search name" hint={AUTOFILL_HINT}>
+                <Input value={autofillName} onChange={e => setAutofillName(e.target.value)} placeholder={name || 'Same as display name'} />
               </Field>
               <Field label=".ovpn file">
                 <Input type="file" accept=".ovpn,.conf,text/plain" onChange={e => setFile(e.target.files?.[0] ?? null)} required />
@@ -179,6 +186,10 @@ function ManageSheet({ profile, onClose, onChanged }: { profile: OpenVPNProfile 
   const [addCustomIp, setAddCustomIp] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [editName, setEditName] = useState('')
+  const [editAutofill, setEditAutofill] = useState('')
+  const [editDescription, setEditDescription] = useState('')
+  const [saved, setSaved] = useState(false)
   const open = profile !== null
   const isTap = profile?.dev_type === 'tap'
   const wantsCustomIp = isTap && profile?.allow_custom_ip
@@ -187,7 +198,32 @@ function ManageSheet({ profile, onClose, onChanged }: { profile: OpenVPNProfile 
     api.adminOpenVPNAssignments(id).then(d => setAssignments(d ?? [])).catch(() => {})
     api.listUsers().then(d => setUsers(d ?? [])).catch(() => {})
   }
-  useEffect(() => { if (profile) { setError(''); setAddUserId(''); setAddCustomIp(''); load(profile.id) } }, [profile])
+  useEffect(() => {
+    if (!profile) return
+    setError(''); setAddUserId(''); setAddCustomIp(''); setSaved(false)
+    setEditName(profile.name); setEditAutofill(profile.autofill_name ?? ''); setEditDescription(profile.description ?? '')
+    load(profile.id)
+  }, [profile])
+
+  const dirty = !!profile && (editName !== profile.name || editAutofill !== (profile.autofill_name ?? '') || editDescription !== (profile.description ?? ''))
+
+  const saveDetails = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!profile) return
+    setBusy(true); setError(''); setSaved(false)
+    try {
+      await api.adminUpdateOpenVPN(profile.id, {
+        name: editName,
+        autofill_name: editAutofill || undefined,
+        description: editDescription || undefined,
+        requires_totp: profile.requires_totp,
+        allow_custom_ip: profile.allow_custom_ip,
+      })
+      Object.assign(profile, { name: editName.trim(), autofill_name: editAutofill.trim() || undefined, description: editDescription.trim() || undefined })
+      setSaved(true); onChanged()
+    } catch (err: any) { setError(err.message ?? 'Save failed') }
+    finally { setBusy(false) }
+  }
 
   const unassigned = useMemo(() => {
     const taken = new Set(assignments.map(a => a.user_id))
@@ -228,6 +264,22 @@ function ManageSheet({ profile, onClose, onChanged }: { profile: OpenVPNProfile 
         <SheetBody>
           <div className="space-y-5">
             {error && <p className="text-sm text-destructive">{error}</p>}
+
+            <form onSubmit={saveDetails} className="space-y-3 rounded-md border border-border bg-card/40 p-3">
+              <Field label="Display name">
+                <Input value={editName} onChange={e => { setEditName(e.target.value); setSaved(false) }} required />
+              </Field>
+              <Field label="Autofill search name" hint={AUTOFILL_HINT}>
+                <Input value={editAutofill} onChange={e => { setEditAutofill(e.target.value); setSaved(false) }} placeholder={editName || 'Same as display name'} />
+              </Field>
+              <Field label="Description" hint="Optional">
+                <Input value={editDescription} onChange={e => { setEditDescription(e.target.value); setSaved(false) }} />
+              </Field>
+              <div className="flex items-center justify-end gap-2">
+                {saved && <span className="text-xs text-muted-foreground">Saved</span>}
+                <Button type="submit" size="sm" disabled={busy || !dirty || !editName.trim()}>Save details</Button>
+              </div>
+            </form>
 
             <div>
               <p className="text-xs font-medium text-muted-foreground mb-2">Assign to user</p>

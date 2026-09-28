@@ -239,9 +239,9 @@ export const api = {
 
   // Admin — OpenVPN profiles + per-user assignments
   adminListOpenVPN: () => request<OpenVPNProfile[]>('GET', '/admin/openvpn/profiles'),
-  adminCreateOpenVPN: (data: { name: string; description?: string; config: string; requires_totp: boolean; allow_custom_ip: boolean; dev_type?: string }) =>
+  adminCreateOpenVPN: (data: { name: string; autofill_name?: string; description?: string; config: string; requires_totp: boolean; allow_custom_ip: boolean; dev_type?: string }) =>
     request<{ id: string; dev_type: string; auth_user_pass: boolean }>('POST', '/admin/openvpn/profiles', data),
-  adminUpdateOpenVPN: (id: string, data: { name: string; description?: string; requires_totp: boolean; allow_custom_ip: boolean; dev_type?: string; config?: string }) =>
+  adminUpdateOpenVPN: (id: string, data: { name: string; autofill_name?: string; description?: string; requires_totp: boolean; allow_custom_ip: boolean; dev_type?: string; config?: string }) =>
     request<{ ok: boolean }>('PUT', `/admin/openvpn/profiles/${id}`, data),
   adminDeleteOpenVPN: (id: string) => request<{ ok: boolean }>('DELETE', `/admin/openvpn/profiles/${id}`),
   adminOpenVPNAssignments: (id: string) => request<OpenVPNAssignment[]>('GET', `/admin/openvpn/profiles/${id}/assignments`),
@@ -276,6 +276,8 @@ export interface PermDef {
 export interface OpenVPNProfile {
   id: string
   name: string
+  /** Password-manager search text shown in the client's window title; empty = name. */
+  autofill_name?: string
   description?: string
   requires_totp: boolean
   auth_user_pass: boolean

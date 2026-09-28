@@ -83,6 +83,7 @@ func (s *Server) decryptProfile(profileID string, blob []byte) (string, error) {
 type openvpnProfileMeta struct {
 	ID            string  `db:"id"              json:"id"`
 	Name          string  `db:"name"            json:"name"`
+	AutofillName  *string `db:"autofill_name"   json:"autofill_name,omitempty"`
 	Description   *string `db:"description"     json:"description,omitempty"`
 	RequiresTOTP  bool    `db:"requires_totp"   json:"requires_totp"`
 	AuthUserPass  bool    `db:"auth_user_pass"  json:"auth_user_pass"`
@@ -96,7 +97,7 @@ func (s *Server) handleListOpenVPNProfiles(w http.ResponseWriter, r *http.Reques
 	claims := claimsFrom(r)
 	rows := []openvpnProfileMeta{}
 	err := s.db.Select(&rows, `
-		SELECT p.id, p.name, p.description, p.requires_totp, p.auth_user_pass,
+		SELECT p.id, p.name, p.autofill_name, p.description, p.requires_totp, p.auth_user_pass,
 		       p.dev_type, p.allow_custom_ip, a.custom_ip
 		FROM openvpn_profiles p
 		JOIN openvpn_profile_assignments a ON a.profile_id = p.id
@@ -120,7 +121,7 @@ func (s *Server) handleDownloadOpenVPNProfile(w http.ResponseWriter, r *http.Req
 		ConfigEncrypted []byte `db:"config_encrypted"`
 	}
 	err := s.db.QueryRowx(`
-		SELECT p.id, p.name, p.description, p.requires_totp, p.auth_user_pass,
+		SELECT p.id, p.name, p.autofill_name, p.description, p.requires_totp, p.auth_user_pass,
 		       p.dev_type, p.allow_custom_ip, a.custom_ip, p.config_encrypted
 		FROM openvpn_profiles p
 		JOIN openvpn_profile_assignments a ON a.profile_id = p.id

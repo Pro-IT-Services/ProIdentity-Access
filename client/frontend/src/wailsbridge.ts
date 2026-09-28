@@ -244,6 +244,8 @@ export type OpenVPNProfileView = {
   id: string
   name: string
   source: 'assigned' | 'local'
+  /** Password-manager search text (admin-set, else the profile name). */
+  autofill_name?: string
   requires_totp: boolean
   auth_user_pass: boolean
   dev_type: 'tun' | 'tap'

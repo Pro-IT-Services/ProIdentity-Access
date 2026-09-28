@@ -16,9 +16,13 @@ import (
 // OpenVPNProfileView is the unified profile shape the frontend renders: both
 // admin-assigned (fetched from the server) and locally-imported profiles.
 type OpenVPNProfileView struct {
-	ID               string `json:"id"`
-	Name             string `json:"name"`
-	Source           string `json:"source"` // "assigned" | "local"
+	ID     string `json:"id"`
+	Name   string `json:"name"`
+	Source string `json:"source"` // "assigned" | "local"
+	// AutofillName is what a password manager (RoboForm) matches the login
+	// against; the app puts it in the window title while connecting. The
+	// admin can set it per profile; otherwise it's the profile name.
+	AutofillName     string `json:"autofill_name"`
 	RequiresTOTP     bool   `json:"requires_totp"`
 	AuthUserPass     bool   `json:"auth_user_pass"`
 	DevType          string `json:"dev_type"`
@@ -88,6 +92,13 @@ func rememberedUser(id string) string {
 	return ""
 }
 
+func autofillName(set, name string) string {
+	if s := strings.TrimSpace(set); s != "" {
+		return s
+	}
+	return strings.TrimSpace(name)
+}
+
 // ManagedListOpenVPNProfiles returns admin-assigned + locally-imported profiles.
 func (a *App) ManagedListOpenVPNProfiles() ([]OpenVPNProfileView, error) {
 	views := []OpenVPNProfileView{}
@@ -99,7 +110,7 @@ func (a *App) ManagedListOpenVPNProfiles() ([]OpenVPNProfileView, error) {
 		if profs, err := mc.ListOpenVPNProfiles(); err == nil {
 			for _, p := range profs {
 				views = append(views, OpenVPNProfileView{
-					ID: p.ID, Name: p.Name, Source: "assigned",
+					ID: p.ID, Name: p.Name, Source: "assigned", AutofillName: autofillName(p.AutofillName, p.Name),
 					RequiresTOTP: p.RequiresTOTP, AuthUserPass: p.AuthUserPass,
 					DevType: p.DevType, AllowCustomIP: p.AllowCustomIP, CustomIP: p.CustomIP,
 					RememberedUser: rememberedUser(p.ID), HasSavedPassword: hasSecret(ovpnPwKey(p.ID)),
@@ -112,7 +123,7 @@ func (a *App) ManagedListOpenVPNProfiles() ([]OpenVPNProfileView, error) {
 
 	for _, lp := range loadLocalOVPNIndex() {
 		views = append(views, OpenVPNProfileView{
-			ID: lp.ID, Name: lp.Name, Source: "local",
+			ID: lp.ID, Name: lp.Name, Source: "local", AutofillName: autofillName("", lp.Name),
 			RequiresTOTP: lp.RequiresTOTP, AuthUserPass: lp.AuthUserPass,
 			DevType: lp.DevType, AllowCustomIP: lp.AllowCustomIP,
 			RememberedUser: rememberedUser(lp.ID), HasSavedPassword: hasSecret(ovpnPwKey(lp.ID)),
@@ -236,7 +247,7 @@ func (a *App) ImportOpenVPNProfile(name, config string, requiresTotp bool) (*Ope
 		return nil, err
 	}
 	return &OpenVPNProfileView{
-		ID: id, Name: name, Source: "local", RequiresTOTP: requiresTotp,
+		ID: id, Name: name, Source: "local", AutofillName: autofillName("", name), RequiresTOTP: requiresTotp,
 		AuthUserPass: authUserPass, DevType: devType, AllowCustomIP: lp.AllowCustomIP,
 	}, nil
 }

@@ -203,6 +203,7 @@ export namespace main {
 	    id: string;
 	    name: string;
 	    source: string;
+	    autofill_name: string;
 	    requires_totp: boolean;
 	    auth_user_pass: boolean;
 	    dev_type: string;
@@ -220,6 +221,7 @@ export namespace main {
 	        this.id = source["id"];
 	        this.name = source["name"];
 	        this.source = source["source"];
+	        this.autofill_name = source["autofill_name"];
 	        this.requires_totp = source["requires_totp"];
 	        this.auth_user_pass = source["auth_user_pass"];
 	        this.dev_type = source["dev_type"];
