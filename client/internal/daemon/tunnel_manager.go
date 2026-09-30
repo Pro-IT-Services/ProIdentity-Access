@@ -50,6 +50,7 @@ func NewTunnelManager(storageDir string, broadcast func(ipc.Event)) (*TunnelMana
 		openvpn:    NewOpenVPNManager(broadcast),
 	}
 	m.openvpn.conflict = m.findConflict
+	go m.reapEphemeralLoop()
 	return m, nil
 }
 
@@ -133,6 +134,7 @@ func (m *TunnelManager) ImportEphemeralTunnel(principal ipc.Principal, name, con
 	}
 
 	t := NewTunnel(cfg)
+	t.Ephemeral = true
 
 	m.mu.Lock()
 	m.tunnels[cfg.ID] = t
@@ -157,6 +159,9 @@ func (m *TunnelManager) DeleteTunnel(principal ipc.Principal, id string) error {
 
 	_ = t.Stop()
 	_ = m.deletePersistedConfig(t.Config.OwnerID, id)
+	if t.Ephemeral {
+		t.forgetKeys()
+	}
 	return nil
 }
 

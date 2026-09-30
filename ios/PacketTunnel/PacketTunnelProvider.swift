@@ -9,9 +9,10 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
     }()
 
     override func startTunnel(options: [String: NSObject]?, completionHandler: @escaping (Error?) -> Void) {
-        guard let proto = protocolConfiguration as? NETunnelProviderProtocol,
-              let providerConfig = proto.providerConfiguration,
-              let wgConfig = providerConfig["wg-config"] as? String else {
+        // The app passes the config for this start only; the VPN profile holds
+        // no config or keys. A start without it (the toggle in iOS Settings)
+        // fails: connections are started from the app, with a fresh config.
+        guard let wgConfig = options?["wg-config"] as? String else {
             completionHandler(PacketTunnelError.missingConfig)
             return
         }

@@ -80,6 +80,9 @@ func main() {
 
 	// Session manager + watchdog
 	sessMgr := session.NewManager(database, registry, fwMgr, settings)
+	// Sessions from a previous run can't continue: their preshared keys lived
+	// only in that process. End them now; clients reconnect with a fresh config.
+	sessMgr.TerminateAll()
 	sessMgr.StartWatchdog()
 
 	// WebAuthn

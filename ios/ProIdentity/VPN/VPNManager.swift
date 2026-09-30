@@ -11,6 +11,10 @@ class VPNManager {
 
     private let storageKey = "wg_tunnels"
     private var providerManagers: [String: NETunnelProviderManager] = [:]
+    /// Full configs (with keys) of managed tunnels, for the current server
+    /// session only. Never written anywhere: the Keychain holds a copy without
+    /// keys, and the tunnel gets the config when it starts.
+    private var sessionConfigs: [String: WireGuardConfig] = [:]
     private var observers: [String: NSObjectProtocol] = [:]
     var onStateChanged: ((String, String) -> Void)? // (tunnelID, state)
 
@@ -78,15 +82,20 @@ class VPNManager {
 
     // MARK: - Connect
     func connectTunnel(id: String) async throws {
-        guard let config = configs.first(where: { $0.id == id }) else {
+        guard let config = sessionConfigs[id] ?? configs.first(where: { $0.id == id }) else {
             throw VPNError.tunnelNotFound
         }
+        // A managed tunnel's stored copy has no keys: it needs a new session.
+        guard !config.iface.privateKey.isEmpty else { throw VPNError.sessionEnded }
         let mgr = try await loadOrCreateManager(for: config)
         guard let session = mgr.connection as? NETunnelProviderSession else {
             throw VPNError.vpnUnavailable
         }
         onStateChanged?(id, "connecting")
-        try session.startTunnel(options: nil)
+        // The config (with the private and preshared keys) goes to the tunnel
+        // only for this start. It is never saved in the iOS VPN profile, so
+        // the profile can't be switched on again from Settings.
+        try session.startTunnel(options: ["wg-config": config.toConfigString() as NSString])
         observeManager(mgr, tunnelID: id)
     }
 
@@ -127,6 +136,7 @@ class VPNManager {
     /// the app was relaunched — so the UI shows the real state.
     func restoreState() async {
         guard let managers = try? await NETunnelProviderManager.loadAllFromPreferences() else { return }
+        await removeStaleSecrets(managers)
         let known = Set(configs.map(\.id))
         var connected = Set<String>()
         for mgr in managers {
@@ -140,7 +150,39 @@ class VPNManager {
             observeManager(mgr, tunnelID: id)
             onStateChanged?(id, Self.statusString(mgr.connection.status))
         }
-        await MainActor.run { ConnectionActivityController.reconcile(connectedTunnelIDs: connected) }
+        let connectedIDs = connected
+        await MainActor.run { ConnectionActivityController.reconcile(connectedTunnelIDs: connectedIDs) }
+    }
+
+    /// Removes keys that outlived their session:
+    ///  - VPN profiles from earlier builds that stored the config (and its
+    ///    private key) in the profile: the key is stripped, or the profile of
+    ///    a managed tunnel removed;
+    ///  - managed configs whose tunnel isn't running (the session is over).
+    /// A tunnel that is running right now is left alone until it stops.
+    private func removeStaleSecrets(_ managers: [NETunnelProviderManager]) async {
+        var running = Set<String>()
+        for mgr in managers {
+            let id = Self.tunnelID(of: mgr)
+            let status = mgr.connection.status
+            let live = status == .connected || status == .connecting || status == .reasserting
+            if live, let id { running.insert(id) }
+            guard !live,
+                  let proto = mgr.protocolConfiguration as? NETunnelProviderProtocol,
+                  proto.providerConfiguration?["wg-config"] != nil else { continue }
+            if let id, id.hasPrefix("managed-") || configs.first(where: { $0.id == id })?.isManaged == true {
+                try? await mgr.removeFromPreferences()
+            } else {
+                proto.providerConfiguration = id.map { ["tunnel-id": $0] } ?? [:]
+                mgr.protocolConfiguration = proto
+                try? await mgr.saveToPreferences()
+            }
+        }
+        let stale = configs.filter { $0.isManaged && !running.contains($0.id) }
+        if !stale.isEmpty {
+            let staleIDs = Set(stale.map(\.id))
+            configs = configs.filter { !staleIDs.contains($0.id) }
+        }
     }
 
     /// Mirrors a tunnel's state into its Live Activity (lock screen / Dynamic Island).
@@ -202,21 +244,37 @@ class VPNManager {
     }
 
     // MARK: - Managed tunnel (from server config)
+    /// One-time config for a server session. The full config stays in
+    /// memory; the Keychain gets a copy without keys (so a relaunched app can
+    /// still show and manage the running connection), removed again by
+    /// `forgetManagedTunnel` when the session ends.
     func importManagedTunnel(name: String, configContent: String, serverID: String) throws -> WireGuardConfig {
         guard var config = WireGuardConfig.parse(name: name, config: configContent) else {
             throw VPNError.invalidConfig
         }
         config.isManaged = true
         config.managedServerID = serverID
+        // Same id (and VPN profile) for every session with this server, so iOS
+        // doesn't ask to add a VPN configuration on each connect.
+        config.id = Self.managedTunnelID(serverID)
+        sessionConfigs[config.id] = config
         var current = configs
-        if let existing = current.first(where: { $0.managedServerID == serverID }) {
-            config.id = existing.id // keep the same VPN profile across sessions
-        }
         current.removeAll { $0.managedServerID == serverID }
-        current.append(config)
+        current.append(config.withoutKeys())
         configs = current
         return config
     }
+
+    /// Ends a managed tunnel's config: the in-memory keys and the Keychain
+    /// copy are deleted. The (key-less) VPN profile is kept for the next
+    /// session.
+    func forgetManagedTunnel(serverID: String) {
+        let id = Self.managedTunnelID(serverID)
+        sessionConfigs.removeValue(forKey: id)
+        configs = configs.filter { $0.managedServerID != serverID }
+    }
+
+    static func managedTunnelID(_ serverID: String) -> String { "managed-\(serverID)" }
 
     /// Imported (non-managed) tunnels, in import order.
     var importedConfigs: [WireGuardConfig] { configs.filter { !$0.isManaged } }
@@ -228,6 +286,7 @@ class VPNManager {
             disconnectTunnel(id: cfg.id)
             try? await deleteTunnel(id: cfg.id)
         }
+        sessionConfigs.removeAll()
     }
 
     func tunnelIDForServer(_ serverID: String) -> String? {
@@ -249,6 +308,7 @@ class VPNManager {
             manager.removeFromPreferences { _ in }
         }
         providerManagers.removeAll()
+        sessionConfigs.removeAll()
         observers.keys.forEach(stopObserving)
         deleteKeychainData(for: storageKey)
         UserDefaults.standard.removeObject(forKey: storageKey)
@@ -265,15 +325,12 @@ class VPNManager {
         // The profile name shown in iOS Settings > VPN.
         manager.localizedDescription = config.name
 
-        // Always re-apply the configuration: managed tunnels get a fresh key
-        // and address for every session but keep the same profile.
+        // The profile holds no config or keys, only which tunnel it is; the
+        // config is passed to startTunnel (see connectTunnel).
         let proto = NETunnelProviderProtocol()
         proto.providerBundleIdentifier = "com.proidentity.access.tunnel" // Network Extension bundle ID
         proto.serverAddress = config.peers.first?.endpoint ?? "WireGuard"
-        proto.providerConfiguration = [
-            "wg-config": config.toConfigString(),
-            "tunnel-id": config.id
-        ]
+        proto.providerConfiguration = ["tunnel-id": config.id]
         manager.protocolConfiguration = proto
         manager.isEnabled = true
 
@@ -389,12 +446,13 @@ private final class ResumeOnce<T>: @unchecked Sendable {
 }
 
 enum VPNError: LocalizedError {
-    case invalidConfig, tunnelNotFound, vpnUnavailable
+    case invalidConfig, tunnelNotFound, vpnUnavailable, sessionEnded
     var errorDescription: String? {
         switch self {
         case .invalidConfig:   return "Invalid WireGuard config"
         case .tunnelNotFound:  return "Tunnel not found"
         case .vpnUnavailable:  return "VPN unavailable — Network Extension entitlement required"
+        case .sessionEnded:    return "This connection's session has ended. Connect again."
         }
     }
 }

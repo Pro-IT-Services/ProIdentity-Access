@@ -119,6 +119,9 @@ class WgVpnService : VpnService() {
                 if (entry.state == "disconnected") {
                     activeTunnels.remove(id)
                     connectedAt.remove(id)
+                    // Server tunnels are one-time: once down, their config and
+                    // keys are gone (a reconnect gets a new session and config).
+                    if (id.startsWith("managed-")) tunnelEntries.remove(id)
                 }
                 stateListeners.forEach { it(id, entry.state) }
                 updateNotification()

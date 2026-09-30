@@ -12,8 +12,9 @@ import (
 
 // PeerEntry is a minimal peer descriptor used for full config sync.
 type PeerEntry struct {
-	PublicKey  string
-	AssignedIP string // without prefix, e.g. "10.8.0.2"
+	PublicKey    string
+	AssignedIP   string // without prefix, e.g. "10.8.0.2"
+	PresharedKey string // base64; per session, never stored
 }
 
 // Manager wraps wgctrl to add/remove peers on the server WireGuard interface.
@@ -53,12 +54,28 @@ func GenerateKeypair() (string, string, error) {
 	return priv.String(), priv.PublicKey().String(), nil
 }
 
+// GeneratePresharedKey returns a fresh random WireGuard preshared key
+// (base64). One per session: it adds a symmetric layer on top of the
+// Curve25519 handshake, and the config it's in is useless once the session
+// ends.
+func GeneratePresharedKey() (string, error) {
+	k, err := wgtypes.GenerateKey()
+	if err != nil {
+		return "", fmt.Errorf("generate preshared key: %w", err)
+	}
+	return k.String(), nil
+}
+
 // AddPeer adds a client peer to the WireGuard interface with the given
-// public key and /32 allowed IP.
-func (m *Manager) AddPeer(clientPubKeyB64, assignedIP string) error {
+// public key, /32 allowed IP and preshared key (empty = none).
+func (m *Manager) AddPeer(clientPubKeyB64, assignedIP, presharedKeyB64 string) error {
 	pub, err := parseKey(clientPubKeyB64)
 	if err != nil {
 		return fmt.Errorf("parse public key: %w", err)
+	}
+	psk, err := optionalKey(presharedKeyB64)
+	if err != nil {
+		return fmt.Errorf("parse preshared key: %w", err)
 	}
 
 	_, ipNet, err := net.ParseCIDR(assignedIP + "/32")
@@ -71,6 +88,7 @@ func (m *Manager) AddPeer(clientPubKeyB64, assignedIP string) error {
 		Peers: []wgtypes.PeerConfig{
 			{
 				PublicKey:                   pub,
+				PresharedKey:                psk,
 				ReplaceAllowedIPs:           true,
 				AllowedIPs:                  []net.IPNet{*ipNet},
 				PersistentKeepaliveInterval: &ka,
@@ -118,8 +136,13 @@ func (m *Manager) SyncAllPeers(peers []PeerEntry) error {
 		if err != nil {
 			continue
 		}
+		psk, err := optionalKey(p.PresharedKey)
+		if err != nil {
+			continue
+		}
 		pcs = append(pcs, wgtypes.PeerConfig{
 			PublicKey:                   pub,
+			PresharedKey:                psk,
 			ReplaceAllowedIPs:           true,
 			AllowedIPs:                  []net.IPNet{*ipNet},
 			PersistentKeepaliveInterval: &ka,
@@ -173,6 +196,18 @@ func (m *Manager) ConfigureInterface(privateKeyB64 string, listenPort int) error
 		return fmt.Errorf("configure interface: %w", err)
 	}
 	return nil
+}
+
+// optionalKey parses a base64 key; "" means none (nil).
+func optionalKey(b64 string) (*wgtypes.Key, error) {
+	if b64 == "" {
+		return nil, nil
+	}
+	k, err := parseKey(b64)
+	if err != nil {
+		return nil, err
+	}
+	return &k, nil
 }
 
 func parseKey(b64 string) (wgtypes.Key, error) {

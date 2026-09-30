@@ -24,6 +24,14 @@ struct WireGuardConfig: Codable, Identifiable {
     var isManaged: Bool = false
     var managedServerID: String?
 
+    /// Same config without the private and preshared keys (for storage).
+    func withoutKeys() -> WireGuardConfig {
+        var copy = self
+        copy.iface.privateKey = ""
+        copy.peers = peers.map { var p = $0; p.presharedKey = nil; return p }
+        return copy
+    }
+
     // Serialize back to .conf format
     func toConfigString() -> String {
         var lines = ["[Interface]"]

@@ -290,6 +290,8 @@ final class ConnectionsModel {
             VPNManager.shared.disconnectTunnel(id: tunnelID)
         }
         keepaliveTasks.removeValue(forKey: serverID)?.cancel()
+        // One-time config: its keys are gone with the session.
+        VPNManager.shared.forgetManagedTunnel(serverID: serverID)
         if let sid = sessions.removeValue(forKey: serverID), let key = try? ManagedClient.shared.aesKey() {
             await ManagedClient.shared.deleteSession(sessionID: sid, aesKey: key)
         }
@@ -425,6 +427,7 @@ final class ConnectionsModel {
                 startKeepalive(serverID: serverID)
             } else {
                 sessions.removeValue(forKey: serverID)
+                VPNManager.shared.forgetManagedTunnel(serverID: serverID)
                 if let key = try? ManagedClient.shared.aesKey() {
                     Task { await ManagedClient.shared.deleteSession(sessionID: sessionID, aesKey: key) }
                 }
@@ -497,9 +500,7 @@ final class ConnectionsModel {
                 lastError = error
             }
         }
-        if let tunnelID = VPNManager.shared.tunnelIDForServer(serverID) {
-            try? await VPNManager.shared.deleteTunnel(id: tunnelID)
-        }
+        VPNManager.shared.forgetManagedTunnel(serverID: serverID)
         throw lastError ?? APIError.serverError("None of the server's endpoints could be reached.")
     }
 

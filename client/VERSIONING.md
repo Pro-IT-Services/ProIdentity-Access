@@ -1,6 +1,6 @@
 # Versioning
 
-Current version: **0.7.10**
+Current version: **0.7.11**
 
 Version is defined in `wails.json` → `info.productVersion`.  
 The build script (`build.ps1` / `build.bat`) reads it from there automatically.
@@ -18,7 +18,7 @@ The build script (`build.ps1` / `build.bat`) reads it from there automatically.
 Edit **one** line in `wails.json`:
 
 ```json
-"productVersion": "0.7.10"
+"productVersion": "0.7.11"
 ```
 
 Then build and commit:
@@ -26,13 +26,14 @@ Then build and commit:
 ```
 build.bat
 git add wails.json
-git commit -m "Bump version to 0.7.10"
+git commit -m "Bump version to 0.7.11"
 ```
 
 ## Changelog
 
 | Version | Type    | Description                                                  |
 |---------|---------|--------------------------------------------------------------|
+| 0.7.11  | patch   | One-time session configs: the server adds a per-session PresharedKey (memory only) and ends sessions of disabled/deleted users and removed server access; the service removes session tunnels whose session is over (app killed), the app removes leftovers at start and ends sessions before quitting |
 | 0.7.10  | patch   | Server address can be entered without https:// (e.g. vpn.example.com); it is added automatically in setup and Settings |
 | 0.7.9   | patch   | Password-manager autofill for OpenVPN sign-in: the window title carries the profile's autofill name while its connect form is open (RoboForm matches `exe://ProIdentity Access/*name*`); admin can set a separate autofill name per server profile, imported profiles use their name; standard username/password field attributes; Enter after the password moves to the TOTP field |
 | 0.7.8   | patch   | Connected VPNs: the main screen shows OpenVPN connections too, plus a "Connected now" list (IP, routed networks, server, duration, traffic, Disconnect); two connections that use the same network are refused with a message naming the one in the way |

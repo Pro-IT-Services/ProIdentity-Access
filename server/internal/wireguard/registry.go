@@ -369,24 +369,13 @@ func (r *Registry) startServer(srv *model.WGServer) error {
 		}
 	}
 
-	// Re-attach existing session peers from the DB. Without this, every
-	// daemon restart silently breaks active client sessions until they
-	// time out — clients show "Connected" but no traffic flows.
-	var sessionRows []struct {
-		ClientPublicKey string `db:"client_public_key"`
-		AssignedIP      string `db:"assigned_ip"`
-	}
-	if err := r.db.Select(&sessionRows,
-		"SELECT client_public_key, assigned_ip FROM sessions WHERE server_id=?", srv.ID); err == nil && len(sessionRows) > 0 {
-		peers := make([]PeerEntry, 0, len(sessionRows))
-		for _, row := range sessionRows {
-			peers = append(peers, PeerEntry{PublicKey: row.ClientPublicKey, AssignedIP: row.AssignedIP})
-		}
-		if err := mgr.SyncAllPeers(peers); err != nil {
-			log.Printf("warn: re-sync peers for %s: %v", srv.InterfaceName, err)
-		} else {
-			log.Printf("re-attached %d existing peer(s) on %s", len(peers), srv.InterfaceName)
-		}
+	// Start with no peers. Configs are one-time: each session's preshared
+	// key lives only in this process's memory, so sessions from before a
+	// restart can't be resumed (the session manager ends them at startup and
+	// clients reconnect with a fresh config). This also clears peers left on
+	// a reused interface after a crash.
+	if err := mgr.SyncAllPeers(nil); err != nil {
+		log.Printf("warn: clear peers on %s: %v", srv.InterfaceName, err)
 	}
 
 	r.mu.Lock()

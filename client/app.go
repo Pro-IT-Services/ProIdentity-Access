@@ -125,8 +125,34 @@ func (a *App) forwardDaemonEvents() {
 
 func (a *App) shutdown(ctx context.Context) {
 	a.teardownTray()
-	a.disconnectAll()
+	// Wait (briefly) for the server to end the sessions: background retries
+	// would die with the process and leave the peers up until they time out.
+	a.endAllSessions(3 * time.Second)
 	a.client.Close()
+}
+
+// removeOrphanedSessionTunnels deletes one-time session tunnels left in the
+// service by an earlier run of the app that didn't end them (killed,
+// crashed). Their sessions are gone, so their configs must be too; the
+// service would also remove them after a few minutes.
+func (a *App) removeOrphanedSessionTunnels() {
+	tunnels, err := a.client.ListTunnels()
+	if err != nil {
+		return
+	}
+	a.mMu.Lock()
+	live := make(map[string]bool, len(a.mSessions))
+	for _, s := range a.mSessions {
+		live[s.tunnelID] = true
+	}
+	a.mMu.Unlock()
+	for _, t := range tunnels {
+		if t.Ephemeral && !live[t.ID] {
+			log.Printf("removing one-time tunnel %q left by an earlier run", t.Name)
+			a.client.DisconnectTunnel(t.ID)
+			a.client.DeleteTunnel(t.ID)
+		}
+	}
 }
 
 func (a *App) tryConnect() {
@@ -135,6 +161,7 @@ func (a *App) tryConnect() {
 			if err := a.client.Connect(); err == nil {
 				log.Println("Connected to daemon")
 				a.sendEncryptionKey()
+				a.removeOrphanedSessionTunnels()
 				signalTrayRefresh()
 				// Clear stale user-config tunnel IDs — daemon restarted, ephemeral tunnels are gone.
 				a.mMu.Lock()
@@ -1316,7 +1343,12 @@ func (a *App) ensureConnected() error {
 
 // disconnectAll tears down every active managed session.
 // Tunnels are torn down immediately; server DELETE calls are retried in background.
-func (a *App) disconnectAll() {
+func (a *App) disconnectAll() { a.endAllSessions(0) }
+
+// endAllSessions tears down every managed session tunnel and ends the
+// sessions on the server: with wait > 0 before returning (at most wait),
+// otherwise in the background with retries.
+func (a *App) endAllSessions(wait time.Duration) {
 	a.mMu.Lock()
 	sessions := make(map[string]*activeSession, len(a.mSessions))
 	for k, v := range a.mSessions {
@@ -1326,6 +1358,7 @@ func (a *App) disconnectAll() {
 	mc := a.mClient
 	a.mMu.Unlock()
 
+	var wg sync.WaitGroup
 	for _, sess := range sessions {
 		if sess.stopKA != nil {
 			sess.stopKA()
@@ -1334,8 +1367,25 @@ func (a *App) disconnectAll() {
 			a.client.DisconnectTunnel(sess.tunnelID)
 			a.client.DeleteTunnel(sess.tunnelID)
 		}
-		if sess.sessionID != "" && mc != nil {
+		if sess.sessionID == "" || mc == nil {
+			continue
+		}
+		if wait <= 0 {
 			go retryDeleteSession(mc, sess.sessionID)
+			continue
+		}
+		wg.Add(1)
+		go func(id string) {
+			defer wg.Done()
+			_ = mc.DeleteSession(id)
+		}(sess.sessionID)
+	}
+	if wait > 0 {
+		done := make(chan struct{})
+		go func() { wg.Wait(); close(done) }()
+		select {
+		case <-done:
+		case <-time.After(wait):
 		}
 	}
 }

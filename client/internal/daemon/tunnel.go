@@ -28,19 +28,25 @@ type TunnelStats struct {
 // Tunnel manages a single WireGuard tunnel instance.
 type Tunnel struct {
 	Config *config.TunnelConfig
+	// Ephemeral tunnels (managed sessions) are never written to disk and are
+	// removed when their session ends (see ephemeral.go).
+	Ephemeral bool
 
-	mu     sync.RWMutex
-	status ipc.TunnelStatus
-	errMsg string
-	dev    *device.Device
-	tdev   tun.Device
+	mu      sync.RWMutex
+	created time.Time
+	upSince time.Time
+	status  ipc.TunnelStatus
+	errMsg  string
+	dev     *device.Device
+	tdev    tun.Device
 }
 
 // NewTunnel creates a Tunnel for the given configuration.
 func NewTunnel(cfg *config.TunnelConfig) *Tunnel {
 	return &Tunnel{
-		Config: cfg,
-		status: ipc.StatusDisconnected,
+		Config:  cfg,
+		status:  ipc.StatusDisconnected,
+		created: time.Now(),
 	}
 }
 
@@ -52,6 +58,17 @@ func (t *Tunnel) Status() ipc.TunnelStatus {
 }
 
 // Info returns UI-safe tunnel metadata without WireGuard key material.
+// forgetKeys drops the private and preshared keys from memory once a
+// one-time tunnel is removed.
+func (t *Tunnel) forgetKeys() {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.Config.Interface.PrivateKey = ""
+	for i := range t.Config.Peers {
+		t.Config.Peers[i].PresharedKey = ""
+	}
+}
+
 func (t *Tunnel) Info() ipc.TunnelInfo {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
@@ -76,6 +93,7 @@ func (t *Tunnel) Info() ipc.TunnelInfo {
 		ListenPort: t.Config.Interface.ListenPort,
 		Peers:      peers,
 		Error:      t.errMsg,
+		Ephemeral:  t.Ephemeral,
 	}
 }
 
@@ -170,6 +188,7 @@ func (t *Tunnel) Start() error {
 	t.dev = dev
 	t.tdev = tdev
 	t.status = ipc.StatusConnected
+	t.upSince = time.Now()
 	t.mu.Unlock()
 
 	// Watch for device errors

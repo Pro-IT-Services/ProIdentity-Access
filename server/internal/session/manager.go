@@ -6,6 +6,7 @@ import (
 	"log"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -22,6 +23,12 @@ type Manager struct {
 	registry *wireguard.Registry
 	fw       *firewall.Manager
 	settings func(key string) string // live settings lookup
+
+	// Per-session WireGuard preshared keys, by session ID. Kept only in
+	// memory: a session's config works for that session alone, and nothing
+	// on disk (database, backups) can bring a tunnel back.
+	pskMu sync.Mutex
+	psks  map[string]string
 }
 
 type SessionMetadata struct {
@@ -32,7 +39,7 @@ type SessionMetadata struct {
 }
 
 func NewManager(db *sqlx.DB, registry *wireguard.Registry, fw *firewall.Manager, settings func(string) string) *Manager {
-	return &Manager{db: db, registry: registry, fw: fw, settings: settings}
+	return &Manager{db: db, registry: registry, fw: fw, settings: settings, psks: map[string]string{}}
 }
 
 // CreateSession allocates an IP on the given server, adds a WG peer, installs firewall rules,
@@ -45,9 +52,16 @@ func (m *Manager) CreateSession(userID, serverID, clientPubKey string, meta Sess
 
 	sessionID := uuid.New().String()
 
+	psk, err := wireguard.GeneratePresharedKey()
+	if err != nil {
+		return nil, "", nil, err
+	}
+	m.setPSK(sessionID, psk)
+
 	// Allocate IP from the server's pool
 	assignedIP, err := AllocateIP(m.db, serverID, sessionID)
 	if err != nil {
+		m.dropPSK(sessionID)
 		return nil, "", nil, fmt.Errorf("allocate ip: %w", err)
 	}
 
@@ -76,12 +90,13 @@ func (m *Manager) CreateSession(userID, serverID, clientPubKey string, meta Sess
 		sess.SourceIP, sess.DeviceID, sess.DeviceName, sess.UserAgent,
 	)
 	if err != nil {
+		m.dropPSK(sessionID)
 		_ = ReleaseIP(m.db, serverID, assignedIP)
 		return nil, "", nil, fmt.Errorf("insert session: %w", err)
 	}
 
 	// Add WireGuard peer then do a full config sync
-	if err := inst.Manager.AddPeer(clientPubKey, assignedIP); err != nil {
+	if err := inst.Manager.AddPeer(clientPubKey, assignedIP, psk); err != nil {
 		_ = m.deleteSession(sess, "", false)
 		return nil, "", nil, fmt.Errorf("wg add peer: %w", err)
 	}
@@ -126,10 +141,11 @@ Address = %s/32
 %s
 [Peer]
 PublicKey = %s
+PresharedKey = %s
 Endpoint = %s
 AllowedIPs = %s
 PersistentKeepalive = 25
-`, assignedIP, dnsLine, serverPubKey, endpoint, allowedIPs)
+`, assignedIP, dnsLine, serverPubKey, psk, endpoint, allowedIPs)
 
 	m.recordConnectionEvent("connected", "", sess)
 
@@ -171,6 +187,41 @@ func (m *Manager) TerminateUserSessions(userID string) error {
 		}
 	}
 	return nil
+}
+
+// TerminateUserServerSessions ends a user's sessions on one server (their
+// access to it was removed).
+func (m *Manager) TerminateUserServerSessions(userID, serverID string) error {
+	var sessions []model.Session
+	if err := m.db.Select(&sessions, "SELECT * FROM sessions WHERE user_id=? AND server_id=?", userID, serverID); err != nil {
+		return err
+	}
+	for _, s := range sessions {
+		s := s
+		if err := m.deleteSession(&s, "access_removed", true); err != nil {
+			log.Printf("warn: terminate session %s: %v", s.ID, err)
+		}
+	}
+	return nil
+}
+
+func (m *Manager) setPSK(sessionID, psk string) {
+	m.pskMu.Lock()
+	m.psks[sessionID] = psk
+	m.pskMu.Unlock()
+}
+
+func (m *Manager) getPSK(sessionID string) (string, bool) {
+	m.pskMu.Lock()
+	defer m.pskMu.Unlock()
+	psk, ok := m.psks[sessionID]
+	return psk, ok
+}
+
+func (m *Manager) dropPSK(sessionID string) {
+	m.pskMu.Lock()
+	delete(m.psks, sessionID)
+	m.pskMu.Unlock()
 }
 
 // TerminateAll tears down every active session. Called on daemon shutdown.
@@ -312,6 +363,9 @@ func (m *Manager) deleteSession(sess *model.Session, reason string, emitEvent bo
 		_ = ReleaseIP(m.db, *sess.ServerID, sess.AssignedIP)
 	}
 
+	// The session's preshared key is gone for good: its config can't be reused.
+	m.dropPSK(sess.ID)
+
 	// Delete DB record
 	_, err := m.db.Exec("DELETE FROM sessions WHERE id=?", sess.ID)
 	if err != nil {
@@ -342,9 +396,16 @@ func (m *Manager) syncServerPeers(serverID string) {
 	}
 	peers := make([]wireguard.PeerEntry, 0, len(sessions))
 	for _, s := range sessions {
+		psk, ok := m.getPSK(s.ID)
+		if !ok {
+			// No key in memory (session from before a restart): no peer; the
+			// watchdog removes the session.
+			continue
+		}
 		peers = append(peers, wireguard.PeerEntry{
-			PublicKey:  s.ClientPublicKey,
-			AssignedIP: s.AssignedIP,
+			PublicKey:    s.ClientPublicKey,
+			AssignedIP:   s.AssignedIP,
+			PresharedKey: psk,
 		})
 	}
 	if err := inst.Manager.SyncAllPeers(peers); err != nil {

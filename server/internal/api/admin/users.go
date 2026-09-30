@@ -10,7 +10,13 @@ import (
 	"proidentity/internal/model"
 )
 
-type UserHandler struct{ DB *sqlx.DB }
+type UserHandler struct {
+	DB *sqlx.DB
+	// EndSessions / EndServerSessions tear down live VPN sessions (and their
+	// one-time configs) when a user loses access. Optional.
+	EndSessions       func(userID string)
+	EndServerSessions func(userID, serverID string)
+}
 
 func (h *UserHandler) canManageAdminTarget(r *http.Request, userID string) bool {
 	claims := claimsFrom(r)
@@ -137,6 +143,9 @@ func (h *UserHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.IsActive != nil {
 		h.DB.Exec("UPDATE users SET is_active=? WHERE id=?", *req.IsActive, id)
+		if !*req.IsActive && h.EndSessions != nil {
+			h.EndSessions(id)
+		}
 	}
 	if req.DisableTOTP != nil && *req.DisableTOTP {
 		if req.AdminPassword == nil || *req.AdminPassword == "" {
@@ -170,6 +179,11 @@ func (h *UserHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	if !h.canManageAdminTarget(r, id) {
 		jsonError(w, http.StatusForbidden, "full admin required")
 		return
+	}
+	// End live tunnels first: deleting the user cascades away the session
+	// rows, which would leave their peers on the interface.
+	if h.EndSessions != nil {
+		h.EndSessions(id)
 	}
 	h.DB.Exec("DELETE FROM users WHERE id=?", id)
 	jsonOK(w, map[string]bool{"ok": true})
@@ -262,6 +276,9 @@ func (h *UserHandler) RemoveServer(w http.ResponseWriter, r *http.Request) {
 	}
 	sID := chi.URLParam(r, "sid")
 	h.DB.Exec("DELETE FROM user_server_access WHERE user_id=? AND server_id=?", userID, sID)
+	if h.EndServerSessions != nil {
+		h.EndServerSessions(userID, sID)
+	}
 	jsonOK(w, map[string]bool{"ok": true})
 }
 

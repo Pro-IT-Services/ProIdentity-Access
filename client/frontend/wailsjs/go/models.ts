@@ -85,6 +85,7 @@ export namespace ipc {
 	    peers: PeerInfo[];
 	    error?: string;
 	    is_managed?: boolean;
+	    ephemeral?: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new TunnelInfo(source);
@@ -104,6 +105,7 @@ export namespace ipc {
 	        this.peers = this.convertValues(source["peers"], PeerInfo);
 	        this.error = source["error"];
 	        this.is_managed = source["is_managed"];
+	        this.ephemeral = source["ephemeral"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

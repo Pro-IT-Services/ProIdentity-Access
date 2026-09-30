@@ -68,7 +68,23 @@ class ManagedViewModel(application: Application) : AndroidViewModel(application)
     var onTunnelAdded: ((TunnelInfo) -> Unit)? = null
     var onTunnelRemoved: ((String) -> Unit)? = null
 
-    init { loadSettings() }
+    /**
+     * A server tunnel that went down without the app asking (the system,
+     * another VPN, Always-on off): end its session so the server removes the
+     * peer. The one-time config is already gone from the VPN service.
+     */
+    private val tunnelStateListener: (String, String) -> Unit = { tunnelId, state ->
+        if (state == "disconnected") {
+            tunnelServerIds[tunnelId]?.let { serverId ->
+                viewModelScope.launch(Dispatchers.IO) { disconnectServerInternal(serverId) }
+            }
+        }
+    }
+
+    init {
+        loadSettings()
+        WgVpnService.stateListeners.add(tunnelStateListener)
+    }
 
     private fun loadSettings() {
         val s = appSettings
@@ -375,6 +391,7 @@ class ManagedViewModel(application: Application) : AndroidViewModel(application)
 
     override fun onCleared() {
         super.onCleared()
+        WgVpnService.stateListeners.remove(tunnelStateListener)
         keepaliveJob?.cancel()
         serverPollJob?.cancel()
     }

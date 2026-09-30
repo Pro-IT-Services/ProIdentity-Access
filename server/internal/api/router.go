@@ -121,7 +121,13 @@ func (s *Server) buildRouter() *chi.Mux {
 			// so existing admin behavior is preserved.
 
 			// Users + their reach + direct server access
-			uh := &admin.UserHandler{DB: s.db}
+			uh := &admin.UserHandler{
+				DB:          s.db,
+				EndSessions: func(userID string) { _ = s.sessions.TerminateUserSessions(userID) },
+				EndServerSessions: func(userID, serverID string) {
+					_ = s.sessions.TerminateUserServerSessions(userID, serverID)
+				},
+			}
 			r.With(RequirePerm(auth.PermUsersManage)).Group(func(r chi.Router) {
 				r.Get("/admin/users", uh.List)
 				r.Post("/admin/users", uh.Create)

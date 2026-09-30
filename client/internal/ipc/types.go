@@ -58,6 +58,7 @@ type TunnelInfo struct {
 	Peers      []PeerInfo   `json:"peers"`
 	Error      string       `json:"error,omitempty"`
 	IsManaged  bool         `json:"is_managed,omitempty"` // true for managed VPN session tunnels
+	Ephemeral  bool         `json:"ephemeral,omitempty"`  // one-time session tunnel, never on disk
 }
 
 // PeerInfo is the peer representation sent to UI clients.
