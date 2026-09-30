@@ -32,7 +32,7 @@ export const Button = forwardRef<HTMLButtonElement, Props>(function Button(
       ref={ref}
       disabled={disabled}
       className={cn(
-        'inline-flex items-center justify-center font-medium rounded-md transition-colors duration-150',
+        'inline-flex items-center justify-center font-medium rounded-md transition-colors duration-150 whitespace-nowrap shrink-0',
         'focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
         'disabled:cursor-not-allowed disabled:opacity-70',
         !disabled && 'cursor-pointer no-drag',

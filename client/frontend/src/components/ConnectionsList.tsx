@@ -9,6 +9,7 @@ import { MonoChip } from './ui/MonoChip'
 import { managedDisconnectByTunnelID } from '../wailsbridge'
 import { OpenVPNPanel } from './OpenVPNPanel'
 import { cn } from '../lib/cn'
+import { t, tNode } from '../i18n'
 
 import type { ServerInfo } from '../types'
 
@@ -79,12 +80,12 @@ export function ConnectionsList({ onConnected, onConnectIntent, onConnectManaged
       <div className="space-y-3">
         <p className="text-sm text-muted-foreground italic px-1">
           {showSignIn
-            ? <>Sign in to a managed server to load available connections, or import a <span className="font-mono">.conf</span> file.</>
-            : <>No connections yet. Import a <span className="font-mono">.conf</span> file or wait for managed servers to load.</>}
+            ? tNode('conns.signInHint', { file: <span key="f" className="font-mono">.conf</span> })
+            : tNode('conns.empty', { file: <span key="f" className="font-mono">.conf</span> })}
         </p>
         {showSignIn && (
           <Button variant="primary" size="sm" onClick={onSignIn}>
-            <LogIn className="w-3.5 h-3.5" /> Sign in
+            <LogIn className="w-3.5 h-3.5" /> {t('common.signIn')}
           </Button>
         )}
       </div>
@@ -92,18 +93,18 @@ export function ConnectionsList({ onConnected, onConnectIntent, onConnectManaged
     <div className="space-y-3">
       {showSignIn && (
         <div className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg border border-dashed border-border bg-secondary/20">
-          <span className="text-xs text-muted-foreground">Sign in to load managed servers.</span>
+          <span className="text-xs text-muted-foreground">{t('conns.signInBanner')}</span>
           <Button variant="primary" size="sm" onClick={onSignIn}>
-            <LogIn className="w-3.5 h-3.5" /> Sign in
+            <LogIn className="w-3.5 h-3.5" /> {t('common.signIn')}
           </Button>
         </div>
       )}
     <div className="rounded-xl border border-border bg-card overflow-hidden">
       <div className="px-4 py-2 border-b border-border bg-secondary/30 flex items-center justify-between">
         <span className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">
-          Available connections
+          {t('conns.available')}
         </span>
-        <span className="text-[11px] text-muted-foreground">{rows.length} total</span>
+        <span className="text-[11px] text-muted-foreground">{t('common.countTotal', { count: rows.length })}</span>
       </div>
       {rows.map(row => {
         const meta = rowMeta(row)
@@ -169,10 +170,10 @@ export function ConnectionsList({ onConnected, onConnectIntent, onConnectManaged
               <div className="flex items-center gap-2 mt-0.5">
                 <StatusDot status={effectiveStatus} pulse={busy || effectiveStatus === 'connecting'} />
                 <span className={cn(
-                  'text-[11px] capitalize',
+                  'text-[11px]',
                   busy ? 'text-warning font-medium' : 'text-muted-foreground',
                 )}>
-                  {busy ? (isActive ? 'disconnecting…' : 'connecting…') : labelFor(effectiveStatus)}
+                  {busy ? (isActive ? t('common.disconnectingEllipsis') : t('common.connectingEllipsis')) : labelFor(effectiveStatus)}
                 </span>
                 {!busy && meta.sub && <MonoChip value={meta.sub} bare copy={false} className="text-[11px]" />}
               </div>
@@ -188,21 +189,21 @@ export function ConnectionsList({ onConnected, onConnectIntent, onConnectManaged
                   : 'text-destructive hover:bg-destructive/10')}
               >
                 {busy
-                  ? <><Loader2 className="w-4 h-4 animate-spin" /> Disconnecting…</>
-                  : <><Power className="w-3.5 h-3.5" /> Disconnect</>}
+                  ? <><Loader2 className="w-4 h-4 animate-spin" /> {t('common.disconnectingEllipsis')}</>
+                  : <><Power className="w-3.5 h-3.5" /> {t('common.disconnect')}</>}
               </Button>
             ) : (
               <Button
                 variant={busy ? 'secondary' : 'primary'}
                 size="sm"
                 disabled={busy || otherActive}
-                title={otherActive ? `Disconnect ${activeTunnel!.name} first` : undefined}
+                title={otherActive ? t('conns.disconnectFirst', { name: activeTunnel!.name }) : undefined}
                 onClick={(e) => { e.stopPropagation(); handleConnect(row) }}
                 className={cn('min-w-[150px]', busy && 'bg-warning/15 text-warning')}
               >
                 {busy
-                  ? <><Loader2 className="w-4 h-4 animate-spin" /> Connecting…</>
-                  : <><Power className="w-3.5 h-3.5" /> Connect</>}
+                  ? <><Loader2 className="w-4 h-4 animate-spin" /> {t('common.connectingEllipsis')}</>
+                  : <><Power className="w-3.5 h-3.5" /> {t('common.connect')}</>}
               </Button>
             )}
           </div>
@@ -275,7 +276,7 @@ function rowMeta(row: Row): { name: string; badge: string; sub: string; status: 
     case 'imported':
       return {
         name: row.tunnel.name,
-        badge: 'imported',
+        badge: t('conns.badgeImported'),
         sub: row.tunnel.addresses[0] ?? '',
         status: row.tunnel.status as any,
         Icon: FileKey,
@@ -283,7 +284,7 @@ function rowMeta(row: Row): { name: string; badge: string; sub: string; status: 
     case 'managed-active':
       return {
         name: row.server.server.name,
-        badge: 'managed',
+        badge: t('conns.badgeManaged'),
         sub: row.tunnel.addresses[0] ?? row.server.server.subnet,
         status: row.tunnel.status as any,
         Icon: Globe,
@@ -291,7 +292,7 @@ function rowMeta(row: Row): { name: string; badge: string; sub: string; status: 
     case 'managed-available':
       return {
         name: row.server.server.name,
-        badge: 'managed',
+        badge: t('conns.badgeManaged'),
         sub: row.server.server.subnet,
         status: row.server.connecting ? 'connecting' : row.server.error ? 'error' : 'disconnected',
         Icon: Globe,
@@ -301,10 +302,10 @@ function rowMeta(row: Row): { name: string; badge: string; sub: string; status: 
 
 function labelFor(s: Status): string {
   switch (s) {
-    case 'connected':    return 'connected'
-    case 'connecting':   return 'connecting'
-    case 'reconnecting': return 'reconnecting'
-    case 'error':        return 'error'
-    case 'disconnected': return 'available'
+    case 'connected':    return t('status.connected')
+    case 'connecting':   return t('status.connecting')
+    case 'reconnecting': return t('status.reconnecting')
+    case 'error':        return t('status.error')
+    case 'disconnected': return t('status.available')
   }
 }

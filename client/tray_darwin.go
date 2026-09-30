@@ -365,12 +365,12 @@ func buildTrayMenu() {
 }
 
 func addPlaceholder() {
-	item := systray.AddMenuItem("No tunnels", "")
+	item := systray.AddMenuItem(tr("tray.noTunnels"), "")
 	item.Disable()
 }
 
 func addBottomItems(ctx context.Context) {
-	mShow := systray.AddMenuItem("Show", "Show window")
+	mShow := systray.AddMenuItem(tr("tray.show"), tr("tray.showWindow"))
 	go func() {
 		for {
 			select {
@@ -383,7 +383,7 @@ func addBottomItems(ctx context.Context) {
 	}()
 
 	systray.AddSeparator()
-	mQuit := systray.AddMenuItem("Quit", "Quit ProIdentity")
+	mQuit := systray.AddMenuItem(tr("tray.quit"), tr("tray.quitApp"))
 	go func() {
 		select {
 		case <-ctx.Done():

@@ -12,12 +12,12 @@ struct LicensesView: View {
     }
 
     static let components: [Component] = [
-        Component(name: "WireGuardKit", detail: "WireGuard for iOS (wireguard-apple)", license: "MIT", file: "wireguard-apple"),
-        Component(name: "wireguard-go", detail: "WireGuard implementation", license: "MIT", file: "wireguard-go"),
-        Component(name: "Go", detail: "Go runtime, standard library and golang.org/x/crypto, net, sys", license: "BSD-3-Clause", file: "go"),
+        Component(name: "WireGuardKit", detail: String(localized: "WireGuard for iOS (wireguard-apple)"), license: "MIT", file: "wireguard-apple"),
+        Component(name: "wireguard-go", detail: String(localized: "WireGuard implementation"), license: "MIT", file: "wireguard-go"),
+        Component(name: "Go", detail: String(localized: "Go runtime, standard library and golang.org/x/crypto, net, sys"), license: "BSD-3-Clause", file: "go"),
     ]
 
-    static let app = Component(name: "ProIdentity Access", detail: "This app", license: "Free Internal Use License 1.0", file: "proidentity-access")
+    static let app = Component(name: "ProIdentity Access", detail: String(localized: "This app"), license: "Free Internal Use License 1.0", file: "proidentity-access")
 
     var body: some View {
         List {
@@ -50,7 +50,7 @@ struct LicensesView: View {
         } label: {
             VStack(alignment: .leading, spacing: 2) {
                 Text(c.name)
-                Text("\(c.detail) · \(c.license)")
+                Text(verbatim: "\(c.detail) · \(c.license)")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
@@ -65,7 +65,7 @@ private struct LicenseTextView: View {
     private var text: String {
         guard let url = Bundle.main.url(forResource: file, withExtension: "txt"),
               let text = try? String(contentsOf: url, encoding: .utf8) else {
-            return "License text not found."
+            return String(localized: "License text not found.")
         }
         return text
     }

@@ -12,6 +12,7 @@ import { EndpointLine } from './EndpointLine'
 import { GridBackground } from './GridBackground'
 import { formatBytes, formatHandshake, formatSince } from '../../lib/format'
 import { cn } from '../../lib/cn'
+import { t } from '../../i18n'
 
 interface Props {
   tunnel: TunnelInfo | null
@@ -26,13 +27,13 @@ interface Props {
 // every render cause zustand to think state changed and infinite-loop.
 const EMPTY_HISTORY: ThroughputSample[] = []
 
-const STATE_LABEL: Record<Status, string> = {
-  connected:    'connected',
-  connecting:   'connecting…',
-  reconnecting: 'reconnecting…',
-  disconnected: 'disconnected',
-  error:        'error',
-}
+const stateLabel = (s: Status): string => ({
+  connected:    t('status.connected'),
+  connecting:   t('status.connecting'),
+  reconnecting: t('status.reconnecting'),
+  disconnected: t('status.disconnected'),
+  error:        t('status.error'),
+})[s]
 
 export function MissionControl({ tunnel, onOpenConnections, onImport, onConnect, onDisconnect }: Props) {
   // ALL hooks must run before any early return. React errors if the hook count
@@ -64,19 +65,19 @@ export function MissionControl({ tunnel, onOpenConnections, onImport, onConnect,
         <GridBackground />
         <div className="relative text-center max-w-sm px-6">
           <StatusOrb status="disconnected" intensity={0} size={200} />
-          <p className="mt-6 text-base font-semibold text-foreground">Nothing connected</p>
+          <p className="mt-6 text-base font-semibold text-foreground">{t('mission.nothingConnected')}</p>
           <p className="mt-1 text-xs text-muted-foreground mb-5">
-            Pick a server, or import a WireGuard config.
+            {t('mission.nothingHint')}
           </p>
           <div className="flex items-center justify-center gap-2">
             {onOpenConnections && (
               <Button variant="primary" size="md" onClick={onOpenConnections}>
-                <LogoMark size={16} /> Show connections
+                <LogoMark size={16} /> {t('mission.showConnections')}
               </Button>
             )}
             {onImport && (
               <Button variant="outline" size="md" onClick={onImport}>
-                Import config
+                {t('mission.importConfig')}
               </Button>
             )}
           </div>
@@ -125,7 +126,7 @@ export function MissionControl({ tunnel, onOpenConnections, onImport, onConnect,
             : isError ? 'text-destructive'
             : 'text-muted-foreground',
           )}>
-            {STATE_LABEL[status]}
+            {stateLabel(status)}
           </p>
           <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight">{tunnel.name}</h1>
           <p className="text-xs text-muted-foreground font-mono mt-1">{addr}</p>
@@ -134,7 +135,7 @@ export function MissionControl({ tunnel, onOpenConnections, onImport, onConnect,
         {/* Endpoint line — below the name, where it has space and stays centered. */}
         {endpoint && (
           <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
-            <span className="font-mono">you</span>
+            <span className="font-mono">{t('mission.you')}</span>
             <EndpointLine
               active={isConnected}
               length={120}
@@ -154,14 +155,14 @@ export function MissionControl({ tunnel, onOpenConnections, onImport, onConnect,
           <div className="grid grid-cols-2 gap-8 w-full max-w-sm">
             <ThroughputCell
               icon={<ArrowDown className="w-3.5 h-3.5" />}
-              label="Received"
+              label={t('mission.received')}
               data={history.map(h => h.rxBps)}
               total={tStats?.rx_bytes ?? 0}
               color="hsl(var(--success))"
             />
             <ThroughputCell
               icon={<ArrowUp className="w-3.5 h-3.5" />}
-              label="Sent"
+              label={t('mission.sent')}
               data={history.map(h => h.txBps)}
               total={tStats?.tx_bytes ?? 0}
               color="hsl(var(--primary))"
@@ -180,17 +181,17 @@ export function MissionControl({ tunnel, onOpenConnections, onImport, onConnect,
         {isConnecting ? (
           <Button variant="ghost" size="lg" disabled className="min-w-[200px]">
             <RefreshCw className="w-4 h-4 animate-spin" />
-            Connecting…
+            {t('common.connectingEllipsis')}
           </Button>
         ) : isConnected ? (
           <Button variant="destructive" size="lg" onClick={handleToggle} className="min-w-[200px]">
             <PowerOff className="w-4 h-4" />
-            Disconnect
+            {t('common.disconnect')}
           </Button>
         ) : (
           <Button variant="primary" size="lg" onClick={handleToggle} className="min-w-[200px]">
             <LogoMark size={18} />
-            {isError ? 'Retry' : 'Connect'}
+            {isError ? t('common.retry') : t('common.connect')}
           </Button>
         )}
 
@@ -198,10 +199,10 @@ export function MissionControl({ tunnel, onOpenConnections, onImport, onConnect,
         {isConnected && tStats && (
           <p className="text-[11px] text-muted-foreground tabular-nums">
             {tunnel.id.startsWith('ovpn:')
-              ? <>OpenVPN · connected {formatSince(tStats.last_handshake) || 'now'}</>
-              : <>handshake {formatHandshake(tStats.last_handshake)}</>}
+              ? t('mission.ovpnConnected', { time: formatSince(tStats.last_handshake) || t('time.now') })
+              : t('mission.handshake', { time: formatHandshake(tStats.last_handshake) })}
             {(tStats.rx_bytes + tStats.tx_bytes > 0) && (
-              <> · {formatBytes(tStats.rx_bytes + tStats.tx_bytes)} total</>
+              <> · {t('common.bytesTotal', { bytes: formatBytes(tStats.rx_bytes + tStats.tx_bytes) })}</>
             )}
           </p>
         )}
@@ -222,7 +223,7 @@ function ThroughputCell({
       <div className="flex justify-center mt-1.5" style={{ color }}>
         <Sparkline data={data} width={140} height={20} color={color} />
       </div>
-      <p className="text-[10px] text-muted-foreground mt-1 tabular-nums">total</p>
+      <p className="text-[10px] text-muted-foreground mt-1 tabular-nums">{t('common.total')}</p>
     </div>
   )
 }

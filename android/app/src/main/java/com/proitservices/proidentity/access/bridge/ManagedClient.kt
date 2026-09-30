@@ -1,6 +1,9 @@
 package com.proitservices.proidentity.access.bridge
 
+import android.content.Context
 import android.util.Base64
+import androidx.annotation.StringRes
+import com.proitservices.proidentity.access.R
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -54,6 +57,20 @@ data class UserConfigInfo(val id: String, val name: String, val createdAt: Strin
 class DeviceRevokedException : Exception("device revoked")
 class AuthInvalidException : Exception("auth invalid")
 
+/**
+ * An error raised by the app (not by the server) whose text is shown to the
+ * user. [message] stays English for logs; the UI resolves [messageRes].
+ */
+class LocalizedException(
+    @StringRes val messageRes: Int,
+    message: String,
+    vararg val formatArgs: Any,
+) : Exception(message)
+
+/** The user-facing text of an exception: localized when the app created it, as-is otherwise. */
+fun Context.userMessage(e: Throwable): String? =
+    if (e is LocalizedException) getString(e.messageRes, *e.formatArgs) else e.message
+
 class ManagedClient(
     val baseURL: String,
     val token: String = "",
@@ -75,16 +92,16 @@ class ManagedClient(
         val uri = try {
             URI(value.trim())
         } catch (_: Exception) {
-            throw IllegalArgumentException("Invalid server URL")
+            throw LocalizedException(R.string.error_invalid_server_url, "Invalid server URL")
         }
-        val scheme = uri.scheme?.lowercase() ?: throw IllegalArgumentException("Server URL must include https://")
-        val host = uri.host ?: throw IllegalArgumentException("Server URL must include a host")
+        val scheme = uri.scheme?.lowercase() ?: throw LocalizedException(R.string.error_server_url_scheme, "Server URL must include https://")
+        val host = uri.host ?: throw LocalizedException(R.string.error_server_url_host, "Server URL must include a host")
         val localhost = host == "localhost" || host == "127.0.0.1" || host == "::1"
         if (scheme != "https" && !(scheme == "http" && localhost)) {
-            throw IllegalArgumentException("Server URL must use HTTPS")
+            throw LocalizedException(R.string.error_server_url_https, "Server URL must use HTTPS")
         }
         if (!uri.rawQuery.isNullOrEmpty() || !uri.rawFragment.isNullOrEmpty()) {
-            throw IllegalArgumentException("Server URL must not include query or fragment")
+            throw LocalizedException(R.string.error_server_url_query, "Server URL must not include query or fragment")
         }
     }
 
@@ -146,9 +163,11 @@ class ManagedClient(
             if (token.isNotEmpty() && (response.code == 401 || response.code == 403)) {
                 throw AuthInvalidException()
             }
-            throw RuntimeException(
-                if (errMsg.isNotEmpty()) errMsg.replaceFirstChar { it.uppercase() }
-                else "The server returned an error (HTTP ${response.code})."
+            if (errMsg.isNotEmpty()) throw RuntimeException(errMsg.replaceFirstChar { it.uppercase() })
+            throw LocalizedException(
+                R.string.error_server_http,
+                "The server returned an error (HTTP ${response.code}).",
+                response.code,
             )
         }
 

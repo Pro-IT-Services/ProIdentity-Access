@@ -11,7 +11,7 @@ struct ManagedServer: Identifiable, Equatable {
 
     init(_ d: [String: Any]) {
         id       = d["id"] as? String ?? ""
-        name     = d["name"] as? String ?? d["hostname"] as? String ?? "Server"
+        name     = d["name"] as? String ?? d["hostname"] as? String ?? String(localized: "Server")
         location = [d["city"], d["country"]].compactMap { $0 as? String }
                        .filter { !$0.isEmpty }.joined(separator: ", ")
         subnet   = d["subnet"] as? String ?? ""
@@ -47,8 +47,8 @@ enum ConnectError: LocalizedError {
     case requirePushAuth
     var errorDescription: String? {
         switch self {
-        case .requireTotp: return "Two-factor authentication required"
-        case .requirePushAuth: return "Push authentication required"
+        case .requireTotp: return String(localized: "Two-factor authentication required")
+        case .requirePushAuth: return String(localized: "Push authentication required")
         }
     }
 }
@@ -71,10 +71,10 @@ enum ConnStatus: Equatable {
 
     var label: String {
         switch self {
-        case .connected:    return "Connected"
-        case .connecting:   return "Connecting…"
-        case .error:        return "Couldn't connect"
-        case .disconnected: return "Not connected"
+        case .connected:    return String(localized: "Connected")
+        case .connecting:   return String(localized: "Connecting…")
+        case .error:        return String(localized: "Couldn't connect")
+        case .disconnected: return String(localized: "Not connected")
         }
     }
 }
@@ -94,7 +94,7 @@ struct Connection: Identifiable, Hashable {
     var status: ConnStatus
 
     var isActive: Bool { status.isActive }
-    var badge: String { kind == .managed ? "Managed" : "Imported" }
+    var badge: String { kind == .managed ? String(localized: "Managed") : String(localized: "Imported") }
 
     static func key(server id: String) -> String { "server:\(id)" }
     static func key(tunnel id: String) -> String { "tunnel:\(id)" }
@@ -137,31 +137,31 @@ enum UserMessage {
         if let urlError = error as? URLError {
             switch urlError.code {
             case .notConnectedToInternet, .networkConnectionLost:
-                return "You're offline. Check your connection and try again."
+                return String(localized: "You're offline. Check your connection and try again.")
             case .timedOut:
-                return "The server took too long to respond. Try again."
+                return String(localized: "The server took too long to respond. Try again.")
             case .cannotFindHost, .cannotConnectToHost, .dnsLookupFailed:
-                return "Can't reach the server. Check the address and try again."
+                return String(localized: "Can't reach the server. Check the address and try again.")
             case .secureConnectionFailed, .serverCertificateUntrusted, .serverCertificateHasBadDate,
                  .serverCertificateNotYetValid, .serverCertificateHasUnknownRoot:
-                return "The server's certificate isn't trusted."
+                return String(localized: "The server's certificate isn't trusted.")
             default:
-                return "Network error. Try again."
+                return String(localized: "Network error. Try again.")
             }
         }
         if let vpnError = error as? NEVPNError {
             #if targetEnvironment(simulator)
             // The simulator can't install or run a packet tunnel.
             _ = vpnError
-            return "VPN connections can't run in the iOS Simulator. Use an iPhone to connect."
+            return String(localized: "VPN connections can't run in the iOS Simulator. Use an iPhone to connect.")
             #else
             switch vpnError.code {
             case .configurationReadWriteFailed:
-                return "VPN permission wasn't granted. Allow the VPN configuration to connect."
+                return String(localized: "VPN permission wasn't granted. Allow the VPN configuration to connect.")
             case .configurationDisabled, .configurationInvalid:
-                return "The VPN configuration is not valid on this device."
+                return String(localized: "The VPN configuration is not valid on this device.")
             default:
-                return "The VPN couldn't start. Try again."
+                return String(localized: "The VPN couldn't start. Try again.")
             }
             #endif
         }

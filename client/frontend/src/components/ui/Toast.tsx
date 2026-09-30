@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { AlertCircle, CheckCircle, Info, X, ShieldOff } from 'lucide-react'
 import { cn } from '../../lib/cn'
+import { t } from '../../i18n'
 
 export interface ToastData {
   id: string
@@ -52,6 +53,7 @@ function ToastItem({ toast, onDismiss }: { toast: ToastData; onDismiss: (id: str
       <p className="text-sm flex-1">{toast.message}</p>
       <button
         onClick={() => onDismiss(toast.id)}
+        aria-label={t('common.close')}
         className="p-0.5 rounded text-muted-foreground hover:text-foreground transition-colors cursor-pointer shrink-0"
       >
         <X className="w-3.5 h-3.5" />

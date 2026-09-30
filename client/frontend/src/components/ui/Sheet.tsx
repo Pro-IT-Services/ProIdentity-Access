@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { X } from 'lucide-react'
 import { cn } from '../../lib/cn'
+import { t } from '../../i18n'
 
 interface SheetProps {
   open: boolean
@@ -37,7 +38,7 @@ export function Sheet({
       {/* Overlay — absolute, lower z. */}
       <button
         type="button"
-        aria-label="Close"
+        aria-label={t('common.close')}
         onClick={onClose}
         className="absolute inset-0 z-0 bg-black/55 backdrop-blur-sm cursor-default no-drag animate-fade-in"
       />
@@ -56,7 +57,7 @@ export function Sheet({
           </div>
           <button
             onClick={onClose}
-            aria-label="Close"
+            aria-label={t('common.close')}
             className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors cursor-pointer"
           >
             <X className="w-4 h-4" />

@@ -1,8 +1,8 @@
-import { Outlet, NavLink, useNavigate, Link } from 'react-router-dom'
+import { Outlet, NavLink, useNavigate, useLocation, Link } from 'react-router-dom'
 import { useAuthStore } from '../stores/useAuthStore'
 import {
   LayoutDashboard, Globe, Settings, LogOut,
-  Activity, User, Users, Network, History, FileKey,
+  Activity, User, Users, Network, History, FileKey, FileLock2, Boxes, Server,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ThemeToggle } from './ThemeToggle'
@@ -18,6 +18,8 @@ interface NavItemDef {
   exact?: boolean
   /** Show if the user holds ANY of these permissions (or is_admin). */
   anyPerm?: string[]
+  /** Sub-items shown indented under this one (e.g. the Access tabs). */
+  children?: { to: string; label: string; icon: React.ElementType }[]
 }
 
 const NAV: NavGroup[] = [
@@ -30,18 +32,20 @@ const NAV: NavGroup[] = [
   {
     label: 'Manage',
     items: [
-      { to: '/access', label: 'Access', icon: Users, anyPerm: ['users.manage', 'resources.manage'] },
-      { to: '/servers', label: 'Servers', icon: Globe, anyPerm: ['servers.manage'] },
-      { to: '/openvpn', label: 'OpenVPN', icon: FileKey, anyPerm: ['openvpn.manage'] },
+      {
+        to: '/access', label: 'Access', icon: Users, anyPerm: ['users.manage', 'resources.manage'],
+        children: [
+          { to: '/access#people', label: 'People', icon: Users },
+          { to: '/access#resources', label: 'Resources', icon: Server },
+          { to: '/access#bundles', label: 'Bundles', icon: Boxes },
+        ],
+      },
+      { to: '/servers', label: 'VPN Servers', icon: Globe, anyPerm: ['servers.manage'] },
+      { to: '/openvpn', label: 'Shared OpenVPN profiles', icon: FileKey, anyPerm: ['openvpn.manage'] },
+      { to: '/stored-profiles', label: 'Stored WireGuard Profiles', icon: FileLock2, anyPerm: ['users.manage', 'servers.manage'] },
       { to: '/topology', label: 'Topology', icon: Network, anyPerm: ['topology.read'] },
       { to: '/connection-history', label: 'Connection History', icon: History, anyPerm: ['sessions.manage'] },
       { to: '/system', label: 'System', icon: Settings, anyPerm: ['system.settings', 'roles.manage', 'audit.read', 'denials.read', 'diagnostics.read'] },
-    ],
-  },
-  {
-    label: 'Account',
-    items: [
-      { to: '/profile', label: 'Profile & 2FA', icon: User },
     ],
   },
 ]
@@ -74,6 +78,27 @@ function NavItem({ to, label, icon: Icon, exact }: { to: string; label: string; 
         </>
       )}
     </NavLink>
+  )
+}
+
+function SubNavItem({ to, label, icon: Icon }: { to: string; label: string; icon: React.ElementType }) {
+  const location = useLocation()
+  const [path, hash] = to.split('#')
+  const current = location.hash.replace('#', '') || 'people'
+  const isActive = location.pathname === path && current === hash
+  return (
+    <Link
+      to={to}
+      className={cn(
+        'group flex items-center gap-2.5 pl-3 pr-3 py-1.5 rounded-md text-[13px] transition-colors duration-150 cursor-pointer',
+        isActive
+          ? 'text-primary font-medium bg-primary/10'
+          : 'text-muted-foreground hover:text-foreground hover:bg-secondary',
+      )}
+    >
+      <Icon className={cn('w-3.5 h-3.5 shrink-0', isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground')} />
+      <span className="flex-1">{label}</span>
+    </Link>
   )
 }
 
@@ -115,22 +140,42 @@ export default function Layout() {
                   </p>
                 )}
                 <div className="space-y-0.5">
-                  {items.map(it => <NavItem key={it.to} {...it} />)}
+                  {items.map(it => (
+                    <div key={it.to}>
+                      <NavItem {...it} />
+                      {it.children && (
+                        <div className="ml-5 mt-0.5 mb-1 pl-2 border-l border-border space-y-0.5">
+                          {it.children.map(c => <SubNavItem key={c.to} {...c} />)}
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </div>
             )
           })}
         </nav>
 
+        <div className="px-3 pb-2">
+          <p className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70">Account</p>
+          <NavItem to="/profile" label="Profile & 2FA" icon={User} />
+        </div>
+
         <div className="border-t border-border p-3">
           <div className="flex items-center gap-2 px-2 py-2 rounded-md">
-            <div className="w-8 h-8 rounded-full bg-primary/15 border border-primary/25 flex items-center justify-center shrink-0">
-              <span className="text-xs font-bold text-primary">{user?.username?.[0]?.toUpperCase()}</span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold truncate">{user?.username}</p>
-              <p className="text-[10px] text-muted-foreground">{user?.is_admin ? 'Administrator' : 'User'}</p>
-            </div>
+            <Link
+              to="/profile"
+              title="Account settings"
+              className="flex flex-1 min-w-0 items-center gap-2 rounded-md -mx-1 px-1 py-0.5 hover:bg-secondary transition-colors cursor-pointer"
+            >
+              <div className="w-8 h-8 rounded-full bg-primary/15 border border-primary/25 flex items-center justify-center shrink-0">
+                <span className="text-xs font-bold text-primary">{user?.username?.[0]?.toUpperCase()}</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold truncate">{user?.username}</p>
+                <p className="text-[10px] text-muted-foreground">{user?.is_admin ? 'Administrator' : 'User'}</p>
+              </div>
+            </Link>
             <ThemeToggle />
             <button
               onClick={handleLogout}

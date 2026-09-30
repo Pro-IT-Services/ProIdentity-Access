@@ -67,7 +67,7 @@ final class SetupModel {
     func submitServer() {
         error = nil
         guard let url = Self.normalizeServerURL(serverURL) else {
-            error = "Enter a valid address, for example vpn.company.com."
+            error = String(localized: "Enter a valid address, for example vpn.company.com.")
             return
         }
         if url != AppSettings.shared.serverURL {
@@ -109,7 +109,7 @@ final class SetupModel {
             )
             guard let deviceID = resp["device_id"] as? String,
                   let serverPubKey = resp["server_public_key"] as? String else {
-                throw APIError.serverError("This doesn't look like a ProIdentity Access server.")
+                throw APIError.serverError(String(localized: "This doesn't look like a ProIdentity Access server."))
             }
             let s = AppSettings.shared
             s.clientPrivateKey = priv
@@ -127,7 +127,7 @@ final class SetupModel {
         error = nil
         let user = username.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !user.isEmpty, !password.isEmpty else {
-            error = "Enter your username and password."
+            error = String(localized: "Enter your username and password.")
             return
         }
         username = user
@@ -156,7 +156,7 @@ final class SetupModel {
     func submitCode() async {
         let digits = code.filter(\.isNumber)
         guard digits.count == 6 else {
-            error = "Enter the 6-digit code."
+            error = String(localized: "Enter the 6-digit code.")
             return
         }
         loading = true; error = nil
@@ -166,7 +166,7 @@ final class SetupModel {
             let resp = try await ManagedClient.shared.login(username: username, password: password, totpCode: digits, aesKey: key)
             if resp["require_totp"] as? Bool == true {
                 code = ""
-                error = "That code didn't work. Check your authenticator and try again."
+                error = String(localized: "That code didn't work. Check your authenticator and try again.")
                 return
             }
             finish(resp)
@@ -250,7 +250,7 @@ final class SetupModel {
 
     private func finish(_ resp: [String: Any]) {
         guard let token = resp["token"] as? String, !token.isEmpty else {
-            error = "The server didn't return a session. Try again."
+            error = String(localized: "The server didn't return a session. Try again.")
             return
         }
         let s = AppSettings.shared

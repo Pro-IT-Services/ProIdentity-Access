@@ -120,7 +120,7 @@ export const api = {
   // Admin — sessions
   listAllSessions: () => request<AdminSession[]>('GET', '/admin/sessions'),
   terminateSession: (id: string) => request<{ ok: boolean }>('DELETE', `/admin/sessions/${id}`),
-  listVPNEvents: (params: { limit?: number; offset?: number; user_id?: string; server_id?: string; event?: 'connected' | 'disconnected'; device?: string; source_ip?: string; since?: string } = {}) => {
+  listVPNEvents: (params: { limit?: number; offset?: number; q?: string; user_id?: string; server_id?: string; event?: 'connected' | 'disconnected'; device?: string; source_ip?: string; since?: string } = {}) => {
     const q = new URLSearchParams()
     Object.entries(params).forEach(([k, v]) => { if (v != null && v !== '') q.set(k, String(v)) })
     const qs = q.toString()
@@ -332,6 +332,7 @@ export interface ResourceGroup {
 export interface Session {
   id: string
   server_id: string | null
+  server_name?: string | null
   assigned_ip: string
   source_ip?: string | null
   device_id?: string | null

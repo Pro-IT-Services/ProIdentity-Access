@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { useTunnelStore } from '../stores/useTunnelStore'
 import { useOpenVPNStore, isLive, OVPN_PREFIX } from '../stores/useOpenVPNStore'
+import { t } from '../i18n'
 
 /** A live VPN connection of either kind, for the "Connected now" list. */
 export interface ActiveConnection {
@@ -10,7 +11,7 @@ export interface ActiveConnection {
   kind: 'WireGuard' | 'OpenVPN'
   status: 'connected' | 'connecting'
   ip: string
-  /** Routed networks; a full tunnel is shown as "all traffic". */
+  /** Routed networks; a full tunnel is shown as "all traffic" (localized). */
   networks: string[]
   server: string
   /** Unix seconds; 0 when unknown. */
@@ -27,7 +28,7 @@ const FULL = new Set(['0.0.0.0/0', '::/0'])
 
 function routes(nets: string[]): string[] {
   const out = nets.filter(n => !FULL.has(n))
-  if (out.length < nets.length) out.unshift('all traffic')
+  if (out.length < nets.length) out.unshift(t('active.allTraffic'))
   return [...new Set(out)]
 }
 

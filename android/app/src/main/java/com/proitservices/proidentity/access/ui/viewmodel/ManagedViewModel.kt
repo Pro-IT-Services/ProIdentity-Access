@@ -1,8 +1,10 @@
 package com.proitservices.proidentity.access.ui.viewmodel
 
 import android.app.Application
+import androidx.annotation.StringRes
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.proitservices.proidentity.access.R
 import com.proitservices.proidentity.access.WgVpnService
 import com.proitservices.proidentity.access.bridge.AppSettings
 import com.proitservices.proidentity.access.bridge.AuthInvalidException
@@ -10,6 +12,7 @@ import com.proitservices.proidentity.access.bridge.DeviceCrypto
 import com.proitservices.proidentity.access.bridge.DeviceRevokedException
 import com.proitservices.proidentity.access.bridge.EndpointCandidate
 import com.proitservices.proidentity.access.bridge.ManagedClient
+import com.proitservices.proidentity.access.bridge.userMessage
 import com.proitservices.proidentity.access.model.ManagedSettings
 import com.proitservices.proidentity.access.model.ServerStatus
 import com.proitservices.proidentity.access.model.TunnelInfo
@@ -42,6 +45,9 @@ data class ManagedUiState(
 class ManagedViewModel(application: Application) : AndroidViewModel(application) {
 
     private val appSettings = AppSettings(application)
+
+    private fun str(@StringRes id: Int, vararg args: Any?): String = getApplication<Application>().getString(id, *args)
+    private fun errorText(e: Exception): String? = getApplication<Application>().userMessage(e)
 
     private val _uiState = MutableStateFlow(ManagedUiState())
     val uiState: StateFlow<ManagedUiState> = _uiState.asStateFlow()
@@ -189,7 +195,7 @@ class ManagedViewModel(application: Application) : AndroidViewModel(application)
                     setServerStatus(serverId) { it.copy(connecting = false) }
                     if (sessionResp.pushAuthEnabled) {
                         _uiState.update { it.copy(showPushAuth = true, pushStatus = "pending", pushAuthEnabled = true, totpTargetServerId = serverId) }
-                        val (reqId, _) = client.createPushAuth("Connect to $serverName")
+                        val (reqId, _) = client.createPushAuth(str(R.string.push_connect_request, serverName))
                         pollPushConnect(serverId, reqId)
                     } else {
                         _uiState.update { it.copy(showTotpModal = true, totpTargetServerId = serverId, pushAuthEnabled = false) }
@@ -199,8 +205,8 @@ class ManagedViewModel(application: Application) : AndroidViewModel(application)
 
                 val config = injectPrivateKey(sessionResp.wgConfig, wgPriv)
 
-                val service = WgVpnService.instance ?: throw IllegalStateException("VPN service not running")
-                val tunnelId = connectEndpointCandidates(service, serverName, config, sessionResp.endpoints, serverId)
+                val service = WgVpnService.instance ?: throw IllegalStateException(str(R.string.error_vpn_service_not_running))
+                val tunnelId = connectEndpointCandidates(service, serverName, config, sessionResp.endpoints, serverId, str(R.string.error_no_endpoint))
 
                 activeSessions[serverId] = sessionResp.sessionId
                 serverTunnelIds[serverId] = tunnelId
@@ -222,8 +228,9 @@ class ManagedViewModel(application: Application) : AndroidViewModel(application)
             } catch (e: AuthInvalidException) {
                 endSession(revoked = false)
             } catch (e: Exception) {
-                setServerStatus(serverId) { it.copy(connecting = false, error = e.message) }
-                _uiState.update { it.copy(error = e.message ?: "Could not connect to $serverName") }
+                val message = errorText(e)
+                setServerStatus(serverId) { it.copy(connecting = false, error = message) }
+                _uiState.update { it.copy(error = message ?: str(R.string.error_could_not_connect, serverName)) }
             }
         }
     }
@@ -269,7 +276,7 @@ class ManagedViewModel(application: Application) : AndroidViewModel(application)
     fun disconnectServer(serverId: String) {
         viewModelScope.launch(Dispatchers.IO) {
             try { disconnectServerInternal(serverId) }
-            catch (e: Exception) { _uiState.update { it.copy(error = e.message) } }
+            catch (e: Exception) { _uiState.update { it.copy(error = errorText(e)) } }
         }
     }
 
@@ -427,7 +434,8 @@ private fun connectEndpointCandidates(
     serverName: String,
     config: String,
     endpoints: List<EndpointCandidate>,
-    serverId: String
+    serverId: String,
+    noEndpointError: String
 ): String {
     val configs = endpointConfigs(config, endpoints)
     var lastError: Exception? = null
@@ -442,7 +450,7 @@ private fun connectEndpointCandidates(
             try { service.deleteTunnel(tunnelId) } catch (_: Exception) {}
         }
     }
-    throw IllegalStateException(lastError?.message ?: "No endpoint candidates could connect")
+    throw IllegalStateException(lastError?.message ?: noEndpointError)
 }
 
 private fun endpointConfigs(config: String, endpoints: List<EndpointCandidate>): List<String> {

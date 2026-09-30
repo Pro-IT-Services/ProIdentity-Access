@@ -1,6 +1,7 @@
 import { AlertTriangle, Download, Loader2, ShieldCheck } from 'lucide-react'
 import { Button } from './ui/Button'
 import { useUpdateStore } from '../stores/useUpdateStore'
+import { t, tNode } from '../i18n'
 
 /**
  * Asks the user to install a client update. The ProIdentity service installs
@@ -27,16 +28,16 @@ export function UpdatePrompt() {
           </div>
           <div className="min-w-0">
             <h2 id="update-title" className="text-base font-semibold leading-tight">
-              {failed ? 'Update failed' : busy ? (status.state === 'installing' ? 'Installing update' : 'Downloading update') : 'Update available'}
+              {failed ? t('update.failedTitle') : busy ? (status.state === 'installing' ? t('update.installingTitle') : t('update.downloadingTitle')) : t('update.availableTitle')}
             </h2>
             <p id="update-body" className="mt-1 text-sm text-muted-foreground">
               {failed
-                ? (error || status.error || 'The update could not be installed.')
+                ? (error || status.error || t('update.couldNotInstall'))
                 : status.state === 'installing'
-                  ? 'ProIdentity Access will close now and reopen when the update is installed.'
+                  ? t('update.closingNow')
                   : busy
-                    ? `Downloading ProIdentity Access ${status.latest_version}…`
-                    : <>ProIdentity Access <span className="font-medium text-foreground">{status.latest_version}</span> is ready to install. You have {status.current_version}.</>}
+                    ? t('update.downloadingBody', { version: status.latest_version ?? '' })
+                    : tNode('update.readyBody', { version: <span key="v" className="font-medium text-foreground">{status.latest_version}</span>, current: status.current_version })}
             </p>
           </div>
         </div>
@@ -52,12 +53,12 @@ export function UpdatePrompt() {
           <>
             {status.notes && <p className="mt-4 text-sm">{status.notes}</p>}
             {mandatory && (
-              <p className="mt-3 text-sm font-medium text-warning">Your organization requires this update.</p>
+              <p className="mt-3 text-sm font-medium text-warning">{t('update.mandatory')}</p>
             )}
             <ul className="mt-4 space-y-1.5 text-xs text-muted-foreground">
-              <li className="flex gap-2"><ShieldCheck className="h-3.5 w-3.5 shrink-0 text-success mt-0.5" />Installed by the ProIdentity service. No admin rights needed.</li>
-              <li className="flex gap-2"><ShieldCheck className="h-3.5 w-3.5 shrink-0 text-success mt-0.5" />Verified against the ProIdentity release signature before installing.</li>
-              <li className="flex gap-2"><AlertTriangle className="h-3.5 w-3.5 shrink-0 text-warning mt-0.5" />Active VPN connections drop briefly while it installs.</li>
+              <li className="flex gap-2"><ShieldCheck className="h-3.5 w-3.5 shrink-0 text-success mt-0.5" />{t('update.bulletService')}</li>
+              <li className="flex gap-2"><ShieldCheck className="h-3.5 w-3.5 shrink-0 text-success mt-0.5" />{t('update.bulletSigned')}</li>
+              <li className="flex gap-2"><AlertTriangle className="h-3.5 w-3.5 shrink-0 text-warning mt-0.5" />{t('update.bulletDrop')}</li>
             </ul>
           </>
         )}
@@ -65,10 +66,10 @@ export function UpdatePrompt() {
         {!busy && (
           <div className="mt-6 flex justify-end gap-2">
             {(!mandatory || failed) && (
-              <Button variant="ghost" onClick={later}>{failed ? 'Close' : 'Later'}</Button>
+              <Button variant="ghost" onClick={later}>{failed ? t('common.close') : t('update.later')}</Button>
             )}
             <Button onClick={install}>
-              {failed ? 'Try again' : 'Update now'}
+              {failed ? t('common.tryAgain') : t('update.now')}
             </Button>
           </div>
         )}

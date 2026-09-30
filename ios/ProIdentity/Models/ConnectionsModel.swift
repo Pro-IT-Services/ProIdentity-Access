@@ -245,7 +245,7 @@ final class ConnectionsModel {
                 // A code was sent and rejected.
                 authPrompt?.submitting = false
                 authPrompt?.code = ""
-                authPrompt?.error = "That code didn't work. Check your authenticator and try again."
+                authPrompt?.error = String(localized: "That code didn't work. Check your authenticator and try again.")
             }
         } catch {
             if handleAuthFailure(error) { return }
@@ -268,10 +268,10 @@ final class ConnectionsModel {
             throw resp["push_auth_enabled"] as? Bool == true ? ConnectError.requirePushAuth : ConnectError.requireTotp
         }
         guard let wgConfig = resp["wg_config"] as? String else {
-            throw APIError.serverError("The server didn't send a configuration.")
+            throw APIError.serverError(String(localized: "The server didn't send a configuration."))
         }
         guard let sessionID = resp["session_id"] as? String else {
-            throw APIError.serverError("The server didn't start a session.")
+            throw APIError.serverError(String(localized: "The server didn't start a session."))
         }
         let config = Self.injectPrivateKey(config: wgConfig, privateKey: wgPriv)
         let endpoints = (resp["endpoints"] as? [[String: Any]] ?? []).compactMap(EndpointCandidate.init)
@@ -308,7 +308,7 @@ final class ConnectionsModel {
         guard var prompt = authPrompt else { return }
         let code = prompt.code.filter(\.isNumber)
         guard code.count == 6 else {
-            authPrompt?.error = "Enter the 6-digit code."
+            authPrompt?.error = String(localized: "Enter the 6-digit code.")
             return
         }
         prompt.submitting = true
@@ -328,7 +328,7 @@ final class ConnectionsModel {
                 let key = try ManagedClient.shared.aesKey()
                 let resp = try await ManagedClient.shared.createPushAuth(context: "Connect to \(prompt.serverName)", aesKey: key)
                 guard let requestID = resp["request_id"] as? String else {
-                    throw APIError.serverError("Push approval isn't available right now.")
+                    throw APIError.serverError(String(localized: "Push approval isn't available right now."))
                 }
                 let deadline = Date().addingTimeInterval(180)
                 while !Task.isCancelled {
@@ -374,7 +374,7 @@ final class ConnectionsModel {
     @discardableResult
     func importConfig(name: String, content: String) throws -> String {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        let base = trimmed.isEmpty ? "Imported tunnel" : trimmed
+        let base = trimmed.isEmpty ? String(localized: "Imported tunnel") : trimmed
         let taken = Set(imported.map(\.name))
         var finalName = base
         var n = 2
@@ -501,7 +501,7 @@ final class ConnectionsModel {
             }
         }
         VPNManager.shared.forgetManagedTunnel(serverID: serverID)
-        throw lastError ?? APIError.serverError("None of the server's endpoints could be reached.")
+        throw lastError ?? APIError.serverError(String(localized: "None of the server's endpoints could be reached."))
     }
 
     private static func injectPrivateKey(config: String, privateKey: String) -> String {

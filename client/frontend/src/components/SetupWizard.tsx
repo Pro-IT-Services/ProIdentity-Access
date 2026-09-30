@@ -4,6 +4,7 @@ import { useSetupStore } from '../stores/useSetupStore'
 import { useManagedStore } from '../stores/useManagedStore'
 import { managedPollPushAuth } from '../wailsbridge'
 import { UninstallApp } from '../../wailsjs/go/main/App'
+import { t } from '../i18n'
 
 export default function SetupWizard({ onClose }: { onClose?: () => void }) {
   const {
@@ -26,7 +27,8 @@ export default function SetupWizard({ onClose }: { onClose?: () => void }) {
             <button
               onClick={onClose}
               className="absolute right-0 top-0 p-1.5 rounded-md text-text-muted hover:text-text-primary hover:bg-bg-border transition-colors"
-              title="Close"
+              title={t('common.close')}
+              aria-label={t('common.close')}
             >
               <X className="w-4 h-4" />
             </button>
@@ -34,8 +36,8 @@ export default function SetupWizard({ onClose }: { onClose?: () => void }) {
           <div className="w-14 h-14 rounded-2xl bg-accent/10 border border-accent/20 flex items-center justify-center mx-auto mb-4">
             <Shield className="w-7 h-7 text-accent" />
           </div>
-          <h1 className="text-xl font-bold text-text-primary">WireGuard Client</h1>
-          <p className="text-sm text-text-secondary mt-1">Set up your VPN experience</p>
+          <h1 className="text-xl font-bold text-text-primary">{t('wizard.title')}</h1>
+          <p className="text-sm text-text-secondary mt-1">{t('wizard.subtitle')}</p>
         </div>
 
         {/* Step card */}
@@ -84,7 +86,7 @@ export default function SetupWizard({ onClose }: { onClose?: () => void }) {
               className="text-xs text-text-muted hover:text-danger transition-colors flex items-center gap-1 mx-auto"
             >
               <Trash2 className="w-3 h-3" />
-              Uninstall ProIdentity Access
+              {t('settings.uninstallApp')}
             </button>
           </div>
         )}
@@ -118,23 +120,23 @@ function StepMode({ onChoose, loading, error, onClearError }: {
 }) {
   return (
     <div className="p-6">
-      <h2 className="text-base font-semibold text-text-primary mb-1">Choose your setup</h2>
-      <p className="text-sm text-text-secondary mb-5">How would you like to use this app?</p>
+      <h2 className="text-base font-semibold text-text-primary mb-1">{t('wizard.chooseSetup')}</h2>
+      <p className="text-sm text-text-secondary mb-5">{t('wizard.howUse')}</p>
 
       {error && <ErrorBox message={error} onDismiss={onClearError} />}
 
       <div className="space-y-3">
         <ModeCard
           icon={<Wifi className="w-5 h-5 text-accent" />}
-          title="Standalone"
-          description="Manage WireGuard configs manually. Import .conf files and connect."
+          title={t('wizard.standalone')}
+          description={t('wizard.standaloneDesc')}
           onClick={() => onChoose('standalone')}
           disabled={loading}
         />
         <ModeCard
           icon={<Server className="w-5 h-5 text-accent" />}
-          title="Managed"
-          description="Connect to a WG Manager server to automatically sync and manage configs."
+          title={t('wizard.managed')}
+          description={t('wizard.managedDesc')}
           onClick={() => onChoose('managed')}
           disabled={loading}
         />
@@ -186,13 +188,13 @@ function StepServer({ serverURL, onURLChange, onNext, error, onClearError }: {
     <form onSubmit={handleSubmit} className="p-6">
       <div className="flex items-center gap-2.5 mb-4">
         <Server className="w-5 h-5 text-accent" />
-        <h2 className="text-base font-semibold text-text-primary">Server URL</h2>
+        <h2 className="text-base font-semibold text-text-primary">{t('common.serverUrl')}</h2>
       </div>
 
       {error && <ErrorBox message={error} onDismiss={onClearError} />}
 
       <div className="mb-5">
-        <label className="block text-xs font-medium text-text-secondary mb-1.5">Management server URL</label>
+        <label className="block text-xs font-medium text-text-secondary mb-1.5">{t('wizard.managementServerUrl')}</label>
         <input
           className="w-full px-3 py-2 bg-bg-base border border-bg-border rounded-lg text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent transition-colors"
           placeholder="vpn.example.com"
@@ -205,7 +207,7 @@ function StepServer({ serverURL, onURLChange, onNext, error, onClearError }: {
           autoCapitalize="none"
           spellCheck={false}
         />
-        <p className="text-xs text-text-muted mt-1.5">Address of your ProIdentity Access server. https:// is added if you leave it out.</p>
+        <p className="text-xs text-text-muted mt-1.5">{t('wizard.serverUrlHint')}</p>
       </div>
 
       <button
@@ -213,7 +215,7 @@ function StepServer({ serverURL, onURLChange, onNext, error, onClearError }: {
         disabled={!serverURL.trim()}
         className="w-full px-4 py-2 text-sm font-medium text-white bg-accent hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
       >
-        Continue
+        {t('common.continue')}
       </button>
     </form>
   )
@@ -248,19 +250,19 @@ function StepRegister({ deviceName, onNameChange, onLoadDefaultName, onRegister,
     <form onSubmit={handleSubmit} className="p-6">
       <div className="flex items-center gap-2.5 mb-4">
         <Monitor className="w-5 h-5 text-accent" />
-        <h2 className="text-base font-semibold text-text-primary">Register Device</h2>
+        <h2 className="text-base font-semibold text-text-primary">{t('wizard.registerDevice')}</h2>
       </div>
       <p className="text-sm text-text-secondary mb-4">
-        Give this device a name. A unique encryption key pair will be generated and registered with the server.
+        {t('wizard.registerDesc')}
       </p>
 
       {error && <ErrorBox message={error} onDismiss={onClearError} />}
 
       <div className="mb-5">
-        <label className="block text-xs font-medium text-text-secondary mb-1.5">Device name</label>
+        <label className="block text-xs font-medium text-text-secondary mb-1.5">{t('wizard.deviceName')}</label>
         <input
           className="w-full px-3 py-2 bg-bg-base border border-bg-border rounded-lg text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent transition-colors"
-          placeholder="My MacBook"
+          placeholder={t('wizard.deviceNamePlaceholder')}
           value={deviceName}
           onChange={e => onNameChange(e.target.value)}
           required
@@ -273,7 +275,7 @@ function StepRegister({ deviceName, onNameChange, onLoadDefaultName, onRegister,
         disabled={loading || !deviceName.trim()}
         className="w-full px-4 py-2 text-sm font-medium text-white bg-accent hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
       >
-        {loading ? 'Registering…' : 'Register Device'}
+        {loading ? t('wizard.registering') : t('wizard.registerDevice')}
       </button>
     </form>
   )
@@ -398,17 +400,17 @@ function StepLogin({ login, loginWithPush, onComplete, loading, error, onClearEr
     <form onSubmit={handleSubmit} className="p-6">
       <div className="flex items-center gap-2.5 mb-4">
         <LogIn className="w-5 h-5 text-accent" />
-        <h2 className="text-base font-semibold text-text-primary">Sign In</h2>
+        <h2 className="text-base font-semibold text-text-primary">{t('common.signIn')}</h2>
       </div>
       <p className="text-sm text-text-secondary mb-4">
-        Sign in with your VPN account credentials.
+        {t('wizard.signInDesc')}
       </p>
 
       {displayError && <ErrorBox message={displayError} onDismiss={() => { onClearError(); setPushError('') }} />}
 
       <div className="space-y-4 mb-5">
         {mode !== 'push' && <div>
-          <label className="block text-xs font-medium text-text-secondary mb-1.5">Username</label>
+          <label className="block text-xs font-medium text-text-secondary mb-1.5">{t('common.username')}</label>
           <input
             className="w-full px-3 py-2 bg-bg-base border border-bg-border rounded-lg text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent transition-colors"
             placeholder="admin"
@@ -421,7 +423,7 @@ function StepLogin({ login, loginWithPush, onComplete, loading, error, onClearEr
         </div>}
 
         {mode !== 'push' && <div>
-          <label className="block text-xs font-medium text-text-secondary mb-1.5">Password</label>
+          <label className="block text-xs font-medium text-text-secondary mb-1.5">{t('common.password')}</label>
           <div className="relative">
             <input
               className="w-full px-3 py-2 pr-9 bg-bg-base border border-bg-border rounded-lg text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent transition-colors"
@@ -435,6 +437,7 @@ function StepLogin({ login, loginWithPush, onComplete, loading, error, onClearEr
             <button
               type="button"
               onClick={() => setShowPw(v => !v)}
+              aria-label={showPw ? t('common.hidePassword') : t('common.showPassword')}
               className="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-secondary transition-colors"
             >
               {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -451,15 +454,15 @@ function StepLogin({ login, loginWithPush, onComplete, loading, error, onClearEr
             </div>
             <div>
               <p className="text-sm font-medium text-text-primary">
-                {pushStatus === 'pending' && 'Waiting for approval...'}
-                {pushStatus === 'approved' && 'Approved, signing in...'}
-                {pushStatus === 'denied' && 'Denied'}
-                {pushStatus === 'expired' && 'Expired'}
+                {pushStatus === 'pending' && t('push.waiting')}
+                {pushStatus === 'approved' && t('login.approvedSigningIn')}
+                {pushStatus === 'denied' && t('push.denied')}
+                {pushStatus === 'expired' && t('push.expired')}
               </p>
               <p className="text-xs text-text-muted mt-1">
-                {pushStatus === 'pending' && 'Check your phone for a push notification.'}
-                {pushStatus === 'denied' && 'The request was denied.'}
-                {pushStatus === 'expired' && 'The request expired.'}
+                {pushStatus === 'pending' && t('push.checkPhone')}
+                {pushStatus === 'denied' && t('push.deniedBody')}
+                {pushStatus === 'expired' && t('push.expiredBody')}
               </p>
             </div>
             {(pushStatus === 'denied' || pushStatus === 'expired') && (
@@ -469,7 +472,7 @@ function StepLogin({ login, loginWithPush, onComplete, loading, error, onClearEr
                 disabled={loading}
                 className="px-3 py-1.5 text-xs font-medium text-text-primary bg-bg-base hover:bg-bg-border border border-bg-border rounded-lg transition-colors disabled:opacity-50"
               >
-                Try again
+                {t('common.tryAgain')}
               </button>
             )}
             {pushStatus !== 'approved' && (
@@ -479,14 +482,14 @@ function StepLogin({ login, loginWithPush, onComplete, loading, error, onClearEr
                   onClick={() => { stopPolling(); setPushError(''); setMode('totp') }}
                   className="inline-flex items-center gap-1.5 text-xs text-text-muted hover:text-text-secondary transition-colors"
                 >
-                  <KeyRound className="w-3.5 h-3.5" /> Enter code manually
+                  <KeyRound className="w-3.5 h-3.5" /> {t('push.enterCode')}
                 </button>
                 <button
                   type="button"
                   onClick={resetToCredentials}
                   className="text-xs text-text-muted hover:text-text-secondary transition-colors"
                 >
-                  Change account
+                  {t('wizard.changeAccount')}
                 </button>
               </div>
             )}
@@ -495,7 +498,7 @@ function StepLogin({ login, loginWithPush, onComplete, loading, error, onClearEr
 
         {showTOTP && (
           <div>
-            <label className="block text-xs font-medium text-text-secondary mb-1.5">2FA Code</label>
+            <label className="block text-xs font-medium text-text-secondary mb-1.5">{t('wizard.twoFaCode')}</label>
             <input
               className="w-full px-3 py-2 bg-bg-base border border-bg-border rounded-lg text-sm text-text-primary text-center tracking-widest font-mono placeholder:text-text-muted focus:outline-none focus:border-accent transition-colors"
               placeholder="000000"
@@ -505,7 +508,7 @@ function StepLogin({ login, loginWithPush, onComplete, loading, error, onClearEr
               autoFocus
               required
             />
-            <p className="text-xs text-text-muted mt-1.5">Enter the 6-digit code from your authenticator app</p>
+            <p className="text-xs text-text-muted mt-1.5">{t('totp.hint')}</p>
           </div>
         )}
       </div>
@@ -515,7 +518,7 @@ function StepLogin({ login, loginWithPush, onComplete, loading, error, onClearEr
         disabled={loading || (showTOTP && totpCode.length !== 6)}
         className={mode === 'push' ? 'hidden' : 'w-full px-4 py-2 text-sm font-medium text-white bg-accent hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors'}
       >
-        {loading ? 'Signing in…' : showTOTP ? 'Verify' : 'Sign In'}
+        {loading ? t('common.signingIn') : showTOTP ? t('common.verify') : t('common.signIn')}
       </button>
     </form>
   )
@@ -532,7 +535,7 @@ function UninstallConfirm({ onCancel }: { onCancel: () => void }) {
       await UninstallApp(keepData)
       // App will be gone — nothing to do
     } catch (e: any) {
-      setError(e?.toString() ?? 'Uninstall failed')
+      setError(e?.toString() ?? t('wizard.uninstallFailed'))
       setState('error')
     }
   }
@@ -543,7 +546,7 @@ function UninstallConfirm({ onCancel }: { onCancel: () => void }) {
         <div className="bg-bg-surface border border-bg-border rounded-2xl shadow-xl overflow-hidden p-6">
           <div className="flex items-center gap-2.5 mb-4">
             <Trash2 className="w-5 h-5 text-danger" />
-            <h2 className="text-base font-semibold text-text-primary">Uninstall ProIdentity Access</h2>
+            <h2 className="text-base font-semibold text-text-primary">{t('settings.uninstallApp')}</h2>
           </div>
 
           {state === 'error' && <ErrorBox message={error} onDismiss={() => setState('confirm')} />}
@@ -551,7 +554,7 @@ function UninstallConfirm({ onCancel }: { onCancel: () => void }) {
           {state !== 'running' ? (
             <>
               <p className="text-sm text-text-secondary mb-5">
-                This will remove the app, daemon, and all associated files. You will be asked for your administrator password.
+                {t('wizard.uninstallBody')}
               </p>
 
               <label className="flex items-center gap-3 mb-6 cursor-pointer">
@@ -561,7 +564,7 @@ function UninstallConfirm({ onCancel }: { onCancel: () => void }) {
                   onChange={e => setKeepData(e.target.checked)}
                   className="w-4 h-4 accent-accent"
                 />
-                <span className="text-sm text-text-secondary">Keep tunnel configuration data</span>
+                <span className="text-sm text-text-secondary">{t('wizard.keepData')}</span>
               </label>
 
               <div className="flex gap-2">
@@ -569,18 +572,18 @@ function UninstallConfirm({ onCancel }: { onCancel: () => void }) {
                   onClick={onCancel}
                   className="flex-1 px-4 py-2 text-sm text-text-secondary hover:text-text-primary bg-bg-base hover:bg-bg-border border border-bg-border rounded-lg transition-colors"
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </button>
                 <button
                   onClick={handleUninstall}
                   className="flex-1 px-4 py-2 text-sm font-medium text-white bg-danger hover:bg-danger/80 rounded-lg transition-colors"
                 >
-                  Uninstall
+                  {t('wizard.uninstall')}
                 </button>
               </div>
             </>
           ) : (
-            <p className="text-sm text-text-secondary">Uninstalling… enter your password if prompted.</p>
+            <p className="text-sm text-text-secondary">{t('wizard.uninstallRunning')}</p>
           )}
         </div>
       </div>
@@ -597,6 +600,7 @@ function ErrorBox({ message, onDismiss }: { message: string; onDismiss: () => vo
         type="button"
         onClick={onDismiss}
         className="text-danger/60 hover:text-danger text-xs shrink-0"
+        aria-label={t('common.dismiss')}
       >
         ✕
       </button>

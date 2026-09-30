@@ -1,5 +1,6 @@
 import type { TunnelInfo } from '../types'
 import { MonoChip } from './ui/MonoChip'
+import { t } from '../i18n'
 
 export function ConfigDisclosure({ tunnel }: { tunnel: TunnelInfo }) {
   const peer = tunnel.peers?.[0]
@@ -8,35 +9,35 @@ export function ConfigDisclosure({ tunnel }: { tunnel: TunnelInfo }) {
 
   return (
     <div className="space-y-5">
-      <Section title="Interface">
-        <KV label="Address">
+      <Section title={t('config.interface')}>
+        <KV label={t('config.address')}>
           {addresses.length === 0
             ? <span className="text-muted-foreground">-</span>
             : <div className="flex flex-wrap gap-1">{addresses.map(a => <MonoChip key={a} value={a} />)}</div>}
         </KV>
-        <KV label="MTU"><MonoChip value={String(tunnel.mtu || 1420)} copy={false} /></KV>
+        <KV label={t('config.mtu')}><MonoChip value={String(tunnel.mtu || 1420)} copy={false} /></KV>
         {tunnel.listen_port > 0 && (
-          <KV label="Listen port"><MonoChip value={String(tunnel.listen_port)} copy={false} /></KV>
+          <KV label={t('config.listenPort')}><MonoChip value={String(tunnel.listen_port)} copy={false} /></KV>
         )}
         {dns.length > 0 && (
-          <KV label="DNS">
+          <KV label={t('config.dns')}>
             <div className="flex flex-wrap gap-1">{dns.map(d => <MonoChip key={d} value={d} />)}</div>
           </KV>
         )}
       </Section>
 
       {peer && (
-        <Section title="Peer">
-          <KV label="Endpoint">
+        <Section title={t('config.peer')}>
+          <KV label={t('config.endpoint')}>
             <MonoChip value={peer.endpoint ?? ''} display={peer.endpoint || '-'} />
           </KV>
-          <KV label="Allowed IPs">
+          <KV label={t('config.allowedIps')}>
             <div className="flex flex-wrap gap-1">
               {(peer.allowed_ips ?? []).map(a => <MonoChip key={a} value={a} />)}
             </div>
           </KV>
           {peer.persistent_keepalive > 0 && (
-            <KV label="Keepalive"><MonoChip value={`${peer.persistent_keepalive}s`} copy={false} /></KV>
+            <KV label={t('config.keepalive')}><MonoChip value={`${peer.persistent_keepalive}s`} copy={false} /></KV>
           )}
         </Section>
       )}

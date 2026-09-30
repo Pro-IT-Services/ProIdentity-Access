@@ -163,8 +163,12 @@ func (s *Server) handleDeleteSession(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleMySessions(w http.ResponseWriter, r *http.Request) {
 	claims := claimsFrom(r)
 	rows, err := s.db.Queryx(`
-		SELECT s.id, s.server_id, s.assigned_ip, s.created_at, s.last_keepalive
-		FROM sessions s WHERE s.user_id=?
+		SELECT s.id, s.server_id, ws.name AS server_name, s.assigned_ip,
+		       s.source_ip, s.device_id, s.device_name, s.user_agent,
+		       s.created_at, s.last_keepalive
+		FROM sessions s
+		LEFT JOIN wg_servers ws ON ws.id = s.server_id
+		WHERE s.user_id=?
 		ORDER BY s.created_at DESC`, claims.UserID)
 	if err != nil {
 		jsonError(w, http.StatusInternalServerError, err.Error())

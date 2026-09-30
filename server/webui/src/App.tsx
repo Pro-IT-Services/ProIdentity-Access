@@ -13,6 +13,7 @@ import System from './pages/System'
 import Sessions from './pages/Sessions'
 import ConnectionHistory from './pages/ConnectionHistory'
 import Profile from './pages/Profile'
+import StoredProfiles from './pages/StoredProfiles'
 
 // Topology pulls in @xyflow/react + dagre — lazy-load so the main bundle stays slim.
 const Topology = lazy(() => import('./pages/Topology'))
@@ -54,6 +55,7 @@ export default function App() {
         <Route path="servers" element={<RequireAdmin><ServersList /></RequireAdmin>} />
         <Route path="servers/:id" element={<RequireAdmin><ServerDetail /></RequireAdmin>} />
         <Route path="openvpn" element={<RequireAdmin><OpenVPN /></RequireAdmin>} />
+        <Route path="stored-profiles" element={<RequireAdmin><StoredProfiles /></RequireAdmin>} />
         <Route path="topology" element={<RequireAdmin><Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Loading topology…</div>}><Topology /></Suspense></RequireAdmin>} />
         <Route path="connection-history" element={<RequireAdmin><ConnectionHistory /></RequireAdmin>} />
         <Route path="system" element={<RequireAdmin><System /></RequireAdmin>} />

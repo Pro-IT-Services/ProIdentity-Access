@@ -15,6 +15,16 @@ async function App() {
   return mod
 }
 
+/** The OS UI language as seen by the Go side: "sk" or "en" ("" outside Wails). */
+export async function systemLanguage(): Promise<string> {
+  if (!isWails()) return ''
+  try {
+    return await (await App()).SystemLanguage()
+  } catch {
+    return ''
+  }
+}
+
 // --- Standard tunnel API ---
 
 export async function isDaemonRunning(): Promise<boolean> {

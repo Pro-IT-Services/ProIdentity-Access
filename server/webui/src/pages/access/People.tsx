@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { api, type User, type ReachRow, type DenialRow, type ResourceGroup } from '../../api/client'
-import { Plus, Trash2, KeyRound, Pencil, Shield, ShieldOff, Search, ChevronRight, ShieldAlert, Package, Lock } from 'lucide-react'
+import { Plus, Trash2, KeyRound, Pencil, Shield, ShieldOff, Search, ChevronRight, ShieldAlert, Package, Lock, Route } from 'lucide-react'
 import { Activity } from '@/components/Activity'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -227,6 +228,7 @@ function PersonDrawer({
   const [reach, setReach] = useState<ReachRow[]>([])
   const [denials, setDenials] = useState<DenialRow[]>([])
   const [confirm, setConfirm] = useState(false)
+  const [showReach, setShowReach] = useState(false)
   const [showDisable2FA, setShowDisable2FA] = useState(false)
   const [adminPw, setAdminPw] = useState('')
   const [disable2FAError, setDisable2FAError] = useState('')
@@ -286,60 +288,7 @@ function PersonDrawer({
         </SheetHeader>
         <SheetBody>
           <div className="space-y-6">
-            <Section title="Reach" hint={`${reachableCount} resource${reachableCount === 1 ? '' : 's'} reachable`}>
-              {reachableCount === 0 ? (
-                <p className="text-sm text-muted-foreground italic">
-                  No reachable resources yet. Give them access to a server below and assign bundles to control what they can reach.
-                </p>
-              ) : (
-                <div className="space-y-2">
-                  {Object.entries(reachByResource).map(([rid, rows]) => {
-                    const first = rows[0]
-                    const cidr = first.type === 'network' && first.mask != null ? `${first.ip_address}/${first.mask}` : first.ip_address
-                    return (
-                      <div key={rid} className="rounded-md border border-border bg-card/60 px-3 py-2.5">
-                        <div className="flex items-center justify-between gap-2 mb-1.5">
-                          <p className="text-sm font-medium truncate">{first.resource_name}</p>
-                          <MonoChip value={cidr} bare />
-                        </div>
-                        <ul className="space-y-1 text-[11px] text-muted-foreground">
-                          {rows.map((r, i) => (
-                            <li key={`${r.server_id}-${r.bundle_id}-${i}`} className="flex items-center gap-1.5">
-                              on <span className="text-foreground/85">{r.server_name}</span>
-                              {' via '}<span className="text-foreground/85">{r.bundle_name}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </Section>
-
-            <Section title="Activity" hint="Last 24 hours">
-              <Activity userId={user.id} topBy="resource" topTitle="Top resources reached" emptyLabel="No traffic recorded yet — try connecting via the desktop client." />
-            </Section>
-
-            {denials.length > 0 && (
-              <Section title="Recent denials" hint={`${denials.length} blocked`}>
-                <div className="rounded-md border border-warning/30 bg-warning/5 divide-y divide-warning/15">
-                  {denials.slice(0, 8).map(d => (
-                    <div key={d.id} className="px-3 py-2 flex items-center gap-2 text-xs">
-                      <ShieldAlert className="w-3.5 h-3.5 text-warning shrink-0" />
-                      <span className="font-mono truncate">{d.dst_ip}{d.dst_port ? `:${d.dst_port}` : ''}</span>
-                      <span className="text-muted-foreground uppercase">{d.proto}</span>
-                      <span className="text-muted-foreground ml-auto">×{d.count}</span>
-                    </div>
-                  ))}
-                </div>
-                <p className="text-[11px] text-muted-foreground mt-2">
-                  This user tried to reach destinations they aren't allowed to. Often a hint that a resource is missing from one of their roles.
-                </p>
-              </Section>
-            )}
-
-            <Section title="Servers & bundles" hint={`${servers.length} server${servers.length === 1 ? '' : 's'}`}>
+            <Section title="WG VPN servers & bundles" hint={`${servers.length} server${servers.length === 1 ? '' : 's'}`}>
               <div className="space-y-3">
                 {servers.map(s => {
                   const assigned = userBundles[s.id] ?? []
@@ -374,14 +323,43 @@ function PersonDrawer({
                   )
                 })}
                 <Combobox
-                  placeholder="Grant server access"
+                  placeholder="Assign WG VPN server"
                   options={allServers.filter(s => !servers.some(x => x.id === s.id)).map(s => ({ value: s.id, label: s.name, hint: s.subnet }))}
                   onSelect={addServer}
                 />
               </div>
               <p className="text-[11px] text-muted-foreground mt-2">
-                Assign bundles per server to control which resources this user can reach. Only bundles allowed on the server are available.
+                Assign a WG VPN server, then bundles on it to control which resources this user can reach. Only bundles allowed on the server are available.
               </p>
+              <Button variant="outline" size="sm" className="mt-3 w-full" onClick={() => setShowReach(true)}>
+                <Route className="w-4 h-4" />
+                Show what this user can reach
+                <span className="ml-auto text-xs text-muted-foreground">
+                  {reachableCount} resource{reachableCount === 1 ? '' : 's'}
+                </span>
+              </Button>
+            </Section>
+
+            {denials.length > 0 && (
+              <Section title="Recent denials" hint={`${denials.length} blocked`}>
+                <div className="rounded-md border border-warning/30 bg-warning/5 divide-y divide-warning/15">
+                  {denials.slice(0, 8).map(d => (
+                    <div key={d.id} className="px-3 py-2 flex items-center gap-2 text-xs">
+                      <ShieldAlert className="w-3.5 h-3.5 text-warning shrink-0" />
+                      <span className="font-mono truncate">{d.dst_ip}{d.dst_port ? `:${d.dst_port}` : ''}</span>
+                      <span className="text-muted-foreground uppercase">{d.proto}</span>
+                      <span className="text-muted-foreground ml-auto">×{d.count}</span>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-2">
+                  This user tried to reach destinations they aren't allowed to. Often a hint that a resource is missing from one of their roles.
+                </p>
+              </Section>
+            )}
+
+            <Section title="Activity" hint="Last 24 hours">
+              <Activity userId={user.id} topBy="resource" topTitle="Top resources reached" emptyLabel="No traffic recorded yet — try connecting via the desktop client." />
             </Section>
 
             <Section title="Account">
@@ -424,7 +402,7 @@ function PersonDrawer({
             <DangerZone>
               <DangerAction
                 title="Delete this user"
-                description="Removes the account and all assignments. Active sessions are not terminated automatically."
+                description="Removes the account and all assignments, and ends their active VPN sessions."
                 action={
                   <Button variant="destructive" size="sm" onClick={() => setConfirm(true)}>
                     <Trash2 className="w-4 h-4" /> Delete
@@ -436,11 +414,52 @@ function PersonDrawer({
         </SheetBody>
       </SheetContent>
 
+      <Dialog open={showReach} onOpenChange={setShowReach}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>What {user.username} can reach</DialogTitle>
+            <DialogDescription>
+              {reachableCount} resource{reachableCount === 1 ? '' : 's'}, with the WG VPN server and bundle that give access.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[60vh] overflow-y-auto pr-1">
+              {reachableCount === 0 ? (
+                <p className="text-sm text-muted-foreground italic">
+                  No reachable resources yet. Assign a WG VPN server and bundles to control what they can reach.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {Object.entries(reachByResource).map(([rid, rows]) => {
+                    const first = rows[0]
+                    const cidr = first.type === 'network' && first.mask != null ? `${first.ip_address}/${first.mask}` : first.ip_address
+                    return (
+                      <div key={rid} className="rounded-md border border-border bg-card/60 px-3 py-2.5">
+                        <div className="flex items-center justify-between gap-2 mb-1.5">
+                          <p className="text-sm font-medium truncate">{first.resource_name}</p>
+                          <MonoChip value={cidr} bare />
+                        </div>
+                        <ul className="space-y-1 text-[11px] text-muted-foreground">
+                          {rows.map((r, i) => (
+                            <li key={`${r.server_id}-${r.bundle_id}-${i}`} className="flex items-center gap-1.5">
+                              on <span className="text-foreground/85">{r.server_name}</span>
+                              {' via '}<span className="text-foreground/85">{r.bundle_name}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <ConfirmDelete
         open={confirm}
         onOpenChange={setConfirm}
         title={`Delete user "${user.username}"`}
-        description={<>This permanently removes the account and unlinks them from every role. Their active sessions stay live until they expire.</>}
+        description={<>This permanently removes the account and unlinks them from every role. Their active VPN sessions end immediately.</>}
         confirmText={user.username}
         actionLabel="Delete user"
         onConfirm={async () => { await api.deleteUser(user.id); onDelete() }}

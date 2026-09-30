@@ -90,12 +90,12 @@ final class AppModel {
         guard !endingSession else { return }
         endingSession = true
         if revoked {
-            resetAll(notice: "This device was removed by your administrator. Set it up again to continue.")
+            resetAll(notice: String(localized: "This device was removed by your administrator. Set it up again to continue."))
             endingSession = false
             return
         }
         AppSettings.shared.clearSession()
-        signInNotice = "Your session expired. Sign in again to continue."
+        signInNotice = String(localized: "Your session expired. Sign in again to continue.")
         route = .signIn
         Task {
             await connections.endManagedSessions(notifyServer: false)

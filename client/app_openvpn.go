@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -151,7 +152,7 @@ func (a *App) ManagedConnectOpenVPN(id, source, username, password, totp, custom
 	case "local":
 		lp, ok := findLocalProfile(id)
 		if !ok {
-			return nil, fmt.Errorf("profile not found")
+			return nil, errors.New(tr("err.profileNotFound"))
 		}
 		data, err := secretstore.Get(ovpnCfgKey(id))
 		if err != nil {
@@ -229,7 +230,7 @@ func (a *App) ManagedDisconnectOpenVPN(sessionID string) error {
 func (a *App) ImportOpenVPNProfile(name, config string, requiresTotp bool) (*OpenVPNProfileView, error) {
 	name = strings.TrimSpace(name)
 	if name == "" || strings.TrimSpace(config) == "" {
-		return nil, fmt.Errorf("name and config are required")
+		return nil, errors.New(tr("err.nameConfigRequired"))
 	}
 	devType, authUserPass := detectOVPNMeta(config)
 	id := uuid.New().String()
@@ -265,7 +266,7 @@ func (a *App) DeleteLocalOpenVPNProfile(id string) error {
 		out = append(out, p)
 	}
 	if !found {
-		return fmt.Errorf("profile not found")
+		return errors.New(tr("err.profileNotFound"))
 	}
 	_ = secretstore.Delete(ovpnCfgKey(id))
 	_ = secretstore.Delete(ovpnPwKey(id))

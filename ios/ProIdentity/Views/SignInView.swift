@@ -53,7 +53,7 @@ struct SignInView: View {
         .tint(Brand.primary)
         .onAppear {
             setup.onComplete = { app.setupCompleted() }
-            setup.onRevoked = { app.resetAll(notice: "This device is no longer registered. Set it up again.") }
+            setup.onRevoked = { app.resetAll(notice: String(localized: "This device is no longer registered. Set it up again.")) }
         }
         .onDisappear { setup.cancel() }
     }
@@ -62,12 +62,12 @@ struct SignInView: View {
 /// Username + password → code or push approval. Shared by onboarding and re-login.
 struct SignInContent<Extra: View>: View {
     @Bindable var setup: SetupModel
-    let title: String
-    let subtitle: String
+    let title: LocalizedStringKey
+    let subtitle: LocalizedStringKey
     var notice: String?
     @ViewBuilder let extra: Extra
 
-    init(setup: SetupModel, title: String, subtitle: String, notice: String? = nil,
+    init(setup: SetupModel, title: LocalizedStringKey, subtitle: LocalizedStringKey, notice: String? = nil,
          @ViewBuilder extra: () -> Extra = { EmptyView() }) {
         self.setup = setup
         self.title = title
@@ -113,7 +113,7 @@ struct SignInContent<Extra: View>: View {
                 }
             }
             if let error = setup.error {
-                NoticeCard(tone: .error, title: "Couldn't sign in", message: error)
+                NoticeCard(tone: .error, title: String(localized: "Couldn't sign in"), message: error)
             }
         } footer: {
             LoadingButton(title: "Sign in", loading: setup.loading) {
@@ -181,7 +181,7 @@ struct OTPField: View {
     var isError = false
 
     var body: some View {
-        TextField("000000", text: $code)
+        TextField("000000" as String, text: $code)
             .keyboardType(.numberPad)
             .textContentType(.oneTimeCode)
             .font(.system(size: 34, weight: .semibold, design: .monospaced))
@@ -226,7 +226,7 @@ struct PushApprovalView: View {
         }
     }
 
-    private var headline: String {
+    private var headline: LocalizedStringKey {
         switch state {
         case .approved: return "Approved"
         case .denied:   return "Request denied"
@@ -235,7 +235,7 @@ struct PushApprovalView: View {
         }
     }
 
-    private var detail: String {
+    private var detail: LocalizedStringKey {
         switch state {
         case .approved: return "Finishing up…"
         case .denied:   return "The request was declined on your phone. Send a new one to try again."

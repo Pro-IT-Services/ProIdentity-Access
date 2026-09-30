@@ -46,7 +46,7 @@ struct ImportSheet: View {
                         .frame(minHeight: 180)
                         .overlay(alignment: .topLeading) {
                             if content.isEmpty {
-                                Text("[Interface]\nPrivateKey = …\nAddress = …\n\n[Peer]\n…")
+                                Text(verbatim: "[Interface]\nPrivateKey = …\nAddress = …\n\n[Peer]\n…")
                                     .font(.monoCaption)
                                     .foregroundStyle(.tertiary)
                                     .padding(.top, 8).padding(.leading, 5)
@@ -102,7 +102,7 @@ struct ImportSheet: View {
             let scoped = url.startAccessingSecurityScopedResource()
             defer { if scoped { url.stopAccessingSecurityScopedResource() } }
             guard let text = try? String(contentsOf: url, encoding: .utf8) else {
-                error = "This file couldn't be read."
+                error = String(localized: "This file couldn't be read.")
                 return
             }
             load(text: text, suggestedName: url.deletingPathExtension().lastPathComponent)
@@ -116,13 +116,13 @@ struct ImportSheet: View {
             name = suggestedName
         }
         if WireGuardConfig.parse(name: "check", config: text) == nil {
-            error = "This doesn't look like a WireGuard configuration."
+            error = String(localized: "This doesn't look like a WireGuard configuration.")
         }
     }
 
     private func save() {
         guard WireGuardConfig.parse(name: "check", config: content) != nil else {
-            error = "This doesn't look like a WireGuard configuration. It needs an [Interface] section with a PrivateKey."
+            error = String(localized: "This doesn't look like a WireGuard configuration. It needs an [Interface] section with a PrivateKey.")
             return
         }
         do {

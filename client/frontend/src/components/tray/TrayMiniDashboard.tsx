@@ -5,6 +5,7 @@ import type { ThroughputSample } from '../../stores/useTrafficHistory'
 import { Sparkline } from '../ui/Sparkline'
 import { formatBytes, formatHandshake } from '../../lib/format'
 import { cn } from '../../lib/cn'
+import { t } from '../../i18n'
 
 interface Props {
   tunnel: TunnelInfo | null
@@ -38,29 +39,30 @@ export function TrayMiniDashboard({
   const totalBytes = (stats?.rx_bytes ?? 0) + (stats?.tx_bytes ?? 0)
 
   const connectionLabel =
-    connected ? 'Connected'
-    : connecting ? 'Connecting'
-    : errored ? 'Needs attention'
-    : 'Disconnected'
+    connected ? t('tray.connected')
+    : connecting ? t('tray.connecting')
+    : errored ? t('tray.needsAttention')
+    : t('tray.disconnected')
 
-  const twoFaLabel =
-    authState === 'required' ? '2FA required'
-    : authState === 'approving' ? '2FA approving'
-    : authState === 'disabled' ? '2FA disabled'
-    : settings.logged_in ? '2FA push'
-    : '2FA unavailable'
+  const twoFaValue =
+    authState === 'required' ? t('tray.twoFaRequired')
+    : authState === 'approving' ? t('tray.twoFaApproving')
+    : authState === 'disabled' ? t('tray.twoFaDisabled')
+    : settings.logged_in ? t('tray.twoFaPush')
+    : t('tray.twoFaUnavailable')
+  const twoFaLabel = t('tray.twoFaPill', { value: twoFaValue })
 
   const sessionLabel =
-    authState === 'required' ? 'Expired'
-    : authState === 'approving' ? 'Approving'
-    : settings.logged_in ? 'Verified'
-    : 'Signed out'
+    authState === 'required' ? t('tray.sessionExpired')
+    : authState === 'approving' ? t('tray.sessionApproving')
+    : settings.logged_in ? t('tray.sessionVerified')
+    : t('tray.sessionSignedOut')
 
   const title = tunnel?.name ?? (settings.vpn_name || 'ProIdentity Access')
   const subtitle =
-    tunnel?.is_managed ? (settings.vpn_name || 'Managed VPN')
-    : tunnel ? 'Imported tunnel'
-    : 'No active tunnel'
+    tunnel?.is_managed ? (settings.vpn_name || t('tray.managedVpn'))
+    : tunnel ? t('tray.importedTunnel')
+    : t('tray.noActiveTunnel')
 
   return (
     <div className="h-full w-full overflow-hidden bg-background text-foreground">
@@ -92,7 +94,7 @@ export function TrayMiniDashboard({
                 type="button"
                 onClick={onClose}
                 className="no-drag grid h-7 w-7 place-items-center rounded-md text-muted-foreground transition hover:bg-secondary hover:text-foreground"
-                aria-label="Close tray dashboard"
+                aria-label={t('tray.closeDashboard')}
               >
                 <X className="h-4 w-4" />
               </button>
@@ -104,11 +106,11 @@ export function TrayMiniDashboard({
                 <div className="min-w-0">
                   <h1 className="truncate text-base font-semibold">{title}</h1>
                   <p className="text-[11px] text-muted-foreground">
-                  {connected ? `${formatBytes(totalBytes)} total` : approving ? 'Waiting for 2FA approval' : connecting ? 'Waiting for tunnel approval' : 'Ready when you are'}
+                  {connected ? t('common.bytesTotal', { bytes: formatBytes(totalBytes) }) : approving ? t('tray.waiting2faApproval') : connecting ? t('tray.waitingTunnelApproval') : t('tray.ready')}
                   </p>
                 </div>
                 <p className="shrink-0 text-[11px] text-muted-foreground">
-                  {connected ? formatHandshake(stats?.last_handshake) : approving ? '2FA' : connecting ? 'pending' : 'idle'}
+                  {connected ? formatHandshake(stats?.last_handshake) : approving ? t('tray.twoFa') : connecting ? t('tray.pending') : t('tray.idle')}
                 </p>
               </div>
 
@@ -125,23 +127,23 @@ export function TrayMiniDashboard({
               <div className="grid grid-cols-2 gap-2">
                 <Metric
                   icon={<ArrowDown className="h-3.5 w-3.5" />}
-                  label="Down"
+                  label={t('tray.down')}
                   value={formatBytes(stats?.rx_bytes ?? 0)}
-                  caption="total"
+                  caption={t('common.total')}
                   tone="success"
                 />
                 <Metric
                   icon={<ArrowUp className="h-3.5 w-3.5" />}
-                  label="Up"
+                  label={t('tray.up')}
                   value={formatBytes(stats?.tx_bytes ?? 0)}
-                  caption="total"
+                  caption={t('common.total')}
                   tone="primary"
                 />
               </div>
 
               <div className="mt-2 grid grid-cols-2 gap-2">
-                <InfoTile label="2FA" value={twoFaLabel.replace('2FA ', '')} />
-                <InfoTile label="Session" value={sessionLabel} />
+                <InfoTile label={t('tray.twoFa')} value={twoFaValue} />
+                <InfoTile label={t('tray.session')} value={sessionLabel} />
               </div>
 
             {errored && tunnel?.error && (
@@ -165,7 +167,7 @@ export function TrayMiniDashboard({
                 )}
               >
                 <Power className="h-4 w-4" />
-                {connected ? 'Disconnect' : approving ? 'Waiting for 2FA' : connecting ? 'Connecting' : 'Connect'}
+                {connected ? t('common.disconnect') : approving ? t('tray.waiting2fa') : connecting ? t('tray.connecting') : t('common.connect')}
               </button>
               <button
                 type="button"
@@ -173,7 +175,7 @@ export function TrayMiniDashboard({
                 className="no-drag inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-border bg-secondary text-sm font-semibold transition hover:bg-secondary/80"
               >
                 <ExternalLink className="h-4 w-4" />
-                Full App
+                {t('tray.fullApp')}
               </button>
             </div>
           </div>

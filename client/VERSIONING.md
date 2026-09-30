@@ -1,6 +1,6 @@
 # Versioning
 
-Current version: **0.7.12**
+Current version: **0.7.13**
 
 Version is defined in `wails.json` → `info.productVersion`.  
 The build script (`build.ps1` / `build.bat`) reads it from there automatically.
@@ -18,7 +18,7 @@ The build script (`build.ps1` / `build.bat`) reads it from there automatically.
 Edit **one** line in `wails.json`:
 
 ```json
-"productVersion": "0.7.12"
+"productVersion": "0.7.13"
 ```
 
 Then build and commit:
@@ -26,13 +26,14 @@ Then build and commit:
 ```
 build.bat
 git add wails.json
-git commit -m "Bump version to 0.7.12"
+git commit -m "Bump version to 0.7.13"
 ```
 
 ## Changelog
 
 | Version | Type    | Description                                                  |
 |---------|---------|--------------------------------------------------------------|
+| 0.7.13  | patch   | Slovak translation (system UI language decides: Slovak -> sk, otherwise English); server admin UI: navigation, stored WireGuard profiles page, user panel, own sessions, paged and searchable connection history |
 | 0.7.12  | patch   | Release with all platforms on 0.7.12 (desktop, server, Android, iOS); no functional desktop changes since 0.7.11 |
 | 0.7.11  | patch   | One-time session configs: the server adds a per-session PresharedKey (memory only) and ends sessions of disabled/deleted users and removed server access; the service removes session tunnels whose session is over (app killed), the app removes leftovers at start and ends sessions before quitting |
 | 0.7.10  | patch   | Server address can be entered without https:// (e.g. vpn.example.com); it is added automatically in setup and Settings |

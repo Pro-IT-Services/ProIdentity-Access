@@ -1,12 +1,12 @@
 {
   "platform": "darwin-arm64",
-  "version": "0.7.12",
-  "filename": "ProIdentity-Access-0.7.12.pkg",
-  "url": "/api/v1/client-updates/darwin-arm64/ProIdentity-Access-0.7.12.pkg",
-  "sha256": "1df46319de4955a325f835296aceb2dbf68e24f5019134562372c67063c6c5d8",
-  "size": 9888645,
-  "published_at": "2026-09-30T21:38:17Z",
+  "version": "0.7.13",
+  "filename": "ProIdentity-Access-0.7.13.pkg",
+  "url": "/api/v1/client-updates/darwin-arm64/ProIdentity-Access-0.7.13.pkg",
+  "sha256": "6cd19757cccd66658f2d3d3a7eb669b7b606b8a05b73152c3c4a0f7271d51ffe",
+  "size": 9894751,
+  "published_at": "2026-09-30T22:39:14Z",
   "mandatory": false,
-  "signature": "97NvEmBQvyvhjM7lAG2pFb73sbzSpI12S9wB4sqvABwyxIYGkT7Z+qcwuVHEhdnLFLQ7kx8yzraLNT0YBrMwBQ==",
-  "latest_version": "0.7.12"
+  "signature": "Pou3Oa3rlPfTtkxsGnmhPwqkm8YEvk3iKryO8FNT2jNJGY4jSg37PKCohaIWoucDUDG6PSYWzuRjXVlfbNdQDg==",
+  "latest_version": "0.7.13"
 }

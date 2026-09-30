@@ -150,6 +150,10 @@ export function SnoozeUpdate(arg1) {
   return window['go']['main']['App']['SnoozeUpdate'](arg1);
 }
 
+export function SystemLanguage() {
+  return window['go']['main']['App']['SystemLanguage']();
+}
+
 export function UninstallApp(arg1) {
   return window['go']['main']['App']['UninstallApp'](arg1);
 }

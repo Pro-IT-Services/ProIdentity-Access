@@ -25,8 +25,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.proitservices.proidentity.access.R
 import com.proitservices.proidentity.access.model.TunnelInfo
 import com.proitservices.proidentity.access.model.TunnelStatus
 import com.proitservices.proidentity.access.ui.design.InfoCard
@@ -69,12 +71,12 @@ fun ConnectionDetailScreen(
                 title = { Text(connection.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 navigationIcon = {
                     if (!embedded) IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.common_back))
                     }
                 },
                 actions = {
                     if (connection.canDelete) IconButton(onClick = { onDelete(connection) }) {
-                        Icon(Icons.Outlined.DeleteOutline, contentDescription = "Delete ${connection.name}")
+                        Icon(Icons.Outlined.DeleteOutline, contentDescription = stringResource(R.string.detail_delete, connection.name))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
@@ -94,38 +96,38 @@ fun ConnectionDetailScreen(
             Spacer(Modifier.height(16.dp))
 
             connection.error?.takeIf { connection.status == TunnelStatus.ERROR }?.let {
-                NoticeCard(title = "Couldn't connect", body = it, container = Brand.status.warningContainer)
+                NoticeCard(title = stringResource(R.string.status_error), body = it, container = Brand.status.warningContainer)
                 Spacer(Modifier.height(16.dp))
             }
 
-            SectionLabel("Connection")
+            SectionLabel(stringResource(R.string.detail_connection))
             InfoCard {
-                InfoRow("Type", when (connection.kind) {
-                    ConnectionKind.Managed -> "Managed server"
-                    ConnectionKind.Imported -> "Imported on this device"
-                    ConnectionKind.Cloud -> "Synced to your account"
+                InfoRow(stringResource(R.string.detail_type), when (connection.kind) {
+                    ConnectionKind.Managed -> stringResource(R.string.detail_type_managed)
+                    ConnectionKind.Imported -> stringResource(R.string.detail_type_imported)
+                    ConnectionKind.Cloud -> stringResource(R.string.detail_type_synced)
                 })
-                if (connection.kind == ConnectionKind.Managed) InfoRow("Network", connection.detail, mono = true)
+                if (connection.kind == ConnectionKind.Managed) InfoRow(stringResource(R.string.detail_network), connection.detail, mono = true)
                 tunnel?.let { t ->
-                    if (t.addresses.isNotEmpty()) InfoRow("Address", t.addresses.joinToString("\n"), mono = true)
-                    if (t.dns.isNotEmpty()) InfoRow("DNS", t.dns.joinToString("\n"), mono = true)
+                    if (t.addresses.isNotEmpty()) InfoRow(stringResource(R.string.detail_address), t.addresses.joinToString("\n"), mono = true)
+                    if (t.dns.isNotEmpty()) InfoRow(stringResource(R.string.detail_dns), t.dns.joinToString("\n"), mono = true)
                     t.peers.mapNotNull { it.endpoint }.distinct().takeIf { it.isNotEmpty() }?.let {
-                        InfoRow("Endpoint", it.joinToString("\n"), mono = true)
+                        InfoRow(stringResource(R.string.detail_endpoint), it.joinToString("\n"), mono = true)
                     }
                     t.peers.flatMap { it.allowedIps }.distinct().takeIf { it.isNotEmpty() }?.let {
-                        InfoRow("Routes", it.joinToString("\n"), mono = true)
+                        InfoRow(stringResource(R.string.detail_routes), it.joinToString("\n"), mono = true)
                     }
-                    t.mtu?.let { InfoRow("MTU", it.toString(), mono = true) }
+                    t.mtu?.let { InfoRow(stringResource(R.string.detail_mtu), it.toString(), mono = true) }
                 }
             }
 
             if (connection.status == TunnelStatus.CONNECTED) {
                 Spacer(Modifier.height(16.dp))
-                SectionLabel("Traffic")
+                SectionLabel(stringResource(R.string.detail_traffic))
                 InfoCard {
-                    InfoRow("Received", formatBytes(live.stats?.rxBytes ?: 0), mono = true)
-                    InfoRow("Sent", formatBytes(live.stats?.txBytes ?: 0), mono = true)
-                    InfoRow("Last handshake", formatAgo(live.stats?.lastHandshakeMillis ?: 0))
+                    InfoRow(stringResource(R.string.common_received), formatBytes(live.stats?.rxBytes ?: 0), mono = true)
+                    InfoRow(stringResource(R.string.common_sent), formatBytes(live.stats?.txBytes ?: 0), mono = true)
+                    InfoRow(stringResource(R.string.detail_last_handshake), formatAgo(live.stats?.lastHandshakeMillis ?: 0))
                 }
             }
             Spacer(Modifier.height(24.dp))
@@ -145,8 +147,8 @@ private fun StatusHeader(connection: Connection, live: Live) {
         Column {
             Text(statusText(connection.status), style = MaterialTheme.typography.titleLarge, color = statusColor(connection.status))
             Text(
-                if (since != null && connection.status == TunnelStatus.CONNECTED) "for ${formatDuration(now - since)}"
-                else connection.kind.label,
+                if (since != null && connection.status == TunnelStatus.CONNECTED) stringResource(R.string.detail_connected_for, formatDuration(now - since))
+                else stringResource(connection.kind.label),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

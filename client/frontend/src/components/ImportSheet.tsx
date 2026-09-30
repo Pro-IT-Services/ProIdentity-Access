@@ -4,6 +4,7 @@ import { useTunnelStore } from '../stores/useTunnelStore'
 import { Sheet } from './ui/Sheet'
 import { Button } from './ui/Button'
 import { Input } from './ui/Input'
+import { t, tNode } from '../i18n'
 
 export function ImportSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { import: importTunnel } = useTunnelStore()
@@ -23,7 +24,7 @@ export function ImportSheet({ open, onClose }: { open: boolean; onClose: () => v
   }
 
   const submit = async () => {
-    if (!content.trim()) { setError('Please provide a WireGuard config'); return }
+    if (!content.trim()) { setError(t('import.errNoConfig')); return }
     setLoading(true); setError('')
     try {
       await importTunnel(name.trim(), content.trim())
@@ -38,14 +39,14 @@ export function ImportSheet({ open, onClose }: { open: boolean; onClose: () => v
     <Sheet
       open={open}
       onClose={() => { if (!loading) { reset(); onClose() } }}
-      title="Import WireGuard config"
-      description="Drop a .conf file or paste its contents."
+      title={t('import.title')}
+      description={t('import.desc')}
       footer={
         <>
-          <Button variant="ghost" onClick={() => { reset(); onClose() }} disabled={loading}>Cancel</Button>
+          <Button variant="ghost" onClick={() => { reset(); onClose() }} disabled={loading}>{t('common.cancel')}</Button>
           <Button onClick={submit} disabled={loading || !content.trim()}>
             {loading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-            {loading ? 'Importing…' : 'Import'}
+            {loading ? t('common.importing') : t('common.import')}
           </Button>
         </>
       }
@@ -53,13 +54,13 @@ export function ImportSheet({ open, onClose }: { open: boolean; onClose: () => v
       <div className="space-y-4">
         <div className="space-y-1.5">
           <label className="block text-xs text-muted-foreground">
-            Tunnel name <span className="text-muted-foreground/70">(optional — defaults to filename)</span>
+            {t('import.tunnelName')} <span className="text-muted-foreground/70">{t('import.tunnelNameHint')}</span>
           </label>
-          <Input value={name} onChange={e => setName(e.target.value)} placeholder="My VPN" disabled={loading} />
+          <Input value={name} onChange={e => setName(e.target.value)} placeholder={t('import.namePlaceholder')} disabled={loading} />
         </div>
 
         <div className="space-y-1.5">
-          <label className="block text-xs text-muted-foreground">Config</label>
+          <label className="block text-xs text-muted-foreground">{t('import.config')}</label>
           <div
             onDragOver={e => { e.preventDefault(); setDragging(true) }}
             onDragLeave={() => setDragging(false)}
@@ -83,6 +84,8 @@ export function ImportSheet({ open, onClose }: { open: boolean; onClose: () => v
                 {!loading && (
                   <button
                     onClick={e => { e.stopPropagation(); setContent('') }}
+                    aria-label={t('import.clear')}
+                    title={t('import.clear')}
                     className="absolute top-2 right-2 p-1 rounded text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors cursor-pointer"
                   >
                     <X className="w-3.5 h-3.5" />
@@ -95,8 +98,8 @@ export function ImportSheet({ open, onClose }: { open: boolean; onClose: () => v
                   <Upload className="w-5 h-5 text-muted-foreground" />
                 </div>
                 <div className="text-center">
-                  <p className="text-sm text-foreground">Drop a <span className="font-mono">.conf</span> file here</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">or click to browse</p>
+                  <p className="text-sm text-foreground">{tNode('import.drop', { file: <span key="f" className="font-mono">.conf</span> })}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{t('import.browse')}</p>
                 </div>
               </div>
             )}
@@ -107,11 +110,11 @@ export function ImportSheet({ open, onClose }: { open: boolean; onClose: () => v
           <button
             onClick={() => navigator.clipboard.readText().then(text => {
               if (text.includes('[Interface]')) setContent(text)
-              else setError('Clipboard doesn\'t contain a WireGuard config')
-            }).catch(() => setError('Cannot read clipboard'))}
+              else setError(t('import.clipboardNoConfig'))
+            }).catch(() => setError(t('import.clipboardError')))}
             className="inline-flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
           >
-            <FileText className="w-3.5 h-3.5" /> Paste from clipboard
+            <FileText className="w-3.5 h-3.5" /> {t('import.paste')}
           </button>
         )}
 

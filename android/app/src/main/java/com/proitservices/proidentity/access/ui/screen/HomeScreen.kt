@@ -40,6 +40,7 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -48,6 +49,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.proitservices.proidentity.access.R
 import com.proitservices.proidentity.access.model.ManagedSettings
 import com.proitservices.proidentity.access.model.TunnelStatus
 import com.proitservices.proidentity.access.ui.design.BrandTitle
@@ -96,8 +98,8 @@ fun HomeScreen(
             TopAppBar(
                 title = { BrandTitle() },
                 actions = {
-                    IconButton(onClick = onImport) { Icon(Icons.Outlined.Add, contentDescription = "Import configuration") }
-                    IconButton(onClick = onSettings) { Icon(Icons.Outlined.Settings, contentDescription = "Settings") }
+                    IconButton(onClick = onImport) { Icon(Icons.Outlined.Add, contentDescription = stringResource(R.string.common_import_configuration)) }
+                    IconButton(onClick = onSettings) { Icon(Icons.Outlined.Settings, contentDescription = stringResource(R.string.common_settings)) }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
             )
@@ -119,9 +121,9 @@ fun HomeScreen(
                 if (managed && !settings.loggedIn) {
                     item(key = "signedOut") {
                         NoticeCard(
-                            title = "You're signed out",
-                            body = "Sign in to load your organization's connections.",
-                            actionLabel = "Sign in",
+                            title = stringResource(R.string.home_signed_out_title),
+                            body = stringResource(R.string.home_signed_out_body),
+                            actionLabel = stringResource(R.string.common_sign_in),
                             onAction = onSignIn,
                         )
                     }
@@ -132,26 +134,26 @@ fun HomeScreen(
                         when {
                             managed && settings.loggedIn -> EmptyState(
                                 icon = Icons.Outlined.Dns,
-                                title = "No connections assigned",
-                                body = "Your administrator hasn't given you access to a server yet. Pull down to refresh.",
-                                actionLabel = "Import configuration", onAction = onImport,
+                                title = stringResource(R.string.home_empty_assigned_title),
+                                body = stringResource(R.string.home_empty_assigned_body),
+                                actionLabel = stringResource(R.string.common_import_configuration), onAction = onImport,
                             )
                             managed -> EmptyState(
                                 icon = Icons.Outlined.Dns,
-                                title = "Nothing here yet",
-                                body = "Sign in to see the servers your organization gives you, or import a configuration.",
-                                actionLabel = "Import configuration", onAction = onImport,
+                                title = stringResource(R.string.home_empty_managed_title),
+                                body = stringResource(R.string.home_empty_managed_body),
+                                actionLabel = stringResource(R.string.common_import_configuration), onAction = onImport,
                             )
                             else -> EmptyState(
                                 icon = Icons.Outlined.Description,
-                                title = "No configurations yet",
-                                body = "Import a WireGuard configuration file to get started.",
-                                actionLabel = "Import configuration", onAction = onImport,
+                                title = stringResource(R.string.home_empty_standalone_title),
+                                body = stringResource(R.string.home_empty_standalone_body),
+                                actionLabel = stringResource(R.string.common_import_configuration), onAction = onImport,
                             )
                         }
                     }
                 } else {
-                    item(key = "label") { SectionLabel("Connections", Modifier.padding(top = 6.dp)) }
+                    item(key = "label") { SectionLabel(stringResource(R.string.home_connections), Modifier.padding(top = 6.dp)) }
                     items(connections, key = { it.key }) { c ->
                         ConnectionRow(
                             connection = c,
@@ -190,15 +192,15 @@ private fun ConnectionHaptics(status: TunnelStatus?) {
 fun ConnectionHero(active: Connection?, primary: Connection?, live: Live) {
     val status = active?.status ?: if (primary?.status == TunnelStatus.ERROR) TunnelStatus.ERROR else TunnelStatus.DISCONNECTED
     val headline = when (status) {
-        TunnelStatus.CONNECTED -> "Connected"
-        TunnelStatus.CONNECTING -> "Connecting…"
-        TunnelStatus.ERROR -> "Couldn't connect"
-        TunnelStatus.DISCONNECTED -> "Not connected"
+        TunnelStatus.CONNECTED -> stringResource(R.string.status_connected)
+        TunnelStatus.CONNECTING -> stringResource(R.string.status_connecting)
+        TunnelStatus.ERROR -> stringResource(R.string.status_error)
+        TunnelStatus.DISCONNECTED -> stringResource(R.string.status_not_connected)
     }
     val subtitle = when {
         active != null -> active.name
-        primary != null -> "Ready to connect to ${primary.name}"
-        else -> "Add a connection to get started"
+        primary != null -> stringResource(R.string.home_ready_to_connect, primary.name)
+        else -> stringResource(R.string.home_add_connection)
     }
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainerLow,
@@ -244,8 +246,8 @@ private fun LiveStats(active: Connection?, live: Live) {
             Spacer(Modifier.height(10.dp))
         }
         Row(horizontalArrangement = Arrangement.spacedBy(20.dp), verticalAlignment = Alignment.CenterVertically) {
-            Traffic(Icons.Outlined.ArrowDownward, "Received", live.stats?.rxBytes ?: 0)
-            Traffic(Icons.Outlined.ArrowUpward, "Sent", live.stats?.txBytes ?: 0)
+            Traffic(Icons.Outlined.ArrowDownward, stringResource(R.string.common_received), live.stats?.rxBytes ?: 0)
+            Traffic(Icons.Outlined.ArrowUpward, stringResource(R.string.common_sent), live.stats?.txBytes ?: 0)
         }
         active?.detail?.takeIf { it.isNotEmpty() }?.let {
             Spacer(Modifier.height(10.dp))

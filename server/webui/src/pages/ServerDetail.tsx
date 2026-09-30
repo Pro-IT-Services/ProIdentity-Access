@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { api, type WGServer, type AdminSession, type ResourceGroup, type User, type Installation, type UserConfig, type WGServerEndpointInput } from '../api/client'
+import { api, type WGServer, type AdminSession, type ResourceGroup, type User, type Installation, type WGServerEndpointInput } from '../api/client'
 import {
-  ArrowLeft, Globe, Activity, KeyRound, Settings as SettingsIcon, Trash2, FileKey, Monitor, Save,
+  ArrowLeft, Globe, Activity, KeyRound, Settings as SettingsIcon, Trash2, Monitor, Save,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -15,13 +15,12 @@ import { ConfirmDelete } from '@/components/ConfirmDelete'
 import { DangerZone, DangerAction } from '@/components/DangerZone'
 import { cn } from '@/lib/utils'
 
-type Tab = 'live' | 'access' | 'config' | 'configs' | 'devices'
+type Tab = 'live' | 'access' | 'config' | 'devices'
 
 const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
   { id: 'live',    label: 'Live',          icon: Activity },
   { id: 'access',  label: 'Access',        icon: KeyRound },
   { id: 'config',  label: 'Configuration', icon: SettingsIcon },
-  { id: 'configs', label: 'Stored Configs', icon: FileKey },
   { id: 'devices', label: 'Devices',       icon: Monitor },
 ]
 
@@ -114,7 +113,6 @@ export default function ServerDetail() {
       {tab === 'live'    && <LiveTab serverId={srv.id} />}
       {tab === 'access'  && <AccessTab serverId={srv.id} />}
       {tab === 'config'  && <ConfigTab server={srv} onSaved={load} onDeleted={() => navigate('/servers')} />}
-      {tab === 'configs' && <StoredConfigsTab serverId={srv.id} />}
       {tab === 'devices' && <DevicesTab serverId={srv.id} />}
     </div>
   )
@@ -320,32 +318,6 @@ function endpointForms(server: WGServer): WGServerEndpointInput[] {
     .map(ep => ({ name: ep.name, host: ep.host, port: ep.port, priority: ep.priority, enabled: ep.enabled }))
   if (rows.length > 0) return rows
   return [{ name: 'Primary', host: server.endpoint, port: server.port || 51820, priority: 0, enabled: true }]
-}
-
-function StoredConfigsTab({ serverId }: { serverId: string }) {
-  const [configs, setConfigs] = useState<UserConfig[]>([])
-  useEffect(() => { api.adminListUserConfigs().then(d => setConfigs(d ?? [])) }, [serverId])
-
-  // Server-side store has no per-server filtering today; show all and let admin filter visually.
-  if (configs.length === 0) {
-    return <Empty icon={FileKey} title="No stored configs" hint="When users save a WireGuard config to the server (encrypted), it shows up here." />
-  }
-  return (
-    <div className="rounded-xl border border-border bg-card divide-y divide-border">
-      {configs.map(c => (
-        <div key={c.id} className="grid grid-cols-[1fr_auto_auto_auto] gap-4 items-center px-4 py-3">
-          <div className="min-w-0">
-            <p className="text-sm font-medium truncate">{c.name}</p>
-            <p className="text-[11px] text-muted-foreground truncate">{c.username} · {c.email}</p>
-          </div>
-          <span className="text-xs text-muted-foreground">{relTime(c.created_at)}</span>
-          <Button size="sm" variant="ghost" onClick={async () => { if (confirm('Delete this stored config?')) { await api.adminDeleteUserConfig(c.id); api.adminListUserConfigs().then(d => setConfigs(d ?? [])) } }} className="text-destructive hover:text-destructive hover:bg-destructive/10">
-            Delete
-          </Button>
-        </div>
-      ))}
-    </div>
-  )
 }
 
 function DevicesTab({ serverId }: { serverId: string }) {

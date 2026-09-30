@@ -25,7 +25,7 @@ struct SettingsView: View {
             Form {
                 if app.isManaged {
                     Section("Account") {
-                        InfoRow(label: "Signed in as", value: app.connections.isSignedIn ? settings.username : "Signed out")
+                        InfoRow(label: "Signed in as", value: app.connections.isSignedIn ? settings.username : String(localized: "Signed out"))
                         InfoRow(label: "Server", value: serverHost)
                         if !settings.vpnName.isEmpty {
                             InfoRow(label: "Organization", value: settings.vpnName)
@@ -49,8 +49,8 @@ struct SettingsView: View {
                 }
 
                 Section("This device") {
-                    InfoRow(label: "Mode", value: app.isManaged ? "Organization" : "Configuration files")
-                    InfoRow(label: "Configurations", value: "\(app.connections.imported.count) imported")
+                    InfoRow(label: "Mode", value: app.isManaged ? String(localized: "Organization") : String(localized: "Configuration files"))
+                    InfoRow(label: "Configurations", value: String(localized: "\(app.connections.imported.count) imported"))
                 }
                 .listRowBackground(Brand.surface)
 

@@ -34,10 +34,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import com.proitservices.proidentity.access.R
 import com.proitservices.proidentity.access.model.ManagedSettings
 import com.proitservices.proidentity.access.ui.design.InfoCard
 import com.proitservices.proidentity.access.ui.design.InfoRow
@@ -69,9 +71,9 @@ fun SettingsScreen(
         modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
         topBar = {
             LargeTopAppBar(
-                title = { Text("Settings") },
+                title = { Text(stringResource(R.string.common_settings)) },
                 navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back") }
+                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.common_back)) }
                 },
                 scrollBehavior = scroll,
                 colors = TopAppBarDefaults.largeTopAppBarColors(containerColor = MaterialTheme.colorScheme.background),
@@ -88,11 +90,11 @@ fun SettingsScreen(
                 .padding(horizontal = 16.dp, vertical = 8.dp),
         ) {
             if (managed) {
-                SectionLabel("Account")
+                SectionLabel(stringResource(R.string.settings_account))
                 InfoCard {
-                    if (settings.vpnName.isNotBlank()) InfoRow("Organization", settings.vpnName)
-                    InfoRow("Server", hostOf(settings.serverUrl), mono = true)
-                    InfoRow("Signed in as", if (settings.loggedIn) settings.username else "Not signed in")
+                    if (settings.vpnName.isNotBlank()) InfoRow(stringResource(R.string.settings_organization), settings.vpnName)
+                    InfoRow(stringResource(R.string.settings_server), hostOf(settings.serverUrl), mono = true)
+                    InfoRow(stringResource(R.string.settings_signed_in_as), if (settings.loggedIn) settings.username else stringResource(R.string.settings_not_signed_in))
                 }
                 Spacer(Modifier.height(12.dp))
                 if (settings.loggedIn) {
@@ -100,56 +102,56 @@ fun SettingsScreen(
                         onClick = { confirmSignOut = true },
                         shape = MaterialTheme.shapes.large,
                         modifier = Modifier.fillMaxWidth().height(52.dp),
-                    ) { Text("Sign out") }
+                    ) { Text(stringResource(R.string.common_sign_out)) }
                 } else {
                     Button(
                         onClick = onSignIn,
                         shape = MaterialTheme.shapes.large,
                         modifier = Modifier.fillMaxWidth().height(52.dp),
-                    ) { Text("Sign in") }
+                    ) { Text(stringResource(R.string.common_sign_in)) }
                 }
                 Spacer(Modifier.height(20.dp))
             }
 
-            SectionLabel("This device")
+            SectionLabel(stringResource(R.string.settings_this_device))
             InfoCard {
-                InfoRow("Name", deviceName)
-                InfoRow("Mode", if (managed) "Managed by organization" else "Own configurations")
-                if (managed) InfoRow("Registration", if (settings.serverUrl.isNotBlank()) "Registered" else "Not registered")
+                InfoRow(stringResource(R.string.common_name), deviceName)
+                InfoRow(stringResource(R.string.settings_mode), if (managed) stringResource(R.string.settings_mode_managed) else stringResource(R.string.settings_mode_standalone))
+                if (managed) InfoRow(stringResource(R.string.settings_registration), if (settings.serverUrl.isNotBlank()) stringResource(R.string.settings_registered) else stringResource(R.string.settings_not_registered))
             }
 
             Spacer(Modifier.height(20.dp))
-            SectionLabel("About")
+            SectionLabel(stringResource(R.string.settings_about))
             InfoCard {
-                InfoRow("Version", version, mono = true)
+                InfoRow(stringResource(R.string.settings_version), version, mono = true)
                 ListItem(
-                    headlineContent = { Text("ProIdentity Access website") },
+                    headlineContent = { Text(stringResource(R.string.settings_website)) },
                     trailingContent = { Icon(Icons.AutoMirrored.Outlined.OpenInNew, contentDescription = null) },
                     colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
                     modifier = Modifier.clickable(role = Role.Button) { uri.openUri(WEBSITE) },
                 )
                 ListItem(
-                    headlineContent = { Text("Privacy policy") },
+                    headlineContent = { Text(stringResource(R.string.settings_privacy_policy)) },
                     trailingContent = { Icon(Icons.AutoMirrored.Outlined.OpenInNew, contentDescription = null) },
                     colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
                     modifier = Modifier.clickable(role = Role.Button) { uri.openUri(PRIVACY_POLICY) },
                 )
                 ListItem(
-                    headlineContent = { Text("Open-source licenses") },
+                    headlineContent = { Text(stringResource(R.string.common_open_source_licenses)) },
                     colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
                     modifier = Modifier.clickable(role = Role.Button, onClick = onLicenses),
                 )
             }
 
             Spacer(Modifier.height(28.dp))
-            SectionLabel("Reset")
+            SectionLabel(stringResource(R.string.settings_reset_section))
             TextButton(
                 onClick = { confirmReset = true },
                 colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
                 modifier = Modifier.fillMaxWidth().height(52.dp),
-            ) { Text("Reset app") }
+            ) { Text(stringResource(R.string.settings_reset_app)) }
             Text(
-                "Removes every connection and this device's registration from this phone.",
+                stringResource(R.string.settings_reset_hint),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 16.dp),
@@ -161,24 +163,24 @@ fun SettingsScreen(
     if (confirmSignOut) {
         AlertDialog(
             onDismissRequest = { confirmSignOut = false },
-            title = { Text("Sign out?") },
-            text = { Text("You'll be disconnected from managed servers. This device stays registered, so signing back in only needs your password.") },
-            confirmButton = { TextButton(onClick = { confirmSignOut = false; onSignOut() }) { Text("Sign out") } },
-            dismissButton = { TextButton(onClick = { confirmSignOut = false }) { Text("Cancel") } },
+            title = { Text(stringResource(R.string.settings_sign_out_title)) },
+            text = { Text(stringResource(R.string.settings_sign_out_body)) },
+            confirmButton = { TextButton(onClick = { confirmSignOut = false; onSignOut() }) { Text(stringResource(R.string.common_sign_out)) } },
+            dismissButton = { TextButton(onClick = { confirmSignOut = false }) { Text(stringResource(R.string.common_cancel)) } },
         )
     }
     if (confirmReset) {
         AlertDialog(
             onDismissRequest = { confirmReset = false },
-            title = { Text("Reset ProIdentity Access?") },
-            text = { Text("This disconnects everything and removes all configurations and the device registration from this phone. You'll need to set it up again.") },
+            title = { Text(stringResource(R.string.settings_reset_title)) },
+            text = { Text(stringResource(R.string.settings_reset_body)) },
             confirmButton = {
                 TextButton(
                     onClick = { confirmReset = false; onReset() },
                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                ) { Text("Reset") }
+                ) { Text(stringResource(R.string.settings_reset_confirm)) }
             },
-            dismissButton = { TextButton(onClick = { confirmReset = false }) { Text("Cancel") } },
+            dismissButton = { TextButton(onClick = { confirmReset = false }) { Text(stringResource(R.string.common_cancel)) } },
         )
     }
 }

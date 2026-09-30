@@ -112,7 +112,7 @@ class ManagedClient {
            !text.isEmpty, text.count < 200, !text.hasPrefix("<"), !text.hasPrefix("{\"ct\"") {
             return text
         }
-        return "The server returned an error (HTTP \(status))."
+        return String(localized: "The server returned an error (HTTP \(status)).")
     }
 
     func login(username: String, password: String, totpCode: String, pushAuthID: String = "", aesKey: SymmetricKey) async throws -> [String: Any] {
@@ -213,7 +213,7 @@ class ManagedClient {
         }
         let localhost = host == "localhost" || host == "127.0.0.1" || host == "::1"
         guard scheme == "https" || (scheme == "http" && localhost) else {
-            throw APIError.serverError("Server URL must use HTTPS")
+            throw APIError.serverError(String(localized: "Server URL must use HTTPS"))
         }
         guard comps.query == nil && comps.fragment == nil else {
             throw APIError.invalidURL
@@ -225,10 +225,10 @@ enum APIError: LocalizedError {
     case invalidURL, invalidResponse, deviceRevoked, authInvalid, serverError(String)
     var errorDescription: String? {
         switch self {
-        case .invalidURL: return "Invalid URL"
-        case .invalidResponse: return "Invalid response"
-        case .deviceRevoked: return "Device revoked"
-        case .authInvalid: return "Login expired or revoked"
+        case .invalidURL: return String(localized: "Invalid URL")
+        case .invalidResponse: return String(localized: "Invalid response")
+        case .deviceRevoked: return String(localized: "Device revoked")
+        case .authInvalid: return String(localized: "Login expired or revoked")
         case .serverError(let m): return m
         }
     }

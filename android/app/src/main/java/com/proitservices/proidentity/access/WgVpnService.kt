@@ -213,7 +213,7 @@ class WgVpnService : VpnService() {
     private fun buildNotification(active: List<TunnelEntry>): Notification {
         val first = active.first()
         val title = if (active.size == 1) getString(R.string.vpn_notification_connected, first.name)
-        else getString(R.string.vpn_notification_connected_many, active.size)
+        else resources.getQuantityString(R.plurals.vpn_notification_connected_many, active.size, active.size)
         val detail = if (active.size == 1) addressOf(first.config) else active.joinToString(", ") { it.name }
         val since = active.mapNotNull { connectedAt[it.id] }.minOrNull() ?: System.currentTimeMillis()
 

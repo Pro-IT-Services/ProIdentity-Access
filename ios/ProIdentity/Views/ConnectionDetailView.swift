@@ -61,7 +61,9 @@ struct ConnectionDetailView: View {
             }
 
             Section {
-                InfoRow(label: "Type", value: c.kind == .managed ? "Managed by your organization" : "Imported configuration")
+                InfoRow(label: "Type", value: c.kind == .managed
+                        ? String(localized: "Managed by your organization")
+                        : String(localized: "Imported configuration"))
                 if let server, !server.location.isEmpty {
                     InfoRow(label: "Location", value: server.location)
                 }
@@ -136,7 +138,8 @@ struct ConnectionDetailView: View {
             Button("Cancel") { Task { await model.disconnect(c) } }
                 .buttonStyle(FilledButtonStyle(color: Brand.muted))
         default:
-            Button(c.status == .error ? "Try again" : "Connect") { Task { await model.connect(c) } }
+            let title: LocalizedStringKey = c.status == .error ? "Try again" : "Connect"
+            Button(title) { Task { await model.connect(c) } }
                 .buttonStyle(FilledButtonStyle())
         }
     }

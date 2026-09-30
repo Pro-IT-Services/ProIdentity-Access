@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { api, type User, type VPNEvent, type WGServer } from '../api/client'
-import { History, LogIn, LogOut, RefreshCw, Search, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, History, LogIn, LogOut, RefreshCw, Search, X } from 'lucide-react'
 import { PageHeader } from '@/components/PageHeader'
 import { Empty } from '@/components/Empty'
 import { Button } from '@/components/ui/button'
@@ -13,6 +13,7 @@ type EventFilter = 'all' | 'connected' | 'disconnected'
 type SinceFilter = '24h' | '7d' | '30d' | 'all'
 
 type Filters = {
+  q: string
   user_id: string
   server_id: string
   event: EventFilter
@@ -22,6 +23,7 @@ type Filters = {
 }
 
 const defaultFilters: Filters = {
+  q: '',
   user_id: '',
   server_id: '',
   event: 'all',
@@ -30,13 +32,15 @@ const defaultFilters: Filters = {
   since: '7d',
 }
 
-const pageSize = 100
+const PAGE_SIZES = [25, 50, 100] as const
 
 export default function ConnectionHistory() {
   const [events, setEvents] = useState<VPNEvent[]>([])
   const [users, setUsers] = useState<User[]>([])
   const [servers, setServers] = useState<WGServer[]>([])
   const [filters, setFilters] = useState<Filters>(defaultFilters)
+  const [search, setSearch] = useState('')
+  const [pageSize, setPageSize] = useState<number>(50)
   const [offset, setOffset] = useState(0)
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -47,6 +51,7 @@ export default function ConnectionHistory() {
     return {
       limit: pageSize,
       offset,
+      q: filters.q.trim(),
       user_id: filters.user_id,
       server_id: filters.server_id,
       event: filters.event === 'all' ? undefined : filters.event,
@@ -54,7 +59,7 @@ export default function ConnectionHistory() {
       device: filters.device.trim(),
       since: since ? since.toISOString() : undefined,
     }
-  }, [filters, offset])
+  }, [filters, offset, pageSize])
 
   const load = async () => {
     setLoading(true)
@@ -79,6 +84,15 @@ export default function ConnectionHistory() {
 
   useEffect(() => { load() }, [params])
 
+  // Search runs on the server over all events (not just this page); apply it
+  // shortly after typing stops.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      if (search !== filters.q) update('q', search)
+    }, 300)
+    return () => clearTimeout(t)
+  }, [search])
+
   const update = <K extends keyof Filters>(key: K, value: Filters[K]) => {
     setOffset(0)
     setFilters(prev => ({ ...prev, [key]: value }))
@@ -86,9 +100,15 @@ export default function ConnectionHistory() {
 
   const clear = () => {
     setOffset(0)
+    setSearch('')
     setFilters(defaultFilters)
   }
 
+  // Pages are counted from the filtered total, so filters and search always
+  // apply to every event, and the current page resets when they change.
+  const pageCount = Math.max(1, Math.ceil(total / pageSize))
+  const page = Math.floor(offset / pageSize) + 1
+  const goTo = (p: number) => setOffset((Math.min(Math.max(p, 1), pageCount) - 1) * pageSize)
   const from = total === 0 ? 0 : offset + 1
   const to = Math.min(offset + pageSize, total)
 
@@ -107,6 +127,15 @@ export default function ConnectionHistory() {
 
       <Card className="mb-4">
         <CardContent className="p-4">
+          <div className="relative mb-3">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="pl-9"
+              placeholder="Search user, email, server, device, source IP, VPN IP or reason…"
+            />
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-3">
             <Field label="User">
               <select
@@ -162,7 +191,7 @@ export default function ConnectionHistory() {
             </Field>
           </div>
           <div className="mt-3 flex items-center justify-between gap-3">
-            <p className="text-xs text-muted-foreground">{from}-{to} of {total} events</p>
+            <p className="text-xs text-muted-foreground">{total} matching {total === 1 ? 'event' : 'events'}</p>
             <Button variant="outline" size="sm" onClick={clear}><X className="w-4 h-4" /> Clear filters</Button>
           </div>
         </CardContent>
@@ -197,16 +226,71 @@ export default function ConnectionHistory() {
         </div>
       )}
 
-      <div className="mt-4 flex items-center justify-end gap-2">
-        <Button variant="outline" disabled={offset === 0 || loading} onClick={() => setOffset(Math.max(0, offset - pageSize))}>
-          Previous
-        </Button>
-        <Button variant="outline" disabled={offset + pageSize >= total || loading} onClick={() => setOffset(offset + pageSize)}>
-          Next
-        </Button>
-      </div>
+      {total > 0 && (
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span>{from}-{to} of {total}</span>
+            <span aria-hidden="true">·</span>
+            <label className="flex items-center gap-1.5">
+              Per page
+              <select
+                value={pageSize}
+                onChange={e => { setOffset(0); setPageSize(Number(e.target.value)) }}
+                className="h-8 rounded-md border border-input bg-background px-2 text-xs"
+              >
+                {PAGE_SIZES.map(n => <option key={n} value={n}>{n}</option>)}
+              </select>
+            </label>
+          </div>
+          <nav className="flex items-center gap-1" aria-label="Pages">
+            <PageButton label="First page" disabled={page === 1 || loading} onClick={() => goTo(1)}><ChevronsLeft className="w-4 h-4" /></PageButton>
+            <PageButton label="Previous page" disabled={page === 1 || loading} onClick={() => goTo(page - 1)}><ChevronLeft className="w-4 h-4" /></PageButton>
+            {pageNumbers(page, pageCount).map((p, i) =>
+              p === null
+                ? <span key={`gap-${i}`} className="px-1 text-xs text-muted-foreground">…</span>
+                : (
+                  <PageButton key={p} label={`Page ${p}`} current={p === page} disabled={loading} onClick={() => goTo(p)}>
+                    {p}
+                  </PageButton>
+                ),
+            )}
+            <PageButton label="Next page" disabled={page === pageCount || loading} onClick={() => goTo(page + 1)}><ChevronRight className="w-4 h-4" /></PageButton>
+            <PageButton label="Last page" disabled={page === pageCount || loading} onClick={() => goTo(pageCount)}><ChevronsRight className="w-4 h-4" /></PageButton>
+          </nav>
+        </div>
+      )}
     </div>
   )
+}
+
+function PageButton({ label, current, disabled, onClick, children }: {
+  label: string; current?: boolean; disabled?: boolean; onClick: () => void; children: React.ReactNode
+}) {
+  return (
+    <Button
+      variant={current ? 'default' : 'outline'}
+      size="sm"
+      className="h-8 min-w-8 px-2"
+      aria-label={label}
+      aria-current={current ? 'page' : undefined}
+      disabled={disabled}
+      onClick={onClick}
+    >
+      {children}
+    </Button>
+  )
+}
+
+/** Page numbers around the current one, with gaps: 1 … 4 5 6 … 12 */
+function pageNumbers(page: number, count: number): (number | null)[] {
+  const set = new Set([1, count, page - 1, page, page + 1].filter(p => p >= 1 && p <= count))
+  const sorted = [...set].sort((a, b) => a - b)
+  const out: (number | null)[] = []
+  sorted.forEach((p, i) => {
+    if (i > 0 && p - sorted[i - 1] > 1) out.push(null)
+    out.push(p)
+  })
+  return out
 }
 
 function EventRow({ event }: { event: VPNEvent }) {

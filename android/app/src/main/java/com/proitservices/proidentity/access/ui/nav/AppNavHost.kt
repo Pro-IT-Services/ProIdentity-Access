@@ -28,8 +28,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.proitservices.proidentity.access.R
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -115,13 +117,16 @@ fun AppNavHost(
     }
     val pendingDelete = tunnelState.deletePendingId
     val pendingName = remember(pendingDelete) { tunnelState.tunnels.find { it.id == pendingDelete }?.name }
+    val deletedMessage = if (pendingName != null) stringResource(R.string.snackbar_deleted, pendingName)
+                         else stringResource(R.string.snackbar_deleted_configuration)
+    val undoLabel = stringResource(R.string.common_undo)
     LaunchedEffect(pendingDelete) {
         // Keyed on the pending id: when the countdown commits, this effect is
         // cancelled and the snackbar dismisses itself.
         if (pendingDelete != null) {
             val result = snackbar.showSnackbar(
-                "Deleted ${pendingName ?: "configuration"}",
-                actionLabel = "Undo",
+                deletedMessage,
+                actionLabel = undoLabel,
                 duration = SnackbarDuration.Indefinite,
             )
             if (result == SnackbarResult.ActionPerformed) tunnelVm.cancelDelete()
@@ -168,8 +173,8 @@ fun AppNavHost(
                                     Box(contentAlignment = Alignment.Center) {
                                         EmptyState(
                                             icon = Icons.Outlined.TouchApp,
-                                            title = "Select a connection",
-                                            body = "Choose a connection on the left to see its details.",
+                                            title = stringResource(R.string.home_select_connection_title),
+                                            body = stringResource(R.string.home_select_connection_body),
                                         )
                                     }
                                 }
@@ -226,7 +231,7 @@ fun AppNavHost(
     if (managedState.showTotpModal || managedState.showPushAuth) {
         val target = managedState.totpTargetServerId
         ConnectAuthSheet(
-            serverName = managedState.serverStatuses[target]?.server?.name ?: "your server",
+            serverName = managedState.serverStatuses[target]?.server?.name ?: stringResource(R.string.connect_auth_your_server),
             pushMode = managedState.showPushAuth,
             pushStatus = managedState.pushStatus,
             pushAvailable = managedState.pushAuthEnabled,
@@ -251,9 +256,9 @@ fun AppNavHost(
                     if (ok) {
                         showImport = false
                         onImportConsumed()
-                        scope.launch { snackbar.showSnackbar("Imported $name") }
+                        scope.launch { snackbar.showSnackbar(context.getString(R.string.snackbar_imported, name)) }
                     } else {
-                        importError = err ?: "That doesn't look like a valid WireGuard configuration."
+                        importError = err ?: context.getString(R.string.import_error_invalid)
                     }
                 }
             },

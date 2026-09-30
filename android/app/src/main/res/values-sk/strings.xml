@@ -1,0 +1,215 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ProIdentity Access</string>
+
+    <!-- Ongoing VPN notification (WgVpnService) -->
+    <string name="vpn_channel_name">VPN pripojenie</string>
+    <string name="vpn_channel_description">Zobrazuje sa počas aktívneho VPN pripojenia, s tlačidlom na odpojenie.</string>
+    <string name="vpn_notification_connected">Pripojené k %1$s</string>
+    <plurals name="vpn_notification_connected_many">
+        <item quantity="one">Pripojené k %1$d sieti</item>
+        <item quantity="few">Pripojené k %1$d sieťam</item>
+        <item quantity="many">Pripojené k %1$d siete</item>
+        <item quantity="other">Pripojené k %1$d sieťam</item>
+    </plurals>
+    <string name="vpn_notification_public">VPN je pripojená</string>
+    <string name="vpn_notification_disconnect">Odpojiť</string>
+
+    <!-- Common -->
+    <string name="common_back">Späť</string>
+    <string name="common_cancel">Zrušiť</string>
+    <string name="common_continue">Pokračovať</string>
+    <string name="common_sign_in">Prihlásiť sa</string>
+    <string name="common_sign_out">Odhlásiť sa</string>
+    <string name="common_undo">Späť</string>
+    <string name="common_import_configuration">Importovať konfiguráciu</string>
+    <string name="common_settings">Nastavenia</string>
+    <string name="common_name">Názov</string>
+    <string name="common_disconnect">Odpojiť</string>
+    <string name="common_connect_to">Pripojiť k %1$s</string>
+    <string name="common_disconnect_named">Odpojiť %1$s</string>
+    <string name="common_send_again">Poslať znova</string>
+    <string name="common_enter_code_instead">Zadať radšej kód</string>
+    <string name="common_received">Prijaté</string>
+    <string name="common_sent">Odoslané</string>
+    <string name="common_open_source_licenses">Licencie open-source softvéru</string>
+
+    <!-- Connection status -->
+    <string name="status_connected">Pripojené</string>
+    <string name="status_connecting">Pripája sa…</string>
+    <string name="status_error">Nepodarilo sa pripojiť</string>
+    <string name="status_available">Dostupné</string>
+    <string name="status_not_connected">Nepripojené</string>
+    <string name="aperture_connecting">Pripája sa</string>
+    <string name="aperture_error">Chyba pripojenia</string>
+    <string name="aperture_content_description">Stav pripojenia: %1$s</string>
+
+    <!-- Connection kinds -->
+    <string name="kind_managed">Spravované</string>
+    <string name="kind_imported">Importované</string>
+    <string name="kind_synced">Synchronizované</string>
+
+    <!-- Relative time -->
+    <string name="time_never">Nikdy</string>
+    <string name="time_just_now">Práve teraz</string>
+    <string name="time_seconds_ago">pred %1$d s</string>
+    <string name="time_minutes_ago">pred %1$d min</string>
+    <string name="time_hours_ago">pred %1$d h</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_step_of">Krok %1$d z %2$d</string>
+    <string name="onboarding_welcome_title">Vitajte v\nProIdentity Access</string>
+    <string name="onboarding_welcome_body">Bezpečný prístup k sieti vašej organizácie. Ako sa chcete pripojiť?</string>
+    <string name="onboarding_mode_managed_title">Spravované mojou organizáciou</string>
+    <string name="onboarding_mode_managed_body">Prihláste sa na firemný server ProIdentity a získajte svoje pripojenia.</string>
+    <string name="onboarding_mode_standalone_title">Použiť vlastnú konfiguráciu</string>
+    <string name="onboarding_mode_standalone_body">Importujte konfiguračné súbory WireGuard a pripojte sa bez servera.</string>
+    <string name="onboarding_server_title">Pripojte sa k svojmu serveru</string>
+    <string name="onboarding_server_body">Zadajte adresu, ktorú vám dalo vaše IT oddelenie, napríklad vpn.company.com.</string>
+    <string name="onboarding_server_address">Adresa servera</string>
+    <string name="onboarding_register_title">Zaregistrujte toto zariadenie</string>
+    <string name="onboarding_register_body">ProIdentity Access vytvorí pre tento telefón bezpečnú identitu a zaregistruje ho na serveri %1$s.</string>
+    <string name="onboarding_register_button">Zaregistrovať zariadenie</string>
+    <string name="onboarding_device_name">Názov zariadenia</string>
+    <string name="onboarding_device_name_hint">Zobrazí sa vášmu správcovi v zozname zariadení.</string>
+
+    <!-- Sign in -->
+    <string name="signin_continue_signed_out">Pokračovať bez prihlásenia</string>
+    <string name="signin_welcome_back">Vitajte späť</string>
+    <string name="signin_reauth_body">Vaša relácia skončila. Prihláste sa znova a pokračujte — toto zariadenie zostáva zaregistrované.</string>
+    <string name="signin_body">Použite účet vašej organizácie.</string>
+    <string name="signin_username">Používateľské meno</string>
+    <string name="signin_password">Heslo</string>
+    <string name="signin_show_password">Zobraziť heslo</string>
+    <string name="signin_hide_password">Skryť heslo</string>
+    <string name="signin_totp_title">Dvojstupňové overenie</string>
+    <string name="signin_totp_body">Zadajte 6-miestny kód z aplikácie autentifikátora.</string>
+    <string name="signin_verify">Overiť</string>
+    <string name="signin_use_push_instead">Poslať radšej notifikáciu push</string>
+
+    <!-- Push approval -->
+    <string name="push_approved_title">Schválené</string>
+    <string name="push_approved_body">Prebieha prihlásenie…</string>
+    <string name="push_denied_title">Žiadosť bola zamietnutá</string>
+    <string name="push_denied_body">Žiadosť bola na vašom telefóne zamietnutá. Skúste to znova alebo použite kód.</string>
+    <string name="push_expired_title">Platnosť žiadosti vypršala</string>
+    <string name="push_expired_body">Čas na schválenie vypršal. Pošlite novú žiadosť alebo použite kód.</string>
+    <string name="push_pending_title">Schváľte na svojom telefóne</string>
+    <string name="push_pending_body">Do aplikácie ProIdentity sme poslali notifikáciu push. Pokračujte jej schválením.</string>
+    <string name="push_waiting">Čaká sa na schválenie…</string>
+    <string name="push_connect_request">Pripojiť k %1$s</string>
+
+    <!-- Connect 2FA sheet -->
+    <string name="connect_auth_connecting_to">Pripája sa k %1$s</string>
+    <string name="connect_auth_check_app">Skontrolujte notifikáciu v aplikácii ProIdentity.</string>
+    <string name="connect_auth_code_title">Vyžaduje sa overenie</string>
+    <string name="connect_auth_code_body">Na pripojenie k %1$s zadajte 6-miestny kód z aplikácie autentifikátora.</string>
+    <string name="connect_auth_verify_and_connect">Overiť a pripojiť</string>
+    <string name="connect_auth_use_push_instead">Použiť radšej notifikáciu push</string>
+    <string name="connect_auth_your_server">vášmu serveru</string>
+
+    <!-- Import sheet -->
+    <string name="import_body">Vyberte súbor WireGuard .conf alebo vložte jeho obsah.</string>
+    <string name="import_choose_file">Vybrať súbor</string>
+    <string name="import_name_placeholder">Domáca kancelária</string>
+    <string name="import_configuration">Konfigurácia</string>
+    <string name="import_button">Importovať</string>
+    <string name="import_default_name">Tunel</string>
+    <string name="import_error_invalid">Toto nevyzerá ako platná konfigurácia WireGuard.</string>
+    <string name="import_user_config_name">Používateľská konfigurácia</string>
+
+    <!-- Home -->
+    <string name="home_signed_out_title">Ste odhlásení</string>
+    <string name="home_signed_out_body">Prihláste sa a načítajte pripojenia vašej organizácie.</string>
+    <string name="home_empty_assigned_title">Nemáte priradené žiadne pripojenia</string>
+    <string name="home_empty_assigned_body">Správca vám zatiaľ nepridelil prístup k žiadnemu serveru. Obnovíte potiahnutím nadol.</string>
+    <string name="home_empty_managed_title">Zatiaľ tu nič nie je</string>
+    <string name="home_empty_managed_body">Prihláste sa a zobrazia sa servery, ktoré vám poskytuje vaša organizácia, alebo importujte konfiguráciu.</string>
+    <string name="home_empty_standalone_title">Zatiaľ žiadne konfigurácie</string>
+    <string name="home_empty_standalone_body">Začnite importovaním konfiguračného súboru WireGuard.</string>
+    <string name="home_connections">Pripojenia</string>
+    <string name="home_ready_to_connect">Pripravené na pripojenie k %1$s</string>
+    <string name="home_add_connection">Začnite pridaním pripojenia</string>
+    <string name="home_select_connection_title">Vyberte pripojenie</string>
+    <string name="home_select_connection_body">Vyberte pripojenie vľavo a zobrazia sa jeho podrobnosti.</string>
+    <string name="snackbar_deleted">Vymazané: %1$s</string>
+    <string name="snackbar_deleted_configuration">Konfigurácia bola vymazaná</string>
+    <string name="snackbar_imported">Importované: %1$s</string>
+
+    <!-- Connection details -->
+    <string name="detail_delete">Vymazať %1$s</string>
+    <string name="detail_connection">Pripojenie</string>
+    <string name="detail_type">Typ</string>
+    <string name="detail_type_managed">Spravovaný server</string>
+    <string name="detail_type_imported">Importované do tohto zariadenia</string>
+    <string name="detail_type_synced">Synchronizované s vaším účtom</string>
+    <string name="detail_network">Sieť</string>
+    <string name="detail_address">Adresa</string>
+    <string name="detail_dns">DNS</string>
+    <string name="detail_endpoint">Koncový bod</string>
+    <string name="detail_routes">Trasy</string>
+    <string name="detail_mtu">MTU</string>
+    <string name="detail_traffic">Prevádzka</string>
+    <string name="detail_last_handshake">Posledný handshake</string>
+    <string name="detail_connected_for">už %1$s</string>
+
+    <!-- Settings -->
+    <string name="settings_account">Účet</string>
+    <string name="settings_organization">Organizácia</string>
+    <string name="settings_server">Server</string>
+    <string name="settings_signed_in_as">Prihlásený účet</string>
+    <string name="settings_not_signed_in">Nie ste prihlásení</string>
+    <string name="settings_this_device">Toto zariadenie</string>
+    <string name="settings_mode">Režim</string>
+    <string name="settings_mode_managed">Spravované organizáciou</string>
+    <string name="settings_mode_standalone">Vlastné konfigurácie</string>
+    <string name="settings_registration">Registrácia</string>
+    <string name="settings_registered">Zaregistrované</string>
+    <string name="settings_not_registered">Nezaregistrované</string>
+    <string name="settings_about">O aplikácii</string>
+    <string name="settings_version">Verzia</string>
+    <string name="settings_website">Webová stránka ProIdentity Access</string>
+    <string name="settings_privacy_policy">Zásady ochrany osobných údajov</string>
+    <string name="settings_reset_section">Resetovanie</string>
+    <string name="settings_reset_app">Resetovať aplikáciu</string>
+    <string name="settings_reset_hint">Odstráni z tohto telefónu všetky pripojenia a registráciu tohto zariadenia.</string>
+    <string name="settings_sign_out_title">Odhlásiť sa?</string>
+    <string name="settings_sign_out_body">Odpojíte sa od spravovaných serverov. Zariadenie zostane zaregistrované, takže na opätovné prihlásenie vám bude stačiť heslo.</string>
+    <string name="settings_reset_title">Resetovať ProIdentity Access?</string>
+    <string name="settings_reset_body">Všetko sa odpojí a z tohto telefónu sa odstránia všetky konfigurácie aj registrácia zariadenia. Aplikáciu bude potrebné znova nastaviť.</string>
+    <string name="settings_reset_confirm">Resetovať</string>
+
+    <!-- Open-source licenses -->
+    <string name="licenses_included_software">Zahrnutý softvér</string>
+    <string name="licenses_wireguard_trademark">WireGuard je registrovaná ochranná známka, ktorej vlastníkom je Jason A. Donenfeld.</string>
+    <string name="licenses_this_app">Táto aplikácia</string>
+    <string name="licenses_source_code">Zdrojový kód</string>
+    <string name="licenses_text_not_found">Text licencie sa nenašiel.</string>
+    <string name="licenses_detail_wireguard_go">Implementácia WireGuard</string>
+    <string name="licenses_detail_go">Runtime Go, štandardná knižnica a golang.org/x</string>
+    <string name="licenses_detail_okhttp">HTTP klient</string>
+    <string name="licenses_detail_bouncycastle">Kryptografický poskytovateľ</string>
+    <string name="licenses_detail_kotlin">Runtime jazyka</string>
+    <string name="licenses_detail_androidx">Vrátane Security Crypto a ikon Material</string>
+    <string name="licenses_detail_tink">Knižnice Google, ktoré používa Security Crypto</string>
+
+    <!-- Errors created in the app (server error text is shown as-is) -->
+    <string name="error_server_url_empty">Adresa servera nemôže byť prázdna</string>
+    <string name="error_cannot_reach_server">Server je nedostupný: %1$s</string>
+    <string name="error_registration_failed">Registrácia zlyhala: %1$s</string>
+    <string name="error_username_password_required">Zadajte používateľské meno a heslo</string>
+    <string name="error_login_failed">Prihlásenie zlyhalo: %1$s</string>
+    <string name="error_invalid_code">Neplatný kód</string>
+    <string name="error_vpn_service_not_running">Služba VPN nie je spustená</string>
+    <string name="error_could_not_connect">Nepodarilo sa pripojiť k %1$s</string>
+    <string name="error_no_endpoint">K žiadnemu z koncových bodov sa nepodarilo pripojiť</string>
+    <string name="error_vpn_permission_denied">Povolenie pre VPN bolo zamietnuté</string>
+    <string name="error_connect_failed">Pripojenie zlyhalo</string>
+    <string name="error_login_expired_or_revoked">Prihlásenie vypršalo alebo bolo zrušené</string>
+    <string name="error_invalid_server_url">Neplatná adresa servera</string>
+    <string name="error_server_url_scheme">Adresa servera musí obsahovať https://</string>
+    <string name="error_server_url_host">Adresa servera musí obsahovať názov hostiteľa</string>
+    <string name="error_server_url_https">Adresa servera musí používať HTTPS</string>
+    <string name="error_server_url_query">Adresa servera nesmie obsahovať parametre ani fragment</string>
+    <string name="error_server_http">Server vrátil chybu (HTTP %1$d).</string>
+</resources>

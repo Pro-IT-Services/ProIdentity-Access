@@ -1,12 +1,15 @@
 package com.proitservices.proidentity.access.ui.viewmodel
 
 import android.app.Application
+import androidx.annotation.StringRes
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.proitservices.proidentity.access.R
 import com.proitservices.proidentity.access.bridge.AppSettings
 import com.proitservices.proidentity.access.bridge.DeviceCrypto
 import com.proitservices.proidentity.access.bridge.ManagedClient
 import com.proitservices.proidentity.access.bridge.defaultDeviceName
+import com.proitservices.proidentity.access.bridge.userMessage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -42,6 +45,9 @@ data class SetupUiState(
 class SetupViewModel(application: Application) : AndroidViewModel(application) {
 
     private val settings = AppSettings(application)
+
+    private fun str(@StringRes id: Int, vararg args: Any?): String = getApplication<Application>().getString(id, *args)
+    private fun errorText(e: Exception): String? = getApplication<Application>().userMessage(e)
 
     private val _uiState = MutableStateFlow(SetupUiState(deviceName = defaultDeviceName()))
     val uiState: StateFlow<SetupUiState> = _uiState.asStateFlow()
@@ -119,7 +125,7 @@ class SetupViewModel(application: Application) : AndroidViewModel(application) {
     fun submitServerUrl() {
         val url = normalizeServerUrl(_uiState.value.serverUrl)
         if (url.isEmpty()) {
-            _uiState.update { it.copy(error = "Server URL cannot be empty") }
+            _uiState.update { it.copy(error = str(R.string.error_server_url_empty)) }
             return
         }
         _uiState.update { it.copy(serverUrl = url) }
@@ -138,7 +144,7 @@ class SetupViewModel(application: Application) : AndroidViewModel(application) {
                     )
                 }
             } catch (e: Exception) {
-                _uiState.update { it.copy(isLoading = false, error = "Cannot reach server: ${e.message}") }
+                _uiState.update { it.copy(isLoading = false, error = str(R.string.error_cannot_reach_server, errorText(e))) }
             }
         }
     }
@@ -156,7 +162,7 @@ class SetupViewModel(application: Application) : AndroidViewModel(application) {
                 settings.deviceID = resp.deviceId
                 _uiState.update { it.copy(isLoading = false, step = SetupStep.LOGIN) }
             } catch (e: Exception) {
-                _uiState.update { it.copy(isLoading = false, error = "Registration failed: ${e.message}") }
+                _uiState.update { it.copy(isLoading = false, error = str(R.string.error_registration_failed, errorText(e))) }
             }
         }
     }
@@ -164,7 +170,7 @@ class SetupViewModel(application: Application) : AndroidViewModel(application) {
     fun login() {
         val s = _uiState.value
         if (s.username.isEmpty() || s.password.isEmpty()) {
-            _uiState.update { it.copy(error = "Username and password required") }
+            _uiState.update { it.copy(error = str(R.string.error_username_password_required)) }
             return
         }
         viewModelScope.launch(Dispatchers.IO) {
@@ -183,7 +189,7 @@ class SetupViewModel(application: Application) : AndroidViewModel(application) {
                     finishLogin(resp)
                 }
             } catch (e: Exception) {
-                _uiState.update { it.copy(isLoading = false, error = "Login failed: ${e.message}") }
+                _uiState.update { it.copy(isLoading = false, error = str(R.string.error_login_failed, errorText(e))) }
             }
         }
     }
@@ -196,12 +202,12 @@ class SetupViewModel(application: Application) : AndroidViewModel(application) {
                 val client = buildClient()
                 val resp = client.login(s.username, s.password, s.totpCode)
                 if (resp.requireTotp) {
-                    _uiState.update { it.copy(isLoading = false, error = "Invalid code") }
+                    _uiState.update { it.copy(isLoading = false, error = str(R.string.error_invalid_code)) }
                 } else {
                     finishLogin(resp)
                 }
             } catch (e: Exception) {
-                _uiState.update { it.copy(isLoading = false, error = "Login failed: ${e.message}") }
+                _uiState.update { it.copy(isLoading = false, error = str(R.string.error_login_failed, errorText(e))) }
             }
         }
     }

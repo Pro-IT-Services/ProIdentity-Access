@@ -449,10 +449,10 @@ enum VPNError: LocalizedError {
     case invalidConfig, tunnelNotFound, vpnUnavailable, sessionEnded
     var errorDescription: String? {
         switch self {
-        case .invalidConfig:   return "Invalid WireGuard config"
-        case .tunnelNotFound:  return "Tunnel not found"
-        case .vpnUnavailable:  return "VPN unavailable — Network Extension entitlement required"
-        case .sessionEnded:    return "This connection's session has ended. Connect again."
+        case .invalidConfig:   return String(localized: "Invalid WireGuard config")
+        case .tunnelNotFound:  return String(localized: "Tunnel not found")
+        case .vpnUnavailable:  return String(localized: "VPN unavailable — Network Extension entitlement required")
+        case .sessionEnded:    return String(localized: "This connection's session has ended. Connect again.")
         }
     }
 }

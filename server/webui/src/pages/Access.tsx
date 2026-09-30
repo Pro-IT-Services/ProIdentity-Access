@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { Users, Network, Boxes } from 'lucide-react'
 import { PageHeader } from '@/components/PageHeader'
 import { cn } from '@/lib/utils'
@@ -15,15 +15,12 @@ const TABS: { id: Tab; label: string; icon: React.ElementType; hint: string }[] 
 ]
 
 export default function Access() {
-  const [tab, setTab] = useState<Tab>(() => {
-    const h = window.location.hash.replace('#', '')
-    return (TABS.find(t => t.id === h)?.id) ?? 'people'
-  })
+  const location = useLocation()
+  const navigate = useNavigate()
+  const h = location.hash.replace('#', '')
+  const tab: Tab = TABS.find(t => t.id === h)?.id ?? 'people'
 
-  const onTab = (t: Tab) => {
-    setTab(t)
-    window.history.replaceState(null, '', `#${t}`)
-  }
+  const onTab = (t: Tab) => navigate({ hash: t }, { replace: true })
 
   const active = TABS.find(t => t.id === tab)!
 

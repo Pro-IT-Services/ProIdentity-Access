@@ -40,10 +40,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.proitservices.proidentity.access.R
 import com.proitservices.proidentity.access.ui.screen.onboarding.OtpField
 import com.proitservices.proidentity.access.ui.theme.Brand
 import com.proitservices.proidentity.access.ui.theme.MonoStyle
@@ -98,44 +100,44 @@ private fun PushContent(serverName: String, status: String, onRetry: () -> Unit,
         Column {
             Text(
                 when (status) {
-                    "denied" -> "Request denied"
-                    "expired" -> "Request expired"
-                    else -> "Approve on your phone"
+                    "denied" -> stringResource(R.string.push_denied_title)
+                    "expired" -> stringResource(R.string.push_expired_title)
+                    else -> stringResource(R.string.push_pending_title)
                 },
                 style = MaterialTheme.typography.titleLarge,
                 modifier = Modifier.semantics { heading() },
             )
-            Text("Connecting to $serverName", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.connect_auth_connecting_to, serverName), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
     Spacer(Modifier.height(20.dp))
     if (failed) {
         Button(onClick = onRetry, shape = MaterialTheme.shapes.large, modifier = Modifier.fillMaxWidth().height(52.dp)) {
-            Text("Send again")
+            Text(stringResource(R.string.common_send_again))
         }
     } else {
         Row(verticalAlignment = Alignment.CenterVertically) {
             CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
             Spacer(Modifier.width(12.dp))
             Text(
-                "Check the ProIdentity app for a notification.",
+                stringResource(R.string.connect_auth_check_app),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
     Spacer(Modifier.height(8.dp))
-    TextButton(onClick = onUseCode, modifier = Modifier.heightIn(min = 48.dp)) { Text("Enter a code instead") }
+    TextButton(onClick = onUseCode, modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.common_enter_code_instead)) }
 }
 
 @Composable
 private fun CodeContent(serverName: String, pushAvailable: Boolean, onSubmit: (String) -> Unit, onUsePush: () -> Unit) {
     var code by rememberSaveable { mutableStateOf("") }
     LaunchedEffect(code) { if (code.length == 6) onSubmit(code) }
-    Text("Verification required", style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
+    Text(stringResource(R.string.connect_auth_code_title), style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
     Spacer(Modifier.height(4.dp))
     Text(
-        "Enter the 6-digit code from your authenticator app to connect to $serverName.",
+        stringResource(R.string.connect_auth_code_body, serverName),
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
@@ -147,9 +149,9 @@ private fun CodeContent(serverName: String, pushAvailable: Boolean, onSubmit: (S
         enabled = code.length == 6,
         shape = MaterialTheme.shapes.large,
         modifier = Modifier.fillMaxWidth().height(52.dp),
-    ) { Text("Verify and connect") }
+    ) { Text(stringResource(R.string.connect_auth_verify_and_connect)) }
     if (pushAvailable) {
-        TextButton(onClick = onUsePush, modifier = Modifier.heightIn(min = 48.dp)) { Text("Use a push notification instead") }
+        TextButton(onClick = onUsePush, modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.connect_auth_use_push_instead)) }
     }
 }
 
@@ -171,6 +173,7 @@ fun ImportSheet(
         if (!prefillConfig.isNullOrEmpty()) config = prefillConfig
         if (!prefillName.isNullOrEmpty() && name.isBlank()) name = prefillName
     }
+    val defaultName = stringResource(R.string.import_default_name)
     val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheet) {
         Column(
@@ -184,9 +187,9 @@ fun ImportSheet(
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             Column {
-                Text("Import configuration", style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
+                Text(stringResource(R.string.common_import_configuration), style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
                 Text(
-                    "Choose a WireGuard .conf file, or paste its contents.",
+                    stringResource(R.string.import_body),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -194,20 +197,20 @@ fun ImportSheet(
             OutlinedButton(onClick = onPickFile, shape = MaterialTheme.shapes.large, modifier = Modifier.fillMaxWidth().height(52.dp)) {
                 Icon(Icons.Outlined.FileOpen, contentDescription = null)
                 Spacer(Modifier.width(10.dp))
-                Text("Choose file")
+                Text(stringResource(R.string.import_choose_file))
             }
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
-                label = { Text("Name") },
-                placeholder = { Text("Home office") },
+                label = { Text(stringResource(R.string.common_name)) },
+                placeholder = { Text(stringResource(R.string.import_name_placeholder)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
             OutlinedTextField(
                 value = config,
                 onValueChange = { config = it },
-                label = { Text("Configuration") },
+                label = { Text(stringResource(R.string.import_configuration)) },
                 placeholder = { Text("[Interface]\n…\n[Peer]\n…", style = MonoStyle) },
                 textStyle = MonoStyle,
                 minLines = 6,
@@ -217,13 +220,13 @@ fun ImportSheet(
                 modifier = Modifier.fillMaxWidth(),
             )
             Button(
-                onClick = { onImport(name.trim().ifEmpty { "Tunnel" }, config) },
+                onClick = { onImport(name.trim().ifEmpty { defaultName }, config) },
                 enabled = config.isNotBlank() && !loading,
                 shape = MaterialTheme.shapes.large,
                 modifier = Modifier.fillMaxWidth().height(52.dp),
             ) {
                 if (loading) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
-                else Text("Import")
+                else Text(stringResource(R.string.import_button))
             }
         }
     }

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Copy, Check } from 'lucide-react'
 import { cn } from '../../lib/cn'
+import { t } from '../../i18n'
 
 interface MonoChipProps {
   value: string
@@ -30,7 +31,7 @@ export function MonoChip({ value, display, copy = true, truncate, bare, classNam
       <span className={cn('inline-flex items-center gap-1 font-mono text-xs', className)}>
         <span className={truncate ? 'truncate' : ''}>{text}</span>
         {copy && (
-          <button onClick={onCopy} aria-label="Copy" className="text-muted-foreground/60 hover:text-foreground transition-colors cursor-pointer no-drag">
+          <button onClick={onCopy} aria-label={t('common.copy')} title={t('common.copy')} className="text-muted-foreground/60 hover:text-foreground transition-colors cursor-pointer no-drag">
             {copied ? <Check className="w-3 h-3 text-success" /> : <Copy className="w-3 h-3" />}
           </button>
         )}
@@ -47,7 +48,7 @@ export function MonoChip({ value, display, copy = true, truncate, bare, classNam
     )}>
       <span className={truncate ? 'truncate' : ''}>{text}</span>
       {copy && (
-        <button onClick={onCopy} aria-label="Copy" className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer shrink-0 no-drag">
+        <button onClick={onCopy} aria-label={t('common.copy')} title={t('common.copy')} className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer shrink-0 no-drag">
           {copied ? <Check className="w-3 h-3 text-success" /> : <Copy className="w-3 h-3" />}
         </button>
       )}

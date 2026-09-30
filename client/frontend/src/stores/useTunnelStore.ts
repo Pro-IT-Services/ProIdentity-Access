@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type { TunnelInfo, StatsInfo } from '../types'
 import * as api from '../wailsbridge'
+import { t as tr } from '../i18n'
 
 interface TunnelStore {
   tunnels: TunnelInfo[]
@@ -55,7 +56,7 @@ export const useTunnelStore = create<TunnelStore>((set, get) => ({
     set({ error: null })
     try {
       const t = await api.importTunnel(name, content)
-      if (!t || !t.id) throw new Error('Daemon returned empty response')
+      if (!t || !t.id) throw new Error(tr('import.emptyResponse'))
       set(s => ({
         tunnels: [...s.tunnels, t],
         selectedId: t.id,

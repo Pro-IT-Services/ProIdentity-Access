@@ -20,7 +20,7 @@ struct OnboardingView: View {
         .tint(Brand.primary)
         .onAppear {
             setup.onComplete = { app.setupCompleted() }
-            setup.onRevoked = { app.resetAll(notice: "This device is no longer registered. Set it up again.") }
+            setup.onRevoked = { app.resetAll(notice: String(localized: "This device is no longer registered. Set it up again.")) }
         }
         .onChange(of: setup.path) { setup.error = nil }
     }
@@ -30,8 +30,8 @@ struct OnboardingView: View {
 
 /// Title + content, with the primary action pinned in the thumb zone.
 struct StepLayout<Content: View, Footer: View>: View {
-    let title: String
-    let subtitle: String
+    let title: LocalizedStringKey
+    let subtitle: LocalizedStringKey
     @ViewBuilder let content: Content
     @ViewBuilder let footer: Footer
 
@@ -78,7 +78,7 @@ private struct ModeStep: View {
                     ApertureMark(size: 96)
                         .padding(20)
                         .background(Brand.primary.opacity(0.10), in: Circle())
-                    Text("ProIdentity Access")
+                    Text(verbatim: "ProIdentity Access")
                         .font(.largeTitle.bold())
                         .multilineTextAlignment(.center)
                         .accessibilityAddTraits(.isHeader)
@@ -89,7 +89,7 @@ private struct ModeStep: View {
                 .padding(.top, 32)
 
                 if let notice {
-                    NoticeCard(tone: .warning, title: "Set up again", message: notice)
+                    NoticeCard(tone: .warning, title: String(localized: "Set up again"), message: notice)
                 }
 
                 PrivacyDisclosure()
@@ -141,8 +141,8 @@ private struct PrivacyDisclosure: View {
 
 private struct OptionCard: View {
     let icon: String
-    let title: String
-    let message: String
+    let title: LocalizedStringKey
+    let message: LocalizedStringKey
     let action: () -> Void
 
     var body: some View {
@@ -210,7 +210,9 @@ private struct RegisterStep: View {
     var body: some View {
         StepLayout(
             title: "Name this device",
-            subtitle: "Your administrator sees this name in the device list. This registers \(setup.serverHost.isEmpty ? "it" : "it with \(setup.serverHost)")."
+            subtitle: setup.serverHost.isEmpty
+                ? "Your administrator sees this name in the device list. This registers it."
+                : "Your administrator sees this name in the device list. This registers it with \(setup.serverHost)."
         ) {
             BrandField(label: "Device name") {
                 TextField("Device name", text: $setup.deviceName)
@@ -221,7 +223,7 @@ private struct RegisterStep: View {
             Label("A unique encryption key is created on this device. It never leaves it.", systemImage: "lock.shield")
                 .font(.footnote).foregroundStyle(.secondary)
             if let error = setup.error {
-                NoticeCard(tone: .error, title: "Couldn't register", message: error)
+                NoticeCard(tone: .error, title: String(localized: "Couldn't register"), message: error)
             }
         } footer: {
             LoadingButton(title: "Register device", loading: setup.loading) {

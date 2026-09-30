@@ -19,7 +19,7 @@ func (a *App) updateServerURL() (string, error) {
 	a.mMu.Lock()
 	defer a.mMu.Unlock()
 	if a.mSettings == nil || strings.TrimSpace(a.mSettings.ServerURL) == "" {
-		return "", errors.New("no management server is configured")
+		return "", errors.New(tr("err.noManagementServer"))
 	}
 	return strings.TrimRight(a.mSettings.ServerURL, "/"), nil
 }
@@ -35,7 +35,7 @@ func (a *App) CheckForUpdate() (*ipc.UpdateState, error) {
 		return nil, err
 	}
 	if !a.client.IsConnected() {
-		return nil, errors.New("the ProIdentity service is not running")
+		return nil, errors.New(tr("err.serviceNotRunning"))
 	}
 	return a.client.CheckUpdate(serverURL)
 }
@@ -48,7 +48,7 @@ func (a *App) InstallUpdate() error {
 		return err
 	}
 	if !a.client.IsConnected() {
-		return errors.New("the ProIdentity service is not running")
+		return errors.New(tr("err.serviceNotRunning"))
 	}
 	return a.client.InstallUpdate(serverURL)
 }

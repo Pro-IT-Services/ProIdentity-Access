@@ -6,6 +6,7 @@ import { Sheet } from './ui/Sheet'
 import { Button } from './ui/Button'
 import { Input } from './ui/Input'
 import { UninstallApp } from '../../wailsjs/go/main/App'
+import { t } from '../i18n'
 
 interface Props {
   open: boolean
@@ -53,7 +54,7 @@ export function SettingsSheet({ open, onClose, onReRunSetup, onSignIn }: Props) 
   }
 
   return (
-    <Sheet open={open} onClose={onClose} title="Settings" description="Server, account, and app management.">
+    <Sheet open={open} onClose={onClose} title={t('common.settings')} description={t('settings.desc')}>
       <div className="space-y-6">
         {error && (
           <div className="flex items-start gap-2 px-3 py-2.5 bg-destructive/10 border border-destructive/30 rounded-md">
@@ -69,121 +70,121 @@ export function SettingsSheet({ open, onClose, onReRunSetup, onSignIn }: Props) 
         )}
 
         {/* Managed server */}
-        <Section title="Managed server" icon={Server}>
+        <Section title={t('settings.managedServer')} icon={Server}>
           <div className="space-y-1.5">
-            <label className="block text-xs text-muted-foreground">Server URL</label>
+            <label className="block text-xs text-muted-foreground">{t('common.serverUrl')}</label>
             <Input
               value={url}
               onChange={e => setUrl(e.target.value)}
               placeholder="vpn.example.com"
               disabled={savingURL}
             />
-            <p className="text-xs text-muted-foreground">Address of the ProIdentity Access server. https:// is added if you leave it out.</p>
+            <p className="text-xs text-muted-foreground">{t('settings.serverUrlHint')}</p>
           </div>
           <div className="flex items-center gap-2 pt-1">
             <Button size="sm" onClick={handleSaveURL} disabled={!canSave || savingURL}>
-              {savingURL ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving…</> : 'Save URL'}
+              {savingURL ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> {t('common.saving')}</> : t('settings.saveUrl')}
             </Button>
             <Button size="sm" variant="ghost" onClick={onReRunSetup}>
-              <RefreshCw className="w-3.5 h-3.5" /> Re-run setup wizard
+              <RefreshCw className="w-3.5 h-3.5" /> {t('settings.rerunWizard')}
             </Button>
           </div>
         </Section>
 
         {/* Account */}
-        <Section title="Account" icon={User}>
+        <Section title={t('settings.account')} icon={User}>
           {settings.logged_in ? (
             <>
-              <Row label="Signed in as" value={
+              <Row label={t('settings.signedInAs')} value={
                 <span className="font-medium">
                   {settings.username}
                   {settings.is_admin && (
-                    <span className="ml-1.5 text-[10px] uppercase tracking-wider text-primary">admin</span>
+                    <span className="ml-1.5 text-[10px] uppercase tracking-wider text-primary">{t('settings.admin')}</span>
                   )}
                 </span>
               }/>
-              {settings.vpn_name && <Row label="VPN" value={settings.vpn_name} />}
-              <Row label="Two-factor" value={
+              {settings.vpn_name && <Row label={t('settings.vpn')} value={settings.vpn_name} />}
+              <Row label={t('settings.twoFactor')} value={
                 settings.totp_enabled
-                  ? <span className="inline-flex items-center gap-1 text-success"><ShieldCheck className="w-3.5 h-3.5" /> enabled</span>
-                  : <span className="text-muted-foreground">disabled</span>
+                  ? <span className="inline-flex items-center gap-1 text-success"><ShieldCheck className="w-3.5 h-3.5" /> {t('settings.enabled')}</span>
+                  : <span className="text-muted-foreground">{t('settings.disabled')}</span>
               }/>
               <div className="pt-1">
                 <Button size="sm" variant="outline" onClick={async () => { await logout(); }} disabled={loading}>
                   {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <LogOut className="w-3.5 h-3.5" />}
-                  Sign out
+                  {t('common.signOut')}
                 </Button>
               </div>
             </>
           ) : (
             <>
-              <p className="text-sm text-muted-foreground">Not signed in.</p>
+              <p className="text-sm text-muted-foreground">{t('settings.notSignedIn')}</p>
               <Button size="sm" onClick={onSignIn} disabled={!settings.server_url}>
-                Sign in
+                {t('common.signIn')}
               </Button>
               {!settings.server_url && (
-                <p className="text-xs text-muted-foreground">Set the server URL above first.</p>
+                <p className="text-xs text-muted-foreground">{t('settings.setUrlFirst')}</p>
               )}
             </>
           )}
         </Section>
 
         {/* Updates */}
-        <Section title="Updates" icon={Download}>
+        <Section title={t('settings.updates')} icon={Download}>
           <div className="space-y-1.5">
-            <Row label="Installed" value={update?.current_version || '—'} />
-            {update?.latest_version && <Row label="Latest" value={update.latest_version} />}
+            <Row label={t('settings.installed')} value={update?.current_version || '—'} />
+            {update?.latest_version && <Row label={t('settings.latest')} value={update.latest_version} />}
             {update && (
-              <Row label="Status" value={
-                update.state === 'available' ? <span className="text-success">update available</span>
-                : update.state === 'downloading' ? <span>downloading {update.progress ?? 0}%</span>
-                : update.state === 'installing' ? <span>installing…</span>
-                : update.state === 'failed' ? <span className="text-destructive">failed</span>
-                : update.state === 'up_to_date' ? <span className="text-muted-foreground">up to date</span>
-                : <span className="text-muted-foreground">not checked yet</span>
+              <Row label={t('settings.status')} value={
+                update.state === 'available' ? <span className="text-success">{t('update.stateAvailable')}</span>
+                : update.state === 'downloading' ? <span>{t('update.stateDownloading', { progress: update.progress ?? 0 })}</span>
+                : update.state === 'installing' ? <span>{t('update.stateInstalling')}</span>
+                : update.state === 'failed' ? <span className="text-destructive">{t('update.stateFailed')}</span>
+                : update.state === 'up_to_date' ? <span className="text-muted-foreground">{t('update.stateUpToDate')}</span>
+                : <span className="text-muted-foreground">{t('update.stateNotChecked')}</span>
               } />
             )}
           </div>
           {!settings.server_url && (
-            <p className="text-xs text-muted-foreground">Updates come from your organization's server. Set the server URL above first.</p>
+            <p className="text-xs text-muted-foreground">{t('settings.updatesFromOrg')}</p>
           )}
           {updateError && <p className="text-xs text-destructive">{updateError}</p>}
           <div className="flex items-center gap-2 pt-1">
             <Button size="sm" variant="outline" onClick={() => checkUpdate()} disabled={!settings.server_url || checkingUpdate || installingUpdate}>
               {checkingUpdate ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
-              Check
+              {t('settings.check')}
             </Button>
             {update?.state === 'available' && (
               <Button size="sm" onClick={installUpdate} disabled={installingUpdate}>
-                <Download className="w-3.5 h-3.5" /> Install {update.latest_version}
+                <Download className="w-3.5 h-3.5" /> {t('settings.installVersion', { version: update.latest_version ?? '' })}
               </Button>
             )}
           </div>
-          <p className="text-xs text-muted-foreground">Updates are installed by the ProIdentity service, so no admin rights are needed.</p>
+          <p className="text-xs text-muted-foreground">{t('settings.updatesByService')}</p>
         </Section>
 
         {/* Danger */}
-        <Section title="Danger zone" icon={Trash2} dangerous>
+        <Section title={t('settings.dangerZone')} icon={Trash2} dangerous>
           {!confirmUninstall ? (
             <>
               <p className="text-sm text-muted-foreground">
-                Removes the app, daemon service, and all local credentials. Requires admin rights.
+                {t('settings.uninstallDesc')}
               </p>
               <Button size="sm" variant="outline" className="text-destructive border-destructive/40 hover:bg-destructive/10" onClick={() => setConfirmUninstall(true)}>
-                <Trash2 className="w-3.5 h-3.5" /> Uninstall ProIdentity Access
+                <Trash2 className="w-3.5 h-3.5" /> {t('settings.uninstallApp')}
               </Button>
             </>
           ) : (
             <>
               <p className="text-sm text-destructive">
-                Are you sure? This will run the uninstaller and quit the app.
+                {t('settings.uninstallSure')}
               </p>
               <div className="flex items-center gap-2">
-                <Button size="sm" variant="ghost" onClick={() => setConfirmUninstall(false)} disabled={uninstalling}>Cancel</Button>
+                <Button size="sm" variant="ghost" onClick={() => setConfirmUninstall(false)} disabled={uninstalling}>{t('common.cancel')}</Button>
                 <Button size="sm" variant="destructive" onClick={handleUninstall} disabled={uninstalling}>
                   {uninstalling
-                    ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Uninstalling…</>
-                    : <><Trash2 className="w-3.5 h-3.5" /> Confirm uninstall</>}
+                    ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> {t('settings.uninstalling')}</>
+                    : <><Trash2 className="w-3.5 h-3.5" /> {t('settings.confirmUninstall')}</>}
                 </Button>
               </div>
             </>

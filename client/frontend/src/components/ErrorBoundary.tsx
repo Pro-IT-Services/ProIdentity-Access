@@ -1,4 +1,5 @@
 import { Component, type ReactNode } from 'react'
+import { t } from '../i18n'
 
 interface Props { children: ReactNode }
 interface State { error: string | null }
@@ -14,13 +15,13 @@ export default class ErrorBoundary extends Component<Props, State> {
     if (this.state.error) {
       return (
         <div className="flex flex-col items-center justify-center h-full gap-3 p-8 text-center">
-          <p className="text-danger font-medium">Something went wrong</p>
+          <p className="text-danger font-medium">{t('error.somethingWrong')}</p>
           <p className="text-xs text-text-secondary font-mono break-all">{this.state.error}</p>
           <button
             onClick={() => this.setState({ error: null })}
             className="px-3 py-1.5 text-xs bg-bg-card border border-bg-border rounded-lg text-text-secondary hover:text-text-primary transition-colors"
           >
-            Dismiss
+            {t('common.dismiss')}
           </button>
         </div>
       )

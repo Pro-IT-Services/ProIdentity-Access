@@ -36,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -45,6 +46,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.proitservices.proidentity.access.R
 import com.proitservices.proidentity.access.model.TunnelStatus
 import com.proitservices.proidentity.access.ui.model.Connection
 import com.proitservices.proidentity.access.ui.model.ConnectionKind
@@ -72,24 +74,26 @@ fun formatDuration(millis: Long): String {
     else String.format(Locale.US, "%02d:%02d", m, s)
 }
 
+@Composable
 fun formatAgo(epochMillis: Long, now: Long = System.currentTimeMillis()): String {
-    if (epochMillis <= 0) return "Never"
+    if (epochMillis <= 0) return stringResource(R.string.time_never)
     val secs = ((now - epochMillis) / 1000).coerceAtLeast(0)
     return when {
-        secs < 5 -> "Just now"
-        secs < 60 -> "${secs}s ago"
-        secs < 3600 -> "${secs / 60}m ago"
-        else -> "${secs / 3600}h ago"
+        secs < 5 -> stringResource(R.string.time_just_now)
+        secs < 60 -> stringResource(R.string.time_seconds_ago, secs)
+        secs < 3600 -> stringResource(R.string.time_minutes_ago, secs / 60)
+        else -> stringResource(R.string.time_hours_ago, secs / 3600)
     }
 }
 
 // ── Status ────────────────────────────────────────────────────────────────
 
+@Composable
 fun statusText(status: TunnelStatus): String = when (status) {
-    TunnelStatus.CONNECTED -> "Connected"
-    TunnelStatus.CONNECTING -> "Connecting…"
-    TunnelStatus.ERROR -> "Couldn't connect"
-    TunnelStatus.DISCONNECTED -> "Available"
+    TunnelStatus.CONNECTED -> stringResource(R.string.status_connected)
+    TunnelStatus.CONNECTING -> stringResource(R.string.status_connecting)
+    TunnelStatus.ERROR -> stringResource(R.string.status_error)
+    TunnelStatus.DISCONNECTED -> stringResource(R.string.status_available)
 }
 
 @Composable
@@ -140,9 +144,13 @@ fun ConnectionRow(
     val status = connection.status
     val active = connection.isActive
     val accent = statusColor(status)
+    val kindLabel = stringResource(connection.kind.label)
+    val stateLabel = statusText(status)
+    val toggleDescription = if (active) stringResource(R.string.common_disconnect_named, connection.name)
+                            else stringResource(R.string.common_connect_to, connection.name)
     val description = buildString {
-        append(connection.name).append(", ").append(connection.kind.label).append(", ")
-        append(statusText(status))
+        append(connection.name).append(", ").append(kindLabel).append(", ")
+        append(stateLabel)
         if (connection.detail.isNotEmpty()) append(", ").append(connection.detail)
     }
     Surface(
@@ -190,10 +198,10 @@ fun ConnectionRow(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     StatusDot(status)
                     Spacer(Modifier.width(6.dp))
-                    Text(statusText(status), style = MaterialTheme.typography.bodySmall, color = accent)
+                    Text(stateLabel, style = MaterialTheme.typography.bodySmall, color = accent)
                 }
                 Text(
-                    listOf(connection.kind.label, connection.detail).filter { it.isNotEmpty() }.joinToString("  ·  "),
+                    listOf(kindLabel, connection.detail).filter { it.isNotEmpty() }.joinToString("  ·  "),
                     style = MonoStyle,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1, overflow = TextOverflow.Ellipsis,
@@ -207,7 +215,7 @@ fun ConnectionRow(
                         onClick = onToggle,
                         modifier = Modifier.semantics {
                             role = Role.Button
-                            contentDescription = if (active) "Disconnect ${connection.name}" else "Connect to ${connection.name}"
+                            contentDescription = toggleDescription
                         },
                     ) {
                         Icon(
@@ -245,7 +253,7 @@ fun PrimaryActionBar(
                 ) {
                     Icon(Icons.Outlined.PowerSettingsNew, contentDescription = null)
                     Spacer(Modifier.width(10.dp))
-                    Text("Disconnect", style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.common_disconnect), style = MaterialTheme.typography.titleMedium)
                 }
                 TunnelStatus.CONNECTING -> OutlinedButton(
                     onClick = { onDisconnect(target) },
@@ -254,7 +262,7 @@ fun PrimaryActionBar(
                 ) {
                     CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
                     Spacer(Modifier.width(10.dp))
-                    Text("Cancel", style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.common_cancel), style = MaterialTheme.typography.titleMedium)
                 }
                 else -> Button(
                     onClick = { onConnect(target) },
@@ -264,7 +272,7 @@ fun PrimaryActionBar(
                     Icon(Icons.Outlined.PowerSettingsNew, contentDescription = null)
                     Spacer(Modifier.width(10.dp))
                     Text(
-                        "Connect to ${target.name}",
+                        stringResource(R.string.common_connect_to, target.name),
                         style = MaterialTheme.typography.titleMedium,
                         maxLines = 1, overflow = TextOverflow.Ellipsis,
                     )

@@ -4,14 +4,17 @@ import android.app.Application
 import android.content.Intent
 import android.net.VpnService
 import android.util.Base64
+import androidx.annotation.StringRes
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.proitservices.proidentity.access.R
 import com.proitservices.proidentity.access.WgVpnService
 import com.proitservices.proidentity.access.bridge.AppSettings
 import com.proitservices.proidentity.access.bridge.AuthInvalidException
 import com.proitservices.proidentity.access.bridge.DeviceCrypto
 import com.proitservices.proidentity.access.bridge.DeviceRevokedException
 import com.proitservices.proidentity.access.bridge.ManagedClient
+import com.proitservices.proidentity.access.bridge.userMessage
 import com.proitservices.proidentity.access.model.PeerInfo
 import com.proitservices.proidentity.access.model.StatsInfo
 import com.proitservices.proidentity.access.model.TunnelInfo
@@ -48,6 +51,9 @@ data class TunnelUiState(
 class TunnelViewModel(application: Application) : AndroidViewModel(application) {
 
     private val settings = AppSettings(application)
+
+    private fun str(@StringRes id: Int, vararg args: Any?): String = getApplication<Application>().getString(id, *args)
+    private fun errorText(e: Exception): String? = getApplication<Application>().userMessage(e)
 
     private val _uiState = MutableStateFlow(TunnelUiState())
     val uiState: StateFlow<TunnelUiState> = _uiState.asStateFlow()
@@ -186,7 +192,7 @@ class TunnelViewModel(application: Application) : AndroidViewModel(application) 
     fun onVpnPermissionResult(granted: Boolean) {
         val id = pendingConnectTunnelId ?: return
         pendingConnectTunnelId = null
-        if (granted) doConnect(id) else setError("VPN permission denied")
+        if (granted) doConnect(id) else setError(str(R.string.error_vpn_permission_denied))
     }
 
     private fun doConnect(id: String) {
@@ -202,7 +208,7 @@ class TunnelViewModel(application: Application) : AndroidViewModel(application) 
                 triggerAuthReset(revoked = false)
             } catch (e: Exception) {
                 setStatus(id, TunnelStatus.ERROR)
-                setError(e.message ?: "Connect failed")
+                setError(errorText(e) ?: str(R.string.error_connect_failed))
             }
         }
     }
@@ -219,9 +225,9 @@ class TunnelViewModel(application: Application) : AndroidViewModel(application) 
             Charsets.UTF_8
         )
         val config = String(DeviceCrypto.decryptBody(rawKey, decryptedEnvelope, aad), Charsets.UTF_8)
-        val service = WgVpnService.instance ?: throw IllegalStateException("VPN service not running")
+        val service = WgVpnService.instance ?: throw IllegalStateException(str(R.string.error_vpn_service_not_running))
         if (service.listTunnels().none { it.id == id }) {
-            service.importTunnel(id, "User Config", config)
+            service.importTunnel(id, str(R.string.import_user_config_name), config)
         }
         service.connectTunnel(id)
     }
@@ -241,7 +247,7 @@ class TunnelViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val service = WgVpnService.instance
-                    ?: throw IllegalStateException("VPN service not running")
+                    ?: throw IllegalStateException(str(R.string.error_vpn_service_not_running))
 
                 if (settings.mode == "managed" && settings.token.isNotEmpty()) {
                     try {
@@ -269,24 +275,24 @@ class TunnelViewModel(application: Application) : AndroidViewModel(application) 
                         return@launch
                     } catch (e: DeviceRevokedException) {
                         triggerAuthReset(revoked = true)
-                        withContext(Dispatchers.Main) { onDone(false, "Login expired or revoked") }
+                        withContext(Dispatchers.Main) { onDone(false, str(R.string.error_login_expired_or_revoked)) }
                         return@launch
                     } catch (e: AuthInvalidException) {
                         triggerAuthReset(revoked = false)
-                        withContext(Dispatchers.Main) { onDone(false, "Login expired or revoked") }
+                        withContext(Dispatchers.Main) { onDone(false, str(R.string.error_login_expired_or_revoked)) }
                         return@launch
                     } catch (_: Exception) { /* fall through to local */ }
                 }
 
                 val id = java.util.UUID.randomUUID().toString()
-                val entry = service.importTunnel(id, name.ifEmpty { "Tunnel" }, config, persist = true)
+                val entry = service.importTunnel(id, name.ifEmpty { str(R.string.import_default_name) }, config, persist = true)
                 val tunnel = buildTunnelInfo(entry)
                 _uiState.update { s ->
                     s.copy(tunnels = s.tunnels + tunnel, selectedTunnelId = tunnel.id)
                 }
                 withContext(Dispatchers.Main) { onDone(true, null) }
             } catch (e: Exception) {
-                withContext(Dispatchers.Main) { onDone(false, e.message) }
+                withContext(Dispatchers.Main) { onDone(false, errorText(e)) }
             }
         }
     }
@@ -332,7 +338,7 @@ class TunnelViewModel(application: Application) : AndroidViewModel(application) 
                 }
             } catch (e: Exception) {
                 _uiState.update { it.copy(deletePendingId = null) }
-                setError(e.message)
+                setError(errorText(e))
             }
         }
     }

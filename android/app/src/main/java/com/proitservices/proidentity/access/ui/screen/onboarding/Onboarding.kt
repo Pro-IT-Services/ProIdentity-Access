@@ -63,6 +63,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.autofill.ContentType
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
@@ -78,6 +79,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.proitservices.proidentity.access.R
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.proitservices.proidentity.access.ui.design.ApertureMark
@@ -102,7 +104,7 @@ fun OnboardingScreen(vm: SetupViewModel) {
                 title = { Text(stepLabel(s.step), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant) },
                 navigationIcon = {
                     IconButton(onClick = vm::goBack) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.common_back))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
@@ -131,10 +133,11 @@ fun OnboardingScreen(vm: SetupViewModel) {
     }
 }
 
+@Composable
 private fun stepLabel(step: SetupStep) = when (step) {
-    SetupStep.SERVER -> "Step 1 of 3"
-    SetupStep.REGISTER -> "Step 2 of 3"
-    SetupStep.LOGIN -> "Step 3 of 3"
+    SetupStep.SERVER -> stringResource(R.string.onboarding_step_of, 1, 3)
+    SetupStep.REGISTER -> stringResource(R.string.onboarding_step_of, 2, 3)
+    SetupStep.LOGIN -> stringResource(R.string.onboarding_step_of, 3, 3)
     else -> ""
 }
 
@@ -216,26 +219,26 @@ private fun ModeStep(onManaged: () -> Unit, onStandalone: () -> Unit) {
         Spacer(Modifier.height(48.dp))
         Icon(ApertureMark, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(72.dp))
         Spacer(Modifier.height(28.dp))
-        Text("Welcome to\nProIdentity Access", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.semantics { heading() })
+        Text(stringResource(R.string.onboarding_welcome_title), style = MaterialTheme.typography.headlineMedium, modifier = Modifier.semantics { heading() })
         Spacer(Modifier.height(10.dp))
         Text(
-            "Secure access to your organization's network. How would you like to connect?",
+            stringResource(R.string.onboarding_welcome_body),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.weight(1f).heightIn(min = 32.dp))
         OptionCard(
             icon = Icons.Outlined.Dns,
-            title = "Managed by my organization",
-            body = "Sign in to your company's ProIdentity server to get your connections.",
+            title = stringResource(R.string.onboarding_mode_managed_title),
+            body = stringResource(R.string.onboarding_mode_managed_body),
             recommended = true,
             onClick = onManaged,
         )
         Spacer(Modifier.height(12.dp))
         OptionCard(
             icon = Icons.Outlined.Description,
-            title = "Use my own configuration",
-            body = "Import WireGuard configuration files and connect without a server.",
+            title = stringResource(R.string.onboarding_mode_standalone_title),
+            body = stringResource(R.string.onboarding_mode_standalone_body),
             onClick = onStandalone,
         )
         Spacer(Modifier.height(24.dp))
@@ -270,9 +273,9 @@ private fun OptionCard(icon: ImageVector, title: String, body: String, onClick: 
 @Composable
 private fun ServerStep(s: SetupUiState, vm: SetupViewModel) {
     StepLayout(
-        title = "Connect to your server",
-        body = "Enter the address your IT team gave you, for example vpn.company.com.",
-        primaryLabel = "Continue",
+        title = stringResource(R.string.onboarding_server_title),
+        body = stringResource(R.string.onboarding_server_body),
+        primaryLabel = stringResource(R.string.common_continue),
         onPrimary = vm::submitServerUrl,
         loading = s.isLoading,
         primaryEnabled = s.serverUrl.isNotBlank(),
@@ -280,8 +283,8 @@ private fun ServerStep(s: SetupUiState, vm: SetupViewModel) {
         OutlinedTextField(
             value = s.serverUrl,
             onValueChange = { vm.setServerUrl(it); vm.clearError() },
-            label = { Text("Server address") },
-            placeholder = { Text("vpn.company.com") },
+            label = { Text(stringResource(R.string.onboarding_server_address)) },
+            placeholder = { Text(stringResource(R.string.onboarding_server_placeholder)) },
             leadingIcon = { Icon(Icons.Outlined.Link, contentDescription = null) },
             singleLine = true,
             isError = s.error != null,
@@ -296,17 +299,17 @@ private fun ServerStep(s: SetupUiState, vm: SetupViewModel) {
 @Composable
 private fun RegisterStep(s: SetupUiState, vm: SetupViewModel) {
     StepLayout(
-        title = "Register this device",
-        body = "ProIdentity Access creates a secure identity for this phone and registers it with ${hostOf(s.serverUrl)}.",
-        primaryLabel = "Register device",
+        title = stringResource(R.string.onboarding_register_title),
+        body = stringResource(R.string.onboarding_register_body, hostOf(s.serverUrl)),
+        primaryLabel = stringResource(R.string.onboarding_register_button),
         onPrimary = vm::registerDevice,
         loading = s.isLoading,
     ) {
         OutlinedTextField(
             value = s.deviceName,
             onValueChange = { vm.setDeviceName(it); vm.clearError() },
-            label = { Text("Device name") },
-            supportingText = { Text("Shown to your administrator in the device list.") },
+            label = { Text(stringResource(R.string.onboarding_device_name)) },
+            supportingText = { Text(stringResource(R.string.onboarding_device_name_hint)) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(onDone = { vm.registerDevice() }),
@@ -328,7 +331,7 @@ fun SignInScreen(vm: SetupViewModel, onContinueSignedOut: () -> Unit) {
             footer = if (s.loginMode == "credentials") {
                 {
                     TextButton(onClick = onContinueSignedOut, modifier = Modifier.padding(top = 4.dp).heightIn(min = 48.dp)) {
-                        Text("Continue without signing in")
+                        Text(stringResource(R.string.signin_continue_signed_out))
                     }
                 }
             } else null,
@@ -362,10 +365,10 @@ private fun CredentialsForm(s: SetupUiState, vm: SetupViewModel, footer: (@Compo
     var showPassword by rememberSaveable { mutableStateOf(false) }
     val returning = s.isReauth && s.username.isNotBlank()
     StepLayout(
-        title = if (returning) "Welcome back" else "Sign in",
-        body = if (returning) "Your session ended. Sign in again to continue — this device stays registered."
-               else "Use your organization account.",
-        primaryLabel = "Sign in",
+        title = if (returning) stringResource(R.string.signin_welcome_back) else stringResource(R.string.common_sign_in),
+        body = if (returning) stringResource(R.string.signin_reauth_body)
+               else stringResource(R.string.signin_body),
+        primaryLabel = stringResource(R.string.common_sign_in),
         onPrimary = vm::login,
         loading = s.isLoading,
         primaryEnabled = s.username.isNotBlank() && s.password.isNotBlank(),
@@ -380,7 +383,7 @@ private fun CredentialsForm(s: SetupUiState, vm: SetupViewModel, footer: (@Compo
         OutlinedTextField(
             value = s.username,
             onValueChange = { vm.setUsername(it); vm.clearError() },
-            label = { Text("Username") },
+            label = { Text(stringResource(R.string.signin_username)) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next, autoCorrectEnabled = false),
             modifier = Modifier.fillMaxWidth().semantics { contentType = ContentType.Username },
@@ -389,7 +392,7 @@ private fun CredentialsForm(s: SetupUiState, vm: SetupViewModel, footer: (@Compo
         OutlinedTextField(
             value = s.password,
             onValueChange = { vm.setPassword(it); vm.clearError() },
-            label = { Text("Password") },
+            label = { Text(stringResource(R.string.signin_password)) },
             singleLine = true,
             isError = s.error != null,
             visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
@@ -397,7 +400,7 @@ private fun CredentialsForm(s: SetupUiState, vm: SetupViewModel, footer: (@Compo
                 IconButton(onClick = { showPassword = !showPassword }) {
                     Icon(
                         if (showPassword) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
-                        contentDescription = if (showPassword) "Hide password" else "Show password",
+                        contentDescription = if (showPassword) stringResource(R.string.signin_hide_password) else stringResource(R.string.signin_show_password),
                     )
                 }
             },
@@ -415,15 +418,15 @@ private fun TotpForm(s: SetupUiState, vm: SetupViewModel) {
         if (s.totpCode.length == 6 && !s.isLoading) vm.loginWithTotp()
     }
     StepLayout(
-        title = "Two-step verification",
-        body = "Enter the 6-digit code from your authenticator app.",
-        primaryLabel = "Verify",
+        title = stringResource(R.string.signin_totp_title),
+        body = stringResource(R.string.signin_totp_body),
+        primaryLabel = stringResource(R.string.signin_verify),
         onPrimary = vm::loginWithTotp,
         loading = s.isLoading,
         primaryEnabled = s.totpCode.length == 6,
         footer = if (s.pushAuthEnabled) ({
             TextButton(onClick = vm::switchToPush, modifier = Modifier.heightIn(min = 48.dp)) {
-                Text("Send a push notification instead")
+                Text(stringResource(R.string.signin_use_push_instead))
             }
         }) else null,
     ) {
@@ -438,7 +441,7 @@ fun OtpField(value: String, onValueChange: (String) -> Unit, modifier: Modifier 
     OutlinedTextField(
         value = value,
         onValueChange = { onValueChange(it.filter(Char::isDigit).take(6)) },
-        placeholder = { Text("000000", style = otpStyle(), modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) },
+        placeholder = { Text(stringResource(R.string.otp_placeholder), style = otpStyle(), modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) },
         textStyle = otpStyle().copy(textAlign = TextAlign.Center),
         singleLine = true,
         isError = isError,
@@ -465,19 +468,19 @@ private fun PushForm(s: SetupUiState, vm: SetupViewModel) {
 fun PushApproval(status: String, loading: Boolean, onRetry: () -> Unit, onUseCode: () -> Unit) {
     val failed = status == "denied" || status == "expired"
     val (title, body) = when (status) {
-        "approved" -> "Approved" to "Signing you in…"
-        "denied" -> "Request denied" to "The request was declined on your phone. Try again, or use a code."
-        "expired" -> "Request expired" to "The request timed out. Send a new one, or use a code."
-        else -> "Approve on your phone" to "We sent a push notification to the ProIdentity app. Approve it to continue."
+        "approved" -> stringResource(R.string.push_approved_title) to stringResource(R.string.push_approved_body)
+        "denied" -> stringResource(R.string.push_denied_title) to stringResource(R.string.push_denied_body)
+        "expired" -> stringResource(R.string.push_expired_title) to stringResource(R.string.push_expired_body)
+        else -> stringResource(R.string.push_pending_title) to stringResource(R.string.push_pending_body)
     }
     StepLayout(
         title = title,
         body = body,
-        primaryLabel = if (failed) "Send again" else null,
+        primaryLabel = if (failed) stringResource(R.string.common_send_again) else null,
         onPrimary = onRetry,
         loading = loading,
         footer = if (status != "approved") ({
-            TextButton(onClick = onUseCode, modifier = Modifier.heightIn(min = 48.dp)) { Text("Enter a code instead") }
+            TextButton(onClick = onUseCode, modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.common_enter_code_instead)) }
         }) else null,
     ) {
         val pulse = rememberInfiniteTransition(label = "push")
@@ -512,7 +515,7 @@ fun PushApproval(status: String, loading: Boolean, onRetry: () -> Unit, onUseCod
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                 CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
                 Spacer(Modifier.width(10.dp))
-                Text("Waiting for approval…", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.push_waiting), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }

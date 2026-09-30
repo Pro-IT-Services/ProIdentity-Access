@@ -4,6 +4,7 @@ import { useActiveConnections } from '../lib/activeConnections'
 import { formatBytes, formatSince } from '../lib/format'
 import { StatusDot } from './ui/StatusDot'
 import { cn } from '../lib/cn'
+import { t, tp } from '../i18n'
 
 interface Props {
   /** The connection shown in the big status card, highlighted here. */
@@ -38,9 +39,9 @@ export function ActiveConnections({ focusedId, onDisconnect }: Props) {
   }
 
   return (
-    <aside aria-label="Connected now" className="relative w-72 shrink-0 border-l border-border bg-background/70 backdrop-blur flex flex-col min-h-0">
+    <aside aria-label={t('active.title')} className="relative w-72 shrink-0 border-l border-border bg-background/70 backdrop-blur flex flex-col min-h-0">
       <p className="px-4 pt-4 pb-2 text-[10px] uppercase tracking-[0.18em] font-semibold text-muted-foreground">
-        Connected now · {conns.length}
+        {t('active.title')} · {conns.length}
       </p>
       <ul className="flex-1 overflow-y-auto px-3 pb-3 space-y-2">
         {conns.map(c => {
@@ -59,8 +60,8 @@ export function ActiveConnections({ focusedId, onDisconnect }: Props) {
                 <button
                   onClick={() => disconnect(c.id)}
                   disabled={busy === c.id}
-                  aria-label={`Disconnect ${c.name}`}
-                  title="Disconnect"
+                  aria-label={t('active.disconnectName', { name: c.name })}
+                  title={t('common.disconnect')}
                   className="no-drag shrink-0 -mr-1 p-1.5 rounded-md text-destructive hover:bg-destructive/10 disabled:opacity-50 cursor-pointer"
                 >
                   {busy === c.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <PowerOff className="w-3.5 h-3.5" />}
@@ -76,22 +77,22 @@ export function ActiveConnections({ focusedId, onDisconnect }: Props) {
                 ))}
                 {extra > 0 && (
                   <span className="text-[10px] text-muted-foreground" title={c.networks.slice(MAX_CHIPS).join(', ')}>
-                    +{extra} more
+                    {tp('active.moreNetworks', extra)}
                   </span>
                 )}
                 {!c.networks.length && c.status === 'connecting' && (
-                  <span className="text-[10px] text-muted-foreground">waiting for the server's networks</span>
+                  <span className="text-[10px] text-muted-foreground">{t('active.waitingNetworks')}</span>
                 )}
               </div>
               <div className="mt-1.5 text-[11px] text-muted-foreground tabular-nums space-y-0.5">
-                {c.server && <p className="truncate">via <span className="font-mono">{c.server}</span>{c.status === 'connected' && c.since > 0 && <> · {formatSince(c.since)}</>}</p>}
+                {c.server && <p className="truncate">{t('active.via')} <span className="font-mono">{c.server}</span>{c.status === 'connected' && c.since > 0 && <> · {formatSince(c.since)}</>}</p>}
                 {c.status === 'connected' ? (
                   <p className="inline-flex items-center gap-1">
                     <ArrowDown className="w-3 h-3" />{formatBytes(c.rx)}
                     <ArrowUp className="w-3 h-3 ml-1.5" />{formatBytes(c.tx)}
                   </p>
                 ) : (
-                  <p className="text-warning">connecting…</p>
+                  <p className="text-warning">{t('active.connecting')}</p>
                 )}
               </div>
             </li>

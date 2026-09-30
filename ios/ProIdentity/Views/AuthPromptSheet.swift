@@ -26,7 +26,9 @@ struct AuthPromptSheet: View {
                             .padding(.horizontal, 20)
                             .padding(.vertical, 12)
                     }
-                    .navigationTitle(prompt.method == .code ? "Verification code" : "Approve connection")
+                    .navigationTitle(prompt.method == .code
+                                     ? LocalizedStringKey("Verification code")
+                                     : LocalizedStringKey("Approve connection"))
                 }
             }
             .background(Brand.background.ignoresSafeArea())

@@ -62,6 +62,16 @@ func (h *VPNEventHandler) List(w http.ResponseWriter, r *http.Request) {
 		where = append(where, "source_ip = ?")
 		args = append(args, v)
 	}
+	// Free-text search over the columns the history shows. Applied in SQL,
+	// so it covers all pages and the total counts only matching events.
+	if v := strings.TrimSpace(q.Get("q")); v != "" {
+		like := "%" + escapeLike(v) + "%"
+		where = append(where, `(username LIKE ? OR email LIKE ? OR server_name LIKE ? OR device_name LIKE ?
+			OR device_id LIKE ? OR source_ip LIKE ? OR assigned_ip LIKE ? OR reason LIKE ?)`)
+		for i := 0; i < 8; i++ {
+			args = append(args, like)
+		}
+	}
 	if v := q.Get("since"); v != "" {
 		if t, err := time.Parse(time.RFC3339, v); err == nil {
 			where = append(where, "created_at >= ?")
@@ -85,4 +95,9 @@ func (h *VPNEventHandler) List(w http.ResponseWriter, r *http.Request) {
 		"limit":  limit,
 		"offset": offset,
 	})
+}
+
+// escapeLike makes user input match literally in a LIKE pattern.
+func escapeLike(s string) string {
+	return strings.NewReplacer(`\`, `\\`, "%", `\%`, "_", `\_`).Replace(s)
 }

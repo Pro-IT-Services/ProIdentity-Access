@@ -30,10 +30,12 @@ import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.proitservices.proidentity.access.R
 import com.proitservices.proidentity.access.ui.theme.Brand
 
 // Geometry of the ProIdentity Access aperture mark (256-unit viewBox),
@@ -137,16 +139,17 @@ fun StatusAperture(
     ) else remember { androidx.compose.runtime.mutableFloatStateOf(1f) }
 
     val description = when (state) {
-        ApertureState.Idle -> "Not connected"
-        ApertureState.Connecting -> "Connecting"
-        ApertureState.Connected -> "Connected"
-        ApertureState.Error -> "Connection error"
+        ApertureState.Idle -> stringResource(R.string.status_not_connected)
+        ApertureState.Connecting -> stringResource(R.string.aperture_connecting)
+        ApertureState.Connected -> stringResource(R.string.status_connected)
+        ApertureState.Error -> stringResource(R.string.aperture_error)
     }
+    val statusDescription = stringResource(R.string.aperture_content_description, description)
 
     Canvas(
         modifier
             .size(size)
-            .semantics { contentDescription = "Connection status: $description" },
+            .semantics { contentDescription = statusDescription },
     ) {
         val unit = this.size.minDimension / 256f
         scale(unit, pivot = Offset.Zero) {

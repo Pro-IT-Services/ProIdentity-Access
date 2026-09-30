@@ -4,6 +4,7 @@ import { Sheet } from './ui/Sheet'
 import { Button } from './ui/Button'
 import { Input } from './ui/Input'
 import { managedCreatePushAuth, managedPollPushAuth } from '../wailsbridge'
+import { t } from '../i18n'
 
 interface Props {
   open: boolean
@@ -61,12 +62,12 @@ export function TotpPromptSheet({ open, serverName, pushAuthEnabled, onCancel, o
               } finally { setLoading(false) }
             } else if (status === 'denied' || status === 'expired') {
               stopPolling()
-              setError(status === 'denied' ? 'Request denied.' : 'Request expired. Try again.')
+              setError(status === 'denied' ? t('totp.requestDenied') : t('totp.requestExpired'))
             }
           } catch { /* keep polling */ }
         }, 2000)
       } catch (e: any) {
-        if (!cancelled) setError(e?.message ?? 'Failed to create push request')
+        if (!cancelled) setError(e?.message ?? t('totp.pushCreateFailed'))
       }
     }
     startPush()
@@ -80,7 +81,7 @@ export function TotpPromptSheet({ open, serverName, pushAuthEnabled, onCancel, o
       await onSubmit(code)
     } catch (e: any) {
       const msg = String(e?.message ?? e)
-      setError(msg.includes('totp') || msg.includes('2FA') ? 'Invalid code, try again' : msg)
+      setError(msg.includes('totp') || msg.includes('2FA') ? t('totp.invalidCode') : msg)
       setCode('')
     } finally { setLoading(false) }
   }
@@ -89,20 +90,20 @@ export function TotpPromptSheet({ open, serverName, pushAuthEnabled, onCancel, o
     <Sheet
       open={open}
       onClose={() => { if (!loading) { stopPolling(); onCancel() } }}
-      title="Verification required"
-      description={serverName ? `Connect to ${serverName}` : 'Verify your identity to continue.'}
+      title={t('totp.title')}
+      description={serverName ? t('totp.connectTo', { name: serverName }) : t('totp.verifyDesc')}
       widthPx={400}
       footer={mode === 'totp' ? (
         <>
-          <Button variant="ghost" onClick={() => { stopPolling(); onCancel() }} disabled={loading}>Cancel</Button>
+          <Button variant="ghost" onClick={() => { stopPolling(); onCancel() }} disabled={loading}>{t('common.cancel')}</Button>
           <Button onClick={submitTotp} disabled={loading || code.length !== 6}>
             {loading
-              ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Verifying…</>
-              : <><ShieldCheck className="w-3.5 h-3.5" /> Connect</>}
+              ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> {t('common.verifying')}</>
+              : <><ShieldCheck className="w-3.5 h-3.5" /> {t('common.connect')}</>}
           </Button>
         </>
       ) : (
-        <Button variant="ghost" onClick={() => { stopPolling(); onCancel() }} disabled={loading}>Cancel</Button>
+        <Button variant="ghost" onClick={() => { stopPolling(); onCancel() }} disabled={loading}>{t('common.cancel')}</Button>
       )}
     >
       <div className="space-y-4">
@@ -122,15 +123,15 @@ export function TotpPromptSheet({ open, serverName, pushAuthEnabled, onCancel, o
             </div>
             <div>
               <p className="text-sm font-medium">
-                {pushStatus === 'pending' && 'Waiting for approval…'}
-                {pushStatus === 'approved' && 'Approved — connecting…'}
-                {pushStatus === 'denied' && 'Denied'}
-                {pushStatus === 'expired' && 'Expired'}
+                {pushStatus === 'pending' && t('push.waiting')}
+                {pushStatus === 'approved' && t('totp.approvedConnecting')}
+                {pushStatus === 'denied' && t('push.denied')}
+                {pushStatus === 'expired' && t('push.expired')}
               </p>
               <p className="text-xs text-muted-foreground mt-1">
-                {pushStatus === 'pending' && 'Check your phone for a push notification from ProIdentity Access.'}
-                {pushStatus === 'denied' && 'The request was denied. Try again or use a code.'}
-                {pushStatus === 'expired' && 'The request expired. Try again or use a code.'}
+                {pushStatus === 'pending' && t('totp.checkPhone')}
+                {pushStatus === 'denied' && t('totp.deniedUseCode')}
+                {pushStatus === 'expired' && t('totp.expiredUseCode')}
               </p>
             </div>
             {(pushStatus === 'pending' || pushStatus === 'denied' || pushStatus === 'expired') && (
@@ -138,7 +139,7 @@ export function TotpPromptSheet({ open, serverName, pushAuthEnabled, onCancel, o
                 onClick={() => { stopPolling(); setError(''); setMode('totp') }}
                 className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
               >
-                <KeyRound className="w-3.5 h-3.5" /> Enter code manually
+                <KeyRound className="w-3.5 h-3.5" /> {t('push.enterCode')}
               </button>
             )}
           </div>
@@ -156,14 +157,14 @@ export function TotpPromptSheet({ open, serverName, pushAuthEnabled, onCancel, o
               className="text-center font-mono tracking-[0.45em] text-lg h-12"
             />
             <p className="text-xs text-muted-foreground text-center">
-              Enter the 6-digit code from your authenticator app.
+              {t('totp.hint')}
             </p>
             {pushAuthEnabled && (
               <button
                 onClick={() => { setError(''); setCode(''); setMode('push') }}
                 className="w-full inline-flex items-center justify-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer mt-2"
               >
-                <Smartphone className="w-3.5 h-3.5" /> Use push notification instead
+                <Smartphone className="w-3.5 h-3.5" /> {t('push.usePush')}
               </button>
             )}
           </div>

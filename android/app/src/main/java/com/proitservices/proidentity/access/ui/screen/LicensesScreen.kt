@@ -1,6 +1,7 @@
 package com.proitservices.proidentity.access.ui.screen
 
 import androidx.activity.compose.BackHandler
+import androidx.annotation.StringRes
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -30,11 +31,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
+import com.proitservices.proidentity.access.R
 import com.proitservices.proidentity.access.ui.design.InfoCard
 import com.proitservices.proidentity.access.ui.design.SectionLabel
 
@@ -43,7 +46,7 @@ private const val SOURCE_CODE = "https://github.com/Pro-IT-Services/ProIdentity-
 /** A piece of software in the app and its license. */
 private data class Component(
     val name: String,
-    val detail: String,
+    @StringRes val detail: Int,
     val license: String,
     /** File in assets/licenses/ (without .txt). */
     val file: String,
@@ -53,25 +56,25 @@ private data class Component(
 
 private val components = listOf(
     Component(
-        "WireGuard tunnel library", "com.wireguard.android:tunnel", "Apache-2.0", "apache-2.0",
+        "WireGuard tunnel library", R.string.licenses_detail_wireguard_tunnel, "Apache-2.0", "apache-2.0",
         "Copyright © 2017-2025 WireGuard LLC. All Rights Reserved.",
     ),
-    Component("wireguard-go", "WireGuard implementation", "MIT", "wireguard-go"),
-    Component("Go", "Go runtime, standard library and golang.org/x", "BSD-3-Clause", "go"),
-    Component("OkHttp and Okio", "HTTP client", "Apache-2.0", "apache-2.0", "Copyright 2019 Square, Inc."),
-    Component("Bouncy Castle", "Cryptography provider", "MIT", "bouncycastle"),
+    Component("wireguard-go", R.string.licenses_detail_wireguard_go, "MIT", "wireguard-go"),
+    Component("Go", R.string.licenses_detail_go, "BSD-3-Clause", "go"),
+    Component("OkHttp and Okio", R.string.licenses_detail_okhttp, "Apache-2.0", "apache-2.0", "Copyright 2019 Square, Inc."),
+    Component("Bouncy Castle", R.string.licenses_detail_bouncycastle, "MIT", "bouncycastle"),
     Component(
-        "Kotlin and kotlinx.coroutines", "Language runtime", "Apache-2.0", "apache-2.0",
+        "Kotlin and kotlinx.coroutines", R.string.licenses_detail_kotlin, "Apache-2.0", "apache-2.0",
         "Copyright 2000-2025 JetBrains s.r.o. and Kotlin Programming Language contributors.",
     ),
     Component(
-        "AndroidX and Jetpack Compose", "Including Security Crypto and Material icons", "Apache-2.0", "apache-2.0",
+        "AndroidX and Jetpack Compose", R.string.licenses_detail_androidx, "Apache-2.0", "apache-2.0",
         "Copyright The Android Open Source Project.",
     ),
-    Component("Tink and Gson", "Google libraries used by Security Crypto", "Apache-2.0", "apache-2.0", "Copyright Google LLC."),
+    Component("Tink and Gson", R.string.licenses_detail_tink, "Apache-2.0", "apache-2.0", "Copyright Google LLC."),
 )
 
-private val appComponent = Component("ProIdentity Access", "This app", "Free Internal Use License 1.0", "proidentity-access")
+private val appComponent = Component("ProIdentity Access", R.string.licenses_this_app, "Free Internal Use License 1.0", "proidentity-access")
 
 /**
  * Third-party software in the app with the notices its licenses (MIT, BSD,
@@ -88,10 +91,10 @@ fun LicensesScreen(onBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(shown?.name ?: "Open-source licenses") },
+                title = { Text(shown?.name ?: stringResource(R.string.common_open_source_licenses)) },
                 navigationIcon = {
                     IconButton(onClick = { if (shown != null) open = null else onBack() }) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.common_back))
                     }
                 },
             )
@@ -109,22 +112,22 @@ fun LicensesScreen(onBack: () -> Unit) {
                 .padding(horizontal = 16.dp)
                 .navigationBarsPadding(),
         ) {
-            SectionLabel("Included software")
+            SectionLabel(stringResource(R.string.licenses_included_software))
             InfoCard {
                 components.forEach { c -> ComponentRow(c) { open = c.name } }
             }
             Text(
-                "WireGuard is a registered trademark of Jason A. Donenfeld.",
+                stringResource(R.string.licenses_wireguard_trademark),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             )
             Spacer(Modifier.height(12.dp))
-            SectionLabel("This app")
+            SectionLabel(stringResource(R.string.licenses_this_app))
             InfoCard {
                 ComponentRow(appComponent) { open = appComponent.name }
                 ListItem(
-                    headlineContent = { Text("Source code") },
+                    headlineContent = { Text(stringResource(R.string.licenses_source_code)) },
                     trailingContent = { Icon(Icons.AutoMirrored.Outlined.OpenInNew, contentDescription = null) },
                     colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
                     modifier = Modifier.clickable(role = Role.Button) { uri.openUri(SOURCE_CODE) },
@@ -139,7 +142,7 @@ fun LicensesScreen(onBack: () -> Unit) {
 private fun ComponentRow(c: Component, onClick: () -> Unit) {
     ListItem(
         headlineContent = { Text(c.name) },
-        supportingContent = { Text("${c.detail} · ${c.license}") },
+        supportingContent = { Text("${stringResource(c.detail)} · ${c.license}") },
         colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
         modifier = Modifier.clickable(role = Role.Button, onClick = onClick),
     )
@@ -148,10 +151,11 @@ private fun ComponentRow(c: Component, onClick: () -> Unit) {
 @Composable
 private fun LicenseText(c: Component, modifier: Modifier) {
     val context = LocalContext.current
-    val text = remember(c.file) {
+    val notFound = stringResource(R.string.licenses_text_not_found)
+    val text = remember(c.file, notFound) {
         runCatching {
             context.assets.open("licenses/${c.file}.txt").bufferedReader().use { it.readText() }
-        }.getOrDefault("License text not found.")
+        }.getOrDefault(notFound)
     }
     SelectionContainer(
         modifier

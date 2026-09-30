@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import * as api from '../wailsbridge'
 import type { UpdateState } from '../wailsbridge'
+import { t } from '../i18n'
 
 /** "Later" hides the prompt for this long, per version (not for mandatory updates). */
 const SNOOZE_MS = 24 * 60 * 60 * 1000
@@ -73,7 +74,7 @@ export const useUpdateStore = create<UpdateStore>((set, get) => ({
     set({
       status,
       installing: status.state === 'downloading' || status.state === 'installing',
-      error: status.state === 'failed' ? (status.error ?? 'The update failed.') : '',
+      error: status.state === 'failed' ? (status.error ?? t('update.failed')) : '',
     })
   },
 

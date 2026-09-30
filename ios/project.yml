@@ -1,6 +1,7 @@
 name: ProIdentity Access
 options:
   bundleIdPrefix: com.proidentity
+  developmentLanguage: en
   xcodeVersion: "26.4"
   deploymentTarget:
     iOS: "17.0"

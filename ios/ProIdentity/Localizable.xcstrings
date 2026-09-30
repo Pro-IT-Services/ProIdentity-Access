@@ -1,0 +1,1968 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "%lld imported" : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld imported"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld imported"
+                }
+              }
+            }
+          }
+        },
+        "sk" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld importovaná"
+                }
+              },
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld importované"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld importovanej"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld importovaných"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lldh ago" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "pred %lld h"
+          }
+        }
+      }
+    },
+    "%lldm ago" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "pred %lld min"
+          }
+        }
+      }
+    },
+    "%llds ago" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "pred %lld s"
+          }
+        }
+      }
+    },
+    "A fresh key and address are issued each time you connect." : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pri každom pripojení sa vydá nový kľúč a adresa."
+          }
+        }
+      }
+    },
+    "A unique encryption key is created on this device. It never leaves it." : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "V tomto zariadení sa vytvorí jedinečný šifrovací kľúč, ktorý ho nikdy neopustí."
+          }
+        }
+      }
+    },
+    "About" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O aplikácii"
+          }
+        }
+      }
+    },
+    "Account" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Účet"
+          }
+        }
+      }
+    },
+    "Add a connection to get started" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Začnite pridaním pripojenia"
+          }
+        }
+      }
+    },
+    "Address" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adresa"
+          }
+        }
+      }
+    },
+    "All connections and settings are removed from this device. This can't be undone." : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Všetky pripojenia a nastavenia sa z tohto zariadenia odstránia. Túto akciu nemožno vrátiť späť."
+          }
+        }
+      }
+    },
+    "Approve connection" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schváľte pripojenie"
+          }
+        }
+      }
+    },
+    "Approve sign-in" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schváľte prihlásenie"
+          }
+        }
+      }
+    },
+    "Approved" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schválené"
+          }
+        }
+      }
+    },
+    "Back" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Späť"
+          }
+        }
+      }
+    },
+    "Can't reach the server. Check the address and try again." : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Server je nedostupný. Skontrolujte adresu a skúste to znova."
+          }
+        }
+      }
+    },
+    "Cancel" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zrušiť"
+          }
+        }
+      }
+    },
+    "Choose a file…" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vybrať súbor…"
+          }
+        }
+      }
+    },
+    "Configuration" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Konfigurácia"
+          }
+        }
+      }
+    },
+    "Configuration files" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Konfiguračné súbory"
+          }
+        }
+      }
+    },
+    "Configuration text" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Text konfigurácie"
+          }
+        }
+      }
+    },
+    "Configurations" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Konfigurácie"
+          }
+        }
+      }
+    },
+    "Connect" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pripojiť"
+          }
+        }
+      }
+    },
+    "Connect %@" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pripojiť %@"
+          }
+        }
+      }
+    },
+    "Connect to %@" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pripojiť k %@"
+          }
+        }
+      }
+    },
+    "Connected" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pripojené"
+          }
+        }
+      }
+    },
+    "Connected for %@" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Čas pripojenia: %@"
+          }
+        }
+      }
+    },
+    "Connecting…" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pripája sa…"
+          }
+        }
+      }
+    },
+    "Connection" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pripojenie"
+          }
+        }
+      }
+    },
+    "Connection status" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stav pripojenia"
+          }
+        }
+      }
+    },
+    "Connection unavailable" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pripojenie nie je k dispozícii"
+          }
+        }
+      }
+    },
+    "Connections" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pripojenia"
+          }
+        }
+      }
+    },
+    "Continue" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pokračovať"
+          }
+        }
+      }
+    },
+    "Continue without signing in" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pokračovať bez prihlásenia"
+          }
+        }
+      }
+    },
+    "Couldn't connect" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nepodarilo sa pripojiť"
+          }
+        }
+      }
+    },
+    "Couldn't register" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nepodarilo sa zaregistrovať"
+          }
+        }
+      }
+    },
+    "Couldn't sign in" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nepodarilo sa prihlásiť"
+          }
+        }
+      }
+    },
+    "DNS" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "DNS"
+          }
+        }
+      }
+    },
+    "Delete" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vymazať"
+          }
+        }
+      }
+    },
+    "Delete %@?" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vymazať %@?"
+          }
+        }
+      }
+    },
+    "Delete configuration" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vymazať konfiguráciu"
+          }
+        }
+      }
+    },
+    "Details" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Podrobnosti"
+          }
+        }
+      }
+    },
+    "Details and traffic for a connection appear here." : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu sa zobrazia podrobnosti a prenos dát pripojenia."
+          }
+        }
+      }
+    },
+    "Device name" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Názov zariadenia"
+          }
+        }
+      }
+    },
+    "Device revoked" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zariadenie bolo zrušené"
+          }
+        }
+      }
+    },
+    "Disconnect" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Odpojiť"
+          }
+        }
+      }
+    },
+    "Disconnect %@" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Odpojiť %@"
+          }
+        }
+      }
+    },
+    "Disconnect VPN" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Odpojiť VPN"
+          }
+        }
+      }
+    },
+    "Disconnect before deleting." : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pred vymazaním sa odpojte."
+          }
+        }
+      }
+    },
+    "Dismiss" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zavrieť"
+          }
+        }
+      }
+    },
+    "Done" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hotovo"
+          }
+        }
+      }
+    },
+    "Duration" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trvanie"
+          }
+        }
+      }
+    },
+    "Endpoint" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Koncový bod"
+          }
+        }
+      }
+    },
+    "Enter a code instead" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zadať kód"
+          }
+        }
+      }
+    },
+    "Enter a valid address, for example vpn.company.com." : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zadajte platnú adresu, napríklad vpn.firma.sk."
+          }
+        }
+      }
+    },
+    "Enter the 6-digit code from your authenticator app to connect to %@." : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Na pripojenie k %@ zadajte 6-miestny kód z aplikácie autentifikátora."
+          }
+        }
+      }
+    },
+    "Enter the 6-digit code from your authenticator app." : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zadajte 6-miestny kód z aplikácie autentifikátora."
+          }
+        }
+      }
+    },
+    "Enter the 6-digit code." : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zadajte 6-miestny kód."
+          }
+        }
+      }
+    },
+    "Enter the address your administrator gave you." : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zadajte adresu, ktorú vám poskytol správca."
+          }
+        }
+      }
+    },
+    "Enter your username and password." : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zadajte používateľské meno a heslo."
+          }
+        }
+      }
+    },
+    "Finishing up…" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dokončuje sa…"
+          }
+        }
+      }
+    },
+    "Go runtime, standard library and golang.org/x/crypto, net, sys" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Runtime jazyka Go, štandardná knižnica a golang.org/x/crypto, net, sys"
+          }
+        }
+      }
+    },
+    "How will you connect?" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ako sa budete pripájať?"
+          }
+        }
+      }
+    },
+    "Import" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Importovať"
+          }
+        }
+      }
+    },
+    "Import WireGuard configuration files yourself. No account needed." : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Konfiguračné súbory WireGuard si importujete sami. Účet nie je potrebný."
+          }
+        }
+      }
+    },
+    "Import a WireGuard configuration file to get started." : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Začnite importom konfiguračného súboru WireGuard."
+          }
+        }
+      }
+    },
+    "Import configuration" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Importovať konfiguráciu"
+          }
+        }
+      }
+    },
+    "Imported" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Importované"
+          }
+        }
+      }
+    },
+    "Imported configuration" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Importovaná konfigurácia"
+          }
+        }
+      }
+    },
+    "Imported tunnel" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Importovaný tunel"
+          }
+        }
+      }
+    },
+    "Invalid URL" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Neplatná adresa URL"
+          }
+        }
+      }
+    },
+    "Invalid WireGuard config" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Neplatná konfigurácia WireGuard"
+          }
+        }
+      }
+    },
+    "Invalid response" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Neplatná odpoveď"
+          }
+        }
+      }
+    },
+    "It was removed or is no longer assigned to you." : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bolo odstránené alebo vám už nie je pridelené."
+          }
+        }
+      }
+    },
+    "Just now" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Práve teraz"
+          }
+        }
+      }
+    },
+    "Last handshake" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Posledný handshake"
+          }
+        }
+      }
+    },
+    "License text not found." : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Text licencie sa nenašiel."
+          }
+        }
+      }
+    },
+    "Location" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Umiestnenie"
+          }
+        }
+      }
+    },
+    "Login expired or revoked" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prihlásenie vypršalo alebo bolo zrušené"
+          }
+        }
+      }
+    },
+    "Managed" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Spravované"
+          }
+        }
+      }
+    },
+    "Managed by your organization" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Spravované vašou organizáciou"
+          }
+        }
+      }
+    },
+    "Mode" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Režim"
+          }
+        }
+      }
+    },
+    "More options" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ďalšie možnosti"
+          }
+        }
+      }
+    },
+    "Name" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Názov"
+          }
+        }
+      }
+    },
+    "Name this device" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pomenujte toto zariadenie"
+          }
+        }
+      }
+    },
+    "Network" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sieť"
+          }
+        }
+      }
+    },
+    "Network error. Try again." : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chyba siete. Skúste to znova."
+          }
+        }
+      }
+    },
+    "No answer in time. Send a new request to try again." : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Odpoveď neprišla včas. Ak to chcete skúsiť znova, pošlite novú žiadosť."
+          }
+        }
+      }
+    },
+    "No configurations yet" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zatiaľ žiadne konfigurácie"
+          }
+        }
+      }
+    },
+    "No connections assigned" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Žiadne pridelené pripojenia"
+          }
+        }
+      }
+    },
+    "None of the server's endpoints could be reached." : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Žiadny z koncových bodov servera nie je dostupný."
+          }
+        }
+      }
+    },
+    "Not connected" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nepripojené"
+          }
+        }
+      }
+    },
+    "Nothing here yet" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zatiaľ tu nič nie je"
+          }
+        }
+      }
+    },
+    "Open the notification on your phone and approve the request." : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Otvorte upozornenie na telefóne a schváľte žiadosť."
+          }
+        }
+      }
+    },
+    "Open-source licenses" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Licencie open-source softvéru"
+          }
+        }
+      }
+    },
+    "Organization" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Organizácia"
+          }
+        }
+      }
+    },
+    "Password" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Heslo"
+          }
+        }
+      }
+    },
+    "Privacy policy" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zásady ochrany osobných údajov"
+          }
+        }
+      }
+    },
+    "Push approval isn't available right now." : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schválenie push momentálne nie je k dispozícii."
+          }
+        }
+      }
+    },
+    "Push authentication required" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vyžaduje sa schválenie push"
+          }
+        }
+      }
+    },
+    "Ready to connect to %@" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pripravené na pripojenie k %@"
+          }
+        }
+      }
+    },
+    "Received" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prijaté"
+          }
+        }
+      }
+    },
+    "Register device" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zaregistrovať zariadenie"
+          }
+        }
+      }
+    },
+    "Removes all connections, the device registration and settings, and returns to setup." : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Odstráni všetky pripojenia, registráciu zariadenia a nastavenia a vráti aplikáciu na úvodné nastavenie."
+          }
+        }
+      }
+    },
+    "Request denied" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Žiadosť bola zamietnutá"
+          }
+        }
+      }
+    },
+    "Request expired" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Platnosť žiadosti vypršala"
+          }
+        }
+      }
+    },
+    "Reset" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Resetovať"
+          }
+        }
+      }
+    },
+    "Reset app" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Resetovať aplikáciu"
+          }
+        }
+      }
+    },
+    "Reset the app?" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Resetovať aplikáciu?"
+          }
+        }
+      }
+    },
+    "Routes" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trasy"
+          }
+        }
+      }
+    },
+    "Secure access to your organization's network." : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bezpečný prístup k sieti vašej organizácie."
+          }
+        }
+      }
+    },
+    "Select a connection" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vyberte pripojenie"
+          }
+        }
+      }
+    },
+    "Send a push approval instead" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Poslať schválenie push"
+          }
+        }
+      }
+    },
+    "Send again" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Poslať znova"
+          }
+        }
+      }
+    },
+    "Sent" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Odoslané"
+          }
+        }
+      }
+    },
+    "Server" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Server"
+          }
+        }
+      }
+    },
+    "Server URL must use HTTPS" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adresa servera musí používať HTTPS"
+          }
+        }
+      }
+    },
+    "Server address" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adresa servera"
+          }
+        }
+      }
+    },
+    "Server connections will be disconnected." : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pripojenia k serverom sa odpoja."
+          }
+        }
+      }
+    },
+    "Session" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Relácia"
+          }
+        }
+      }
+    },
+    "Set up again" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nastaviť znova"
+          }
+        }
+      }
+    },
+    "Settings" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nastavenia"
+          }
+        }
+      }
+    },
+    "Shows details" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zobrazí podrobnosti"
+          }
+        }
+      }
+    },
+    "Sign in" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prihlásiť sa"
+          }
+        }
+      }
+    },
+    "Sign in to %@ to load your connections." : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prihláste sa na server %@ a načítajte svoje pripojenia."
+          }
+        }
+      }
+    },
+    "Sign in to load your organization's connections." : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prihláste sa a načítajte pripojenia vašej organizácie."
+          }
+        }
+      }
+    },
+    "Sign in to see your organization's servers, or import a configuration file." : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prihláste sa a zobrazte servery vašej organizácie alebo importujte konfiguračný súbor."
+          }
+        }
+      }
+    },
+    "Sign in to your company's ProIdentity server. Connections are assigned to you." : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prihláste sa na server ProIdentity vašej organizácie. Pripojenia vám budú pridelené."
+          }
+        }
+      }
+    },
+    "Sign out" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Odhlásiť sa"
+          }
+        }
+      }
+    },
+    "Sign out of %@?" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Odhlásiť používateľa %@?"
+          }
+        }
+      }
+    },
+    "Signed in as" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Účet"
+          }
+        }
+      }
+    },
+    "Signed out" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nie ste prihlásení"
+          }
+        }
+      }
+    },
+    "Signing out disconnects server connections. Imported configurations stay on this device." : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Odhlásenie odpojí pripojenia k serverom. Importované konfigurácie zostanú v tomto zariadení."
+          }
+        }
+      }
+    },
+    "Source code" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zdrojový kód"
+          }
+        }
+      }
+    },
+    "Stays on this device and is stored in the Keychain." : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zostáva v tomto zariadení a je uložená v Keychain."
+          }
+        }
+      }
+    },
+    "That code didn't work. Check your authenticator and try again." : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tento kód nefungoval. Skontrolujte aplikáciu autentifikátora a skúste to znova."
+          }
+        }
+      }
+    },
+    "The VPN configuration is not valid on this device." : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Konfigurácia VPN nie je v tomto zariadení platná."
+          }
+        }
+      }
+    },
+    "The VPN couldn't start. Try again." : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "VPN sa nepodarilo spustiť. Skúste to znova."
+          }
+        }
+      }
+    },
+    "The configuration is removed from this device. This can't be undone." : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Konfigurácia sa z tohto zariadenia odstráni. Túto akciu nemožno vrátiť späť."
+          }
+        }
+      }
+    },
+    "The request was declined on your phone. Send a new one to try again." : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Žiadosť bola na vašom telefóne zamietnutá. Ak to chcete skúsiť znova, pošlite novú."
+          }
+        }
+      }
+    },
+    "The server didn't return a session. Try again." : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Server nevrátil reláciu. Skúste to znova."
+          }
+        }
+      }
+    },
+    "The server didn't send a configuration." : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Server neposlal konfiguráciu."
+          }
+        }
+      }
+    },
+    "The server didn't start a session." : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Server nespustil reláciu."
+          }
+        }
+      }
+    },
+    "The server returned an error (HTTP %lld)." : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Server vrátil chybu (HTTP %lld)."
+          }
+        }
+      }
+    },
+    "The server took too long to respond. Try again." : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Server neodpovedal včas. Skúste to znova."
+          }
+        }
+      }
+    },
+    "The server's certificate isn't trusted." : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Certifikát servera nie je dôveryhodný."
+          }
+        }
+      }
+    },
+    "This app" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Táto aplikácia"
+          }
+        }
+      }
+    },
+    "This connection's session has ended. Connect again." : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Relácia tohto pripojenia sa skončila. Pripojte sa znova."
+          }
+        }
+      }
+    },
+    "This device" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toto zariadenie"
+          }
+        }
+      }
+    },
+    "This device is no longer registered. Set it up again." : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toto zariadenie už nie je zaregistrované. Nastavte ho znova."
+          }
+        }
+      }
+    },
+    "This device was removed by your administrator. Set it up again to continue." : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Správca odstránil toto zariadenie. Ak chcete pokračovať, nastavte ho znova."
+          }
+        }
+      }
+    },
+    "This device will be unregistered here and all connections removed." : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Registrácia tohto zariadenia na serveri sa zruší a všetky pripojenia sa odstránia."
+          }
+        }
+      }
+    },
+    "This doesn't look like a ProIdentity Access server." : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toto nevyzerá ako server ProIdentity Access."
+          }
+        }
+      }
+    },
+    "This doesn't look like a WireGuard configuration." : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toto nevyzerá ako konfigurácia WireGuard."
+          }
+        }
+      }
+    },
+    "This doesn't look like a WireGuard configuration. It needs an [Interface] section with a PrivateKey." : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toto nevyzerá ako konfigurácia WireGuard. Musí obsahovať sekciu [Interface] s kľúčom PrivateKey."
+          }
+        }
+      }
+    },
+    "This file couldn't be read." : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tento súbor sa nepodarilo prečítať."
+          }
+        }
+      }
+    },
+    "Try again" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Skúsiť znova"
+          }
+        }
+      }
+    },
+    "Tunnel not found" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tunel sa nenašiel"
+          }
+        }
+      }
+    },
+    "Two-factor authentication required" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vyžaduje sa dvojfaktorové overenie"
+          }
+        }
+      }
+    },
+    "Type" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Typ"
+          }
+        }
+      }
+    },
+    "Use a .conf file from your VPN provider or administrator." : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Použite súbor .conf od poskytovateľa VPN alebo od správcu."
+          }
+        }
+      }
+    },
+    "Use a different server" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Použiť iný server"
+          }
+        }
+      }
+    },
+    "Use a different server?" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Použiť iný server?"
+          }
+        }
+      }
+    },
+    "Use your %@ account." : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Použite svoj účet na serveri %@."
+          }
+        }
+      }
+    },
+    "Username" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Používateľské meno"
+          }
+        }
+      }
+    },
+    "VPN connections can't run in the iOS Simulator. Use an iPhone to connect." : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "VPN pripojenia nemôžu bežať v simulátore iOS. Na pripojenie použite iPhone."
+          }
+        }
+      }
+    },
+    "VPN permission wasn't granted. Allow the VPN configuration to connect." : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Povolenie pre VPN nebolo udelené. Na pripojenie povoľte konfiguráciu VPN."
+          }
+        }
+      }
+    },
+    "VPN unavailable — Network Extension entitlement required" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "VPN nie je k dispozícii — vyžaduje sa oprávnenie Network Extension"
+          }
+        }
+      }
+    },
+    "Verification code" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Overovací kód"
+          }
+        }
+      }
+    },
+    "Verify" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Overiť"
+          }
+        }
+      }
+    },
+    "Verify and connect" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Overiť a pripojiť"
+          }
+        }
+      }
+    },
+    "Version" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verzia"
+          }
+        }
+      }
+    },
+    "Waiting for approval…" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Čaká sa na schválenie…"
+          }
+        }
+      }
+    },
+    "We sent a request to your ProIdentity authenticator." : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Poslali sme žiadosť do vášho autentifikátora ProIdentity."
+          }
+        }
+      }
+    },
+    "Website" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Webová stránka"
+          }
+        }
+      }
+    },
+    "Welcome back" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vitajte späť"
+          }
+        }
+      }
+    },
+    "WireGuard for iOS (wireguard-apple)" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "WireGuard pre iOS (wireguard-apple)"
+          }
+        }
+      }
+    },
+    "WireGuard implementation" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Implementácia WireGuard"
+          }
+        }
+      }
+    },
+    "WireGuard is a registered trademark of Jason A. Donenfeld." : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "WireGuard je registrovaná ochranná známka Jasona A. Donenfelda."
+          }
+        }
+      }
+    },
+    "With a configuration file" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "S konfiguračným súborom"
+          }
+        }
+      }
+    },
+    "With an organization account, its server processes your username, this device's name and key, your VPN address, connection times and the amount of data transferred, to run and secure your access. With configuration files, nothing is sent anywhere except your VPN traffic. Nothing is sold or shared with third parties, and there are no ads or tracking." : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "S účtom organizácie spracúva jej server vaše používateľské meno, názov a kľúč tohto zariadenia, vašu VPN adresu, časy pripojenia a objem prenesených dát, aby mohol prevádzkovať a zabezpečiť váš prístup. S konfiguračnými súbormi sa nikam neposiela nič okrem vašej VPN prevádzky. Nič sa nepredáva ani nezdieľa s tretími stranami a nie sú tu žiadne reklamy ani sledovanie."
+          }
+        }
+      }
+    },
+    "With my organization" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "So svojou organizáciou"
+          }
+        }
+      }
+    },
+    "You're offline. Check your connection and try again." : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ste offline. Skontrolujte pripojenie k internetu a skúste to znova."
+          }
+        }
+      }
+    },
+    "You're signed out" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ste odhlásení"
+          }
+        }
+      }
+    },
+    "Your administrator hasn't given you access to a server yet. Pull down to refresh." : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Správca vám zatiaľ neudelil prístup k žiadnemu serveru. Potiahnutím nadol obnovíte zoznam."
+          }
+        }
+      }
+    },
+    "Your administrator sees this name in the device list. This registers it with %@." : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Správca uvidí tento názov v zozname zariadení. Týmto zariadenie zaregistrujete na serveri %@."
+          }
+        }
+      }
+    },
+    "Your administrator sees this name in the device list. This registers it." : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Správca uvidí tento názov v zozname zariadení. Týmto zariadenie zaregistrujete."
+          }
+        }
+      }
+    },
+    "Your privacy" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vaše súkromie"
+          }
+        }
+      }
+    },
+    "Your server" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Váš server"
+          }
+        }
+      }
+    },
+    "Your session expired. Sign in again to continue." : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vaša relácia vypršala. Ak chcete pokračovať, znova sa prihláste."
+          }
+        }
+      }
+    },
+    "e.g. Office" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "napr. Kancelária"
+          }
+        }
+      }
+    },
+    "vpn.company.com" : {
+      "localizations" : {
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "vpn.firma.sk"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

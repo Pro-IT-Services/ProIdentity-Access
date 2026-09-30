@@ -1,5 +1,7 @@
 package com.proitservices.proidentity.access.ui.model
 
+import androidx.annotation.StringRes
+import com.proitservices.proidentity.access.R
 import com.proitservices.proidentity.access.model.ServerStatus
 import com.proitservices.proidentity.access.model.StatsInfo
 import com.proitservices.proidentity.access.model.TunnelInfo
@@ -8,11 +10,11 @@ import com.proitservices.proidentity.access.ui.design.ApertureState
 import com.proitservices.proidentity.access.ui.viewmodel.ManagedUiState
 import com.proitservices.proidentity.access.ui.viewmodel.TunnelUiState
 
-enum class ConnectionKind(val label: String) {
-    Managed("Managed"),
-    Imported("Imported"),
+enum class ConnectionKind(@StringRes val label: Int) {
+    Managed(R.string.kind_managed),
+    Imported(R.string.kind_imported),
     /** A config the user uploaded to their account, stored encrypted server-side. */
-    Cloud("Synced"),
+    Cloud(R.string.kind_synced),
 }
 
 /**

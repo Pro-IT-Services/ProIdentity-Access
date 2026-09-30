@@ -20,6 +20,7 @@ import { Sheet } from './components/ui/Sheet'
 import SetupWizard from './components/SetupWizard'
 import ErrorBoundary from './components/ErrorBoundary'
 import { ToastContainer, toast } from './components/ui/Toast'
+import { t } from './i18n'
 import {
   getUpdateState,
   managedConnectServerPush,
@@ -46,11 +47,12 @@ import {
 const LAST_SERVER_KEY = 'proidentity:lastServerId'
 const CONNECT_TIMEOUT_MS = 15_000
 
-function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
+/** Rejects with a "Connect: timed out" error if p takes longer than ms. */
+function withConnectTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   return Promise.race([
     p,
     new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error(`${label}: timed out after ${ms / 1000}s`)), ms),
+      setTimeout(() => reject(new Error(t('app.connectTimedOut', { seconds: ms / 1000 }))), ms),
     ),
   ])
 }
@@ -178,7 +180,7 @@ export default function App() {
         let last = ''
         try { last = localStorage.getItem(key) ?? '' } catch { /* ignore */ }
         if (last && st.current_version && last !== st.current_version && st.state !== 'failed') {
-          toast(`ProIdentity Access was updated to ${st.current_version}.`, 'info', 8_000)
+          toast(t('app.updatedTo', { version: st.current_version }), 'info', 8_000)
         }
         try { localStorage.setItem(key, st.current_version) } catch { /* ignore */ }
       })
@@ -258,12 +260,12 @@ export default function App() {
       if (useManagedStore.getState().settings.logged_in) loadServers()
     })
     rt.EventsOn('session.revoked', () => {
-      toast('Your VPN session was revoked by the server.', 'revoked', 10_000)
+      toast(t('app.sessionRevoked'), 'revoked', 10_000)
       loadServers()
       refresh()
     })
     rt.EventsOn('auth.expired', () => {
-      toast('Your session expired. Please sign in again.', 'warning', 8_000)
+      toast(t('app.sessionExpired'), 'warning', 8_000)
       useTunnelStore.setState({ tunnels: [], selectedId: null, stats: {}, loading: false })
       // Keep server_url + username + vpn_name so the login sheet is prefilled and
       // the app shell stays put — only the session is gone. Do NOT touch the setup
@@ -277,7 +279,7 @@ export default function App() {
       setShowLogin(true)
     })
     rt.EventsOn('installation_revoked', () => {
-      toast('Your login expired or device registration was revoked. Please set up again.', 'revoked', 0)
+      toast(t('app.installationRevoked'), 'revoked', 0)
       useTunnelStore.setState({ tunnels: [], selectedId: null, stats: {}, loading: false })
       useManagedStore.setState({
         servers: [],
@@ -389,7 +391,7 @@ export default function App() {
     }
     setPendingServerId(srv.id)
     try {
-      await withTimeout(connectServer(srv), CONNECT_TIMEOUT_MS, 'Connect')
+      await withConnectTimeout(connectServer(srv), CONNECT_TIMEOUT_MS)
       rememberLastServer(srv.id)
     } catch (e: any) {
       const msg = String(e?.message ?? e)
@@ -409,10 +411,9 @@ export default function App() {
             if (run.cancelled) return
             const status = await managedPollPushAuth(push.request_id)
             if (status === 'approved') {
-              const tunnel = await withTimeout(
+              const tunnel = await withConnectTimeout(
                 managedConnectServerPush(srv.id, srv.name, push.request_id),
                 CONNECT_TIMEOUT_MS,
-                'Connect',
               )
               useManagedStore.setState(s => ({
                 servers: s.servers.map(ss =>
@@ -429,10 +430,10 @@ export default function App() {
               return
             }
             if (status === 'denied' || status === 'expired') {
-              throw new Error(status === 'denied' ? 'Push request denied.' : 'Push request expired.')
+              throw new Error(status === 'denied' ? t('app.pushDenied') : t('app.pushExpired'))
             }
           }
-          throw new Error('Push request timed out.')
+          throw new Error(t('app.pushTimedOut'))
         } catch (pushErr: any) {
           if (!run.cancelled) {
             toast(String(pushErr?.message ?? pushErr), 'warning', 8000)
@@ -473,7 +474,7 @@ export default function App() {
       await connectManaged(srv)
     } else {
       try {
-        await withTimeout(connect(t.id), CONNECT_TIMEOUT_MS, 'Connect')
+        await withConnectTimeout(connect(t.id), CONNECT_TIMEOUT_MS)
       } catch (e: any) {
         console.warn('connect failed', e)
       }
@@ -618,8 +619,8 @@ export default function App() {
       <Sheet
         open={showConns}
         onClose={() => setShowConns(false)}
-        title="Connections"
-        description="Pick a server to switch, or sign in to load more."
+        title={t('common.connections')}
+        description={t('app.connectionsDesc')}
       >
         <ErrorBoundary>
           <ConnectionsList
@@ -634,14 +635,14 @@ export default function App() {
       <Sheet
         open={showConfig}
         onClose={() => setShowConfig(false)}
-        title="Configuration"
+        title={t('common.configuration')}
         description={focusedTunnel?.name}
         widthPx={460}
       >
         <ErrorBoundary>
           {focusedTunnel && !isSynth(focusedTunnel) && !isOpenVPNTunnel(focusedTunnel)
             ? <ConfigDisclosure tunnel={focusedTunnel} />
-            : <p className="text-sm text-muted-foreground">No tunnel selected.</p>}
+            : <p className="text-sm text-muted-foreground">{t('app.noTunnelSelected')}</p>}
         </ErrorBoundary>
       </Sheet>
 
@@ -667,7 +668,7 @@ export default function App() {
           if (!totpForServer) return
           setPendingServerId(totpForServer.id)
           try {
-            await withTimeout(connectServer(totpForServer, code), CONNECT_TIMEOUT_MS, 'Connect')
+            await withConnectTimeout(connectServer(totpForServer, code), CONNECT_TIMEOUT_MS)
             setTotpForServer(null)
           } catch (e) {
             setPendingServerId(null)
@@ -678,10 +679,9 @@ export default function App() {
           if (!totpForServer) return
           setPendingServerId(totpForServer.id)
           try {
-            await withTimeout(
+            await withConnectTimeout(
               managedConnectServerPush(totpForServer.id, totpForServer.name, requestId),
               CONNECT_TIMEOUT_MS,
-              'Connect',
             )
             setTotpForServer(null)
           } catch (e) {

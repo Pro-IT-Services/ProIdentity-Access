@@ -115,9 +115,9 @@ private struct HomeContent: View {
                 if isManaged && !model.isSignedIn {
                     NoticeCard(
                         tone: .info,
-                        title: "You're signed out",
-                        message: "Sign in to load your organization's connections.",
-                        actionTitle: "Sign in",
+                        title: String(localized: "You're signed out"),
+                        message: String(localized: "Sign in to load your organization's connections."),
+                        actionTitle: String(localized: "Sign in"),
                         action: onSignIn
                     )
                 }
@@ -186,7 +186,7 @@ private struct HomeContent: View {
         if !model.loadedOnce {
             ProgressView().frame(maxWidth: .infinity).padding(.vertical, 40)
         } else {
-            let (title, message, icon): (String, String, String) =
+            let (title, message, icon): (LocalizedStringKey, LocalizedStringKey, String) =
                 if isManaged && model.isSignedIn {
                     ("No connections assigned",
                      "Your administrator hasn't given you access to a server yet. Pull down to refresh.",
@@ -225,8 +225,8 @@ struct ConnectionHero: View {
 
     private var subtitle: String {
         if let active { return active.name }
-        if let primary { return "Ready to connect to \(primary.name)" }
-        return "Add a connection to get started"
+        if let primary { return String(localized: "Ready to connect to \(primary.name)") }
+        return String(localized: "Add a connection to get started")
     }
 
     var body: some View {
@@ -272,8 +272,8 @@ private struct LiveStats: View {
                 }
             }
             HStack(spacing: 24) {
-                traffic("arrow.down", "Received", model.stats?.rxBytes ?? 0)
-                traffic("arrow.up", "Sent", model.stats?.txBytes ?? 0)
+                traffic("arrow.down", String(localized: "Received"), model.stats?.rxBytes ?? 0)
+                traffic("arrow.up", String(localized: "Sent"), model.stats?.txBytes ?? 0)
             }
             if !detail.isEmpty {
                 Text(detail).font(.monoCaption).foregroundStyle(.secondary)
@@ -289,6 +289,6 @@ private struct LiveStats: View {
             Image(systemName: icon).foregroundStyle(.secondary)
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(label) \(Format.bytes(bytes))")
+        .accessibilityLabel(label + " " + Format.bytes(bytes))
     }
 }

@@ -22,10 +22,10 @@ enum Format {
 
     static func ago(_ date: Date) -> String {
         let seconds = Int(Date().timeIntervalSince(date))
-        if seconds < 5 { return "Just now" }
-        if seconds < 60 { return "\(seconds)s ago" }
-        if seconds < 3600 { return "\(seconds / 60)m ago" }
-        return "\(seconds / 3600)h ago"
+        if seconds < 5 { return String(localized: "Just now") }
+        if seconds < 60 { return String(localized: "\(seconds)s ago") }
+        if seconds < 3600 { return String(localized: "\(seconds / 60)m ago") }
+        return String(localized: "\(seconds / 3600)h ago")
     }
 }
 
@@ -35,7 +35,7 @@ struct BrandTitle: View {
     var body: some View {
         HStack(spacing: 8) {
             ApertureMark(size: 22)
-            Text("ProIdentity Access").font(.headline)
+            Text(verbatim: "ProIdentity Access").font(.headline)
         }
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.isHeader)
@@ -104,7 +104,7 @@ struct ConnectionRow: View {
             }
             .buttonStyle(.plain)
             .accessibilityElement(children: .combine)
-            .accessibilityLabel("\(connection.name), \(connection.badge), \(connection.status.label)")
+            .accessibilityLabel([connection.name, connection.badge, connection.status.label].joined(separator: ", "))
             .accessibilityHint("Shows details")
 
             toggle
@@ -129,7 +129,9 @@ struct ConnectionRow: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(connection.isActive ? "Disconnect \(connection.name)" : "Connect \(connection.name)")
+        .accessibilityLabel(connection.isActive
+                            ? String(localized: "Disconnect \(connection.name)")
+                            : String(localized: "Connect \(connection.name)"))
     }
 }
 
@@ -143,9 +145,9 @@ struct PrimaryActionBar: View {
     var body: some View {
         if let c = primary {
             let (title, color): (String, Color) = switch c.status {
-            case .connected:  ("Disconnect", Brand.disconnect)
-            case .connecting: ("Cancel", Brand.muted)
-            default:          (c.status == .error ? "Try again" : "Connect", Brand.primary)
+            case .connected:  (String(localized: "Disconnect"), Brand.disconnect)
+            case .connecting: (String(localized: "Cancel"), Brand.muted)
+            default:          (c.status == .error ? String(localized: "Try again") : String(localized: "Connect"), Brand.primary)
             }
             VStack(spacing: 0) {
                 Button {
@@ -160,7 +162,7 @@ struct PrimaryActionBar: View {
                     .frame(maxWidth: .infinity, minHeight: 50)
                 }
                 .buttonStyle(FilledButtonStyle(color: color))
-                .accessibilityLabel(c.isActive ? "\(title) \(c.name)" : "Connect to \(c.name)")
+                .accessibilityLabel(c.isActive ? "\(title) \(c.name)" : String(localized: "Connect to \(c.name)"))
             }
             .padding(.horizontal, 16)
             .padding(.top, 10)
@@ -190,7 +192,7 @@ struct FilledButtonStyle: ButtonStyle {
 
 /// Primary button with an inline spinner.
 struct LoadingButton: View {
-    let title: String
+    let title: LocalizedStringKey
     var loading = false
     var color: Color = Brand.primary
     let action: () -> Void
@@ -209,7 +211,7 @@ struct LoadingButton: View {
 
 /// A labelled text-field container on the brand surface.
 struct BrandField<Field: View>: View {
-    let label: String
+    let label: LocalizedStringKey
     @ViewBuilder let field: Field
 
     var body: some View {
@@ -225,6 +227,8 @@ struct BrandField<Field: View>: View {
 
 // MARK: - Notices
 
+/// Title, message and action title are shown as-is: pass them localized
+/// (`String(localized:)`), or as received when they come from the server.
 struct NoticeCard: View {
     enum Tone { case info, warning, error }
 
@@ -284,9 +288,10 @@ struct NoticeCard: View {
     }
 }
 
-/// Label/value row for detail lists; mono for addresses.
+/// Label/value row for detail lists; mono for addresses. The value is shown
+/// as-is (pass it localized when it isn't data).
 struct InfoRow: View {
-    let label: String
+    let label: LocalizedStringKey
     let value: String
     var mono = false
 

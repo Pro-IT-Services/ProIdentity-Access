@@ -6,6 +6,7 @@ import { useManagedStore } from '../stores/useManagedStore'
 import { useActiveConnections } from '../lib/activeConnections'
 import { StatusDot } from './ui/StatusDot'
 import { cn } from '../lib/cn'
+import { t, tp } from '../i18n'
 
 interface TopbarProps {
   onImport: () => void
@@ -53,14 +54,14 @@ export function Topbar({ onImport, onSettings, onSignIn, onSignOut, onOpenConnec
         {active ? (
           <>
             <StatusDot status={active.status} pulse />
-            <span className="text-muted-foreground">{active.status === 'connected' ? 'connected to' : 'connecting to'}</span>
+            <span className="text-muted-foreground">{active.status === 'connected' ? t('topbar.connectedTo') : t('topbar.connectingTo')}</span>
             <span className="font-medium truncate">{active.name}</span>
-            {others > 0 && <span className="text-muted-foreground shrink-0">+{others} more</span>}
+            {others > 0 && <span className="text-muted-foreground shrink-0">{tp('topbar.moreConnections', others)}</span>}
           </>
         ) : (
           <>
             <StatusDot status="disconnected" />
-            <span className="text-muted-foreground">no active connection</span>
+            <span className="text-muted-foreground">{t('topbar.noActive')}</span>
           </>
         )}
       </div>
@@ -70,39 +71,39 @@ export function Topbar({ onImport, onSettings, onSignIn, onSignOut, onOpenConnec
         <div className={cn(
           'flex items-center gap-1.5 text-[11px] mr-1.5',
           daemonOnline ? 'text-success' : 'text-destructive',
-        )} title={daemonOnline ? 'Daemon connected' : 'Daemon offline'}>
+        )} title={daemonOnline ? t('topbar.daemonConnected') : t('topbar.daemonOffline')}>
           <span className={cn('w-1.5 h-1.5 rounded-full', daemonOnline ? 'bg-success' : 'bg-destructive')} />
-          Daemon
+          {t('topbar.daemon')}
         </div>
 
-        <IconButton onClick={onOpenConfig} disabled={!configEnabled} label="Configuration">
+        <IconButton onClick={onOpenConfig} disabled={!configEnabled} label={t('common.configuration')}>
           <Info className="w-4 h-4" />
         </IconButton>
-        <IconButton onClick={onImport} label="Import .conf">
+        <IconButton onClick={onImport} label={t('topbar.importConf')}>
           <Plus className="w-4 h-4" />
         </IconButton>
-        <IconButton onClick={onOpenConnections} label="Connections" highlight>
+        <IconButton onClick={onOpenConnections} label={t('common.connections')} highlight>
           <ListTree className="w-4 h-4" />
         </IconButton>
 
         <div className="relative" ref={menuRef}>
           <button
             onClick={() => setMenuOpen(o => !o)}
-            aria-label="More"
+            aria-label={t('common.more')}
             className="inline-flex items-center justify-center w-8 h-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors cursor-pointer"
           >
             <MoreHorizontal className="w-4 h-4" />
           </button>
           {menuOpen && (
             <div className="absolute top-full right-0 mt-1 w-52 rounded-md border border-border bg-popover shadow-xl py-1 z-50">
-              <MenuItem icon={Settings} label="Settings" onClick={() => { setMenuOpen(false); onSettings() }} />
+              <MenuItem icon={Settings} label={t('common.settings')} onClick={() => { setMenuOpen(false); onSettings() }} />
               {!settings.logged_in && onSignIn && (
-                <MenuItem icon={LogIn} label="Sign in" onClick={() => { setMenuOpen(false); onSignIn() }} />
+                <MenuItem icon={LogIn} label={t('common.signIn')} onClick={() => { setMenuOpen(false); onSignIn() }} />
               )}
               {settings.logged_in && onSignOut && (
                 <>
                   <div className="my-1 h-px bg-border" />
-                  <MenuItem icon={LogOut} label={`Sign out (${settings.username})`} onClick={() => { setMenuOpen(false); onSignOut() }} destructive />
+                  <MenuItem icon={LogOut} label={t('topbar.signOutAs', { username: settings.username })} onClick={() => { setMenuOpen(false); onSignOut() }} destructive />
                 </>
               )}
             </div>
