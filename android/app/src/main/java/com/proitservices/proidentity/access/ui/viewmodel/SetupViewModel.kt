@@ -117,11 +117,12 @@ class SetupViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun submitServerUrl() {
-        val url = _uiState.value.serverUrl.trim()
+        val url = normalizeServerUrl(_uiState.value.serverUrl)
         if (url.isEmpty()) {
             _uiState.update { it.copy(error = "Server URL cannot be empty") }
             return
         }
+        _uiState.update { it.copy(serverUrl = url) }
         viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
@@ -266,4 +267,15 @@ class SetupViewModel(application: Application) : AndroidViewModel(application) {
             )
         }
     }
+}
+
+/**
+ * "vpn.company.com" becomes "https://vpn.company.com"; an address that already
+ * has a scheme is kept; surrounding spaces and trailing slashes go.
+ */
+internal fun normalizeServerUrl(raw: String): String {
+    val s = raw.trim()
+    if (s.isEmpty()) return ""
+    val withScheme = if ("://" in s) s else "https://$s"
+    return withScheme.trimEnd('/')
 }

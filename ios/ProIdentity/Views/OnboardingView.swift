@@ -92,6 +92,8 @@ private struct ModeStep: View {
                     NoticeCard(tone: .warning, title: "Set up again", message: notice)
                 }
 
+                PrivacyDisclosure()
+
                 VStack(alignment: .leading, spacing: 12) {
                     Text("How will you connect?")
                         .font(.headline)
@@ -114,6 +116,26 @@ private struct ModeStep: View {
         }
         .background(Brand.background.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)
+    }
+}
+
+/// What the app uses, shown before the service is used (App Review 5.4).
+private struct PrivacyDisclosure: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label("Your privacy", systemImage: "hand.raised")
+                .font(.subheadline.weight(.semibold))
+            Text("With an organization account, its server processes your username, this device's name and key, your VPN address, connection times and the amount of data transferred, to run and secure your access. With configuration files, nothing is sent anywhere except your VPN traffic. Nothing is sold or shared with third parties, and there are no ads or tracking.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            Link("Privacy policy", destination: URL(string: "https://access.proidentity.cloud/privacy")!)
+                .font(.footnote.weight(.semibold))
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Brand.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Brand.border))
     }
 }
 

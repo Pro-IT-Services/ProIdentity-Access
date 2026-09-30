@@ -4,7 +4,7 @@ import Security
 /// Secure storage using Keychain — replaces Android's EncryptedSharedPreferences
 class AppSettings {
     static let shared = AppSettings()
-    private let service = "com.proidentity.ios"
+    private let service = "com.proidentity.access"
 
     // MARK: - Keys
     enum Key: String {

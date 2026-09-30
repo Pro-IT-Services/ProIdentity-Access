@@ -57,6 +57,7 @@ fun SettingsScreen(
     onSignIn: () -> Unit,
     onSignOut: () -> Unit,
     onReset: () -> Unit,
+    onLicenses: () -> Unit,
 ) {
     val managed = settings.mode == "managed"
     var confirmSignOut by rememberSaveable { mutableStateOf(false) }
@@ -132,6 +133,11 @@ fun SettingsScreen(
                     trailingContent = { Icon(Icons.AutoMirrored.Outlined.OpenInNew, contentDescription = null) },
                     colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
                     modifier = Modifier.clickable(role = Role.Button) { uri.openUri(PRIVACY_POLICY) },
+                )
+                ListItem(
+                    headlineContent = { Text("Open-source licenses") },
+                    colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                    modifier = Modifier.clickable(role = Role.Button, onClick = onLicenses),
                 )
             }
 

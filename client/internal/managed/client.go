@@ -499,6 +499,20 @@ func (c *Client) do(method, path string, headers map[string]string, body any, ou
 	return nil
 }
 
+// NormalizeServerURL turns what the user typed into the server's base URL:
+// "vpn.example.com" becomes "https://vpn.example.com"; an address that
+// already has a scheme is kept; surrounding spaces and trailing slashes go.
+func NormalizeServerURL(raw string) string {
+	s := strings.TrimSpace(raw)
+	if s == "" {
+		return ""
+	}
+	if !strings.Contains(s, "://") {
+		s = "https://" + s
+	}
+	return strings.TrimRight(s, "/")
+}
+
 func requireSecureBaseURL(rawURL string) error {
 	u, err := url.Parse(rawURL)
 	if err != nil {

@@ -39,7 +39,7 @@ export function SettingsSheet({ open, onClose, onReRunSetup, onSignIn }: Props) 
   }, [open, settings.server_url, clearError])
 
   const dirty = url.trim() !== settings.server_url
-  const canSave = dirty && /^https?:\/\//i.test(url.trim())
+  const canSave = dirty && url.trim() !== ''
 
   const handleSaveURL = async () => {
     setSavingURL(true)
@@ -75,10 +75,10 @@ export function SettingsSheet({ open, onClose, onReRunSetup, onSignIn }: Props) 
             <Input
               value={url}
               onChange={e => setUrl(e.target.value)}
-              placeholder="https://vpn.example.com"
+              placeholder="vpn.example.com"
               disabled={savingURL}
             />
-            <p className="text-xs text-muted-foreground">Base URL of the ProIdentity Access server.</p>
+            <p className="text-xs text-muted-foreground">Address of the ProIdentity Access server. https:// is added if you leave it out.</p>
           </div>
           <div className="flex items-center gap-2 pt-1">
             <Button size="sm" onClick={handleSaveURL} disabled={!canSave || savingURL}>

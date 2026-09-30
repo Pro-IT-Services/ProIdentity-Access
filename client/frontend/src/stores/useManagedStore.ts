@@ -60,7 +60,8 @@ export const useManagedStore = create<ManagedStore>((set, get) => ({
     set({ error: null })
     try {
       await api.managedSaveServerURL(url)
-      set(s => ({ settings: { ...s.settings, server_url: url } }))
+      // The service stores it normalized ("vpn.example.com" → "https://vpn.example.com").
+      await get().loadSettings()
     } catch (e) {
       set({ error: String(e) })
       throw e

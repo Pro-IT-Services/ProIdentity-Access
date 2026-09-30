@@ -66,6 +66,7 @@ struct SettingsView: View {
                             Image(systemName: "arrow.up.right.square").foregroundStyle(.secondary)
                         }
                     }
+                    NavigationLink("Open-source licenses") { LicensesView() }
                 }
                 .listRowBackground(Brand.surface)
 

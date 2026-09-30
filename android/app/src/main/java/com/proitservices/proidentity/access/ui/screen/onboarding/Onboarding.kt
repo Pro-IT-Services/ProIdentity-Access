@@ -271,7 +271,7 @@ private fun OptionCard(icon: ImageVector, title: String, body: String, onClick: 
 private fun ServerStep(s: SetupUiState, vm: SetupViewModel) {
     StepLayout(
         title = "Connect to your server",
-        body = "Enter the address your IT team gave you. It must start with https://.",
+        body = "Enter the address your IT team gave you, for example vpn.company.com.",
         primaryLabel = "Continue",
         onPrimary = vm::submitServerUrl,
         loading = s.isLoading,
@@ -281,7 +281,7 @@ private fun ServerStep(s: SetupUiState, vm: SetupViewModel) {
             value = s.serverUrl,
             onValueChange = { vm.setServerUrl(it); vm.clearError() },
             label = { Text("Server address") },
-            placeholder = { Text("https://vpn.company.com") },
+            placeholder = { Text("vpn.company.com") },
             leadingIcon = { Icon(Icons.Outlined.Link, contentDescription = null) },
             singleLine = true,
             isError = s.error != null,

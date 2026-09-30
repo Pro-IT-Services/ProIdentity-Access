@@ -44,6 +44,7 @@ import com.proitservices.proidentity.access.ui.model.liveFor
 import com.proitservices.proidentity.access.ui.model.primaryConnection
 import com.proitservices.proidentity.access.ui.screen.ConnectionDetailScreen
 import com.proitservices.proidentity.access.ui.screen.HomeScreen
+import com.proitservices.proidentity.access.ui.screen.LicensesScreen
 import com.proitservices.proidentity.access.ui.screen.SettingsScreen
 import com.proitservices.proidentity.access.ui.sheet.ConnectAuthSheet
 import com.proitservices.proidentity.access.ui.sheet.ImportSheet
@@ -57,6 +58,7 @@ data class ImportPrefill(val name: String?, val config: String)
 private const val HOME = "home"
 private const val DETAIL = "detail/{key}"
 private const val SETTINGS = "settings"
+private const val LICENSES = "licenses"
 
 @Composable
 fun AppNavHost(
@@ -212,7 +214,11 @@ fun AppNavHost(
                 onSignIn = onSignIn,
                 onSignOut = managedVm::logout,
                 onReset = managedVm::resetApp,
+                onLicenses = { nav.navigate(LICENSES) },
             )
+        }
+        composable(LICENSES) {
+            LicensesScreen(onBack = { nav.popBackStack() })
         }
     }
 

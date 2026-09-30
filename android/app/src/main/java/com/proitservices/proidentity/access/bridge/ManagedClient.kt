@@ -128,35 +128,37 @@ class ManagedClient(
         val response = http.newCall(request).execute()
         val bodyStr = response.body?.string() ?: ""
 
+        // Encrypted endpoints encrypt their errors too, so decrypt before
+        // reading either. Some errors (e.g. a revoked device) come back plain.
+        val decrypted = if (aesKey != null && deviceID.isNotEmpty() && bodyStr.isNotEmpty()) {
+            try {
+                String(DeviceCrypto.decryptBody(aesKey, bodyStr, deviceID.toByteArray(Charsets.UTF_8)), Charsets.UTF_8)
+            } catch (_: Exception) { null }
+        } else null
+
         if (!response.isSuccessful) {
-            // Check for device revocation
+            val errBody = decrypted ?: bodyStr
+            val errMsg = try { JSONObject(errBody).optString("error", "") } catch (_: Exception) { "" }
             if (response.code == 401) {
-                try {
-                    val errObj = JSONObject(bodyStr)
-                    val errMsg = errObj.optString("error", "")
-                    if (errMsg == "device revoked" || errMsg == "unknown device") {
-                        throw DeviceRevokedException()
-                    }
-                    if (token.isNotEmpty()) {
-                        throw AuthInvalidException()
-                    }
-                } catch (e: DeviceRevokedException) {
-                    throw e
-                } catch (e: AuthInvalidException) {
-                    throw e
-                } catch (_: Exception) {}
+                if (errMsg == "device revoked" || errMsg == "unknown device") throw DeviceRevokedException()
+                if (token.isNotEmpty()) throw AuthInvalidException()
             }
             if (token.isNotEmpty() && (response.code == 401 || response.code == 403)) {
                 throw AuthInvalidException()
             }
-            throw RuntimeException("HTTP ${response.code}: $bodyStr")
+            throw RuntimeException(
+                if (errMsg.isNotEmpty()) errMsg.replaceFirstChar { it.uppercase() }
+                else "The server returned an error (HTTP ${response.code})."
+            )
         }
 
         if (bodyStr.isEmpty()) return "{}"
 
         return if (aesKey != null && deviceID.isNotEmpty()) {
-            val decrypted = DeviceCrypto.decryptBody(aesKey, bodyStr, deviceID.toByteArray(Charsets.UTF_8))
-            String(decrypted, Charsets.UTF_8)
+            decrypted ?: String(
+                DeviceCrypto.decryptBody(aesKey, bodyStr, deviceID.toByteArray(Charsets.UTF_8)),
+                Charsets.UTF_8,
+            )
         } else {
             bodyStr
         }

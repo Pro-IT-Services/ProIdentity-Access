@@ -99,6 +99,18 @@ class VPNManager {
         onStateChanged?(id, "disconnected")
     }
 
+    /// Stops a tunnel even when this process hasn't loaded its profile yet
+    /// (the app launched in the background by the Live Activity button).
+    func stopTunnel(id: String) async {
+        if providerManagers[id] == nil,
+           let managers = try? await NETunnelProviderManager.loadAllFromPreferences(),
+           let mgr = managers.first(where: { Self.tunnelID(of: $0) == id }) {
+            providerManagers[id] = mgr
+            observeManager(mgr, tunnelID: id)
+        }
+        disconnectTunnel(id: id)
+    }
+
     // MARK: - Live state
 
     func status(id: String) -> String {
@@ -116,11 +128,28 @@ class VPNManager {
     func restoreState() async {
         guard let managers = try? await NETunnelProviderManager.loadAllFromPreferences() else { return }
         let known = Set(configs.map(\.id))
+        var connected = Set<String>()
         for mgr in managers {
-            guard let id = Self.tunnelID(of: mgr), known.contains(id), providerManagers[id] == nil else { continue }
+            guard let id = Self.tunnelID(of: mgr), known.contains(id) else { continue }
+            if mgr.connection.status == .connected {
+                connected.insert(id)
+                syncActivity(id: id, mgr: mgr)
+            }
+            guard providerManagers[id] == nil else { continue }
             providerManagers[id] = mgr
             observeManager(mgr, tunnelID: id)
             onStateChanged?(id, Self.statusString(mgr.connection.status))
+        }
+        await MainActor.run { ConnectionActivityController.reconcile(connectedTunnelIDs: connected) }
+    }
+
+    /// Mirrors a tunnel's state into its Live Activity (lock screen / Dynamic Island).
+    private func syncActivity(id: String, mgr: NETunnelProviderManager) {
+        let name = configs.first(where: { $0.id == id })?.name ?? mgr.localizedDescription ?? "VPN"
+        let status = mgr.connection.status
+        let since = mgr.connection.connectedDate
+        Task { @MainActor in
+            ConnectionActivityController.statusChanged(tunnelID: id, name: name, status: status, connectedDate: since)
         }
     }
 
@@ -239,7 +268,7 @@ class VPNManager {
         // Always re-apply the configuration: managed tunnels get a fresh key
         // and address for every session but keep the same profile.
         let proto = NETunnelProviderProtocol()
-        proto.providerBundleIdentifier = "com.proidentity.ios.tunnel" // Network Extension bundle ID
+        proto.providerBundleIdentifier = "com.proidentity.access.tunnel" // Network Extension bundle ID
         proto.serverAddress = config.peers.first?.endpoint ?? "WireGuard"
         proto.providerConfiguration = [
             "wg-config": config.toConfigString(),
@@ -268,6 +297,7 @@ class VPNManager {
             forName: .NEVPNStatusDidChange, object: mgr.connection, queue: .main
         ) { [weak self] _ in
             self?.onStateChanged?(tunnelID, Self.statusString(mgr.connection.status))
+            self?.syncActivity(id: tunnelID, mgr: mgr)
         }
     }
 
@@ -280,7 +310,7 @@ class VPNManager {
     private func keychainData(for account: String) -> Data? {
         let query: [CFString: Any] = [
             kSecClass: kSecClassGenericPassword,
-            kSecAttrService: "com.proidentity.ios.vpn",
+            kSecAttrService: "com.proidentity.access.vpn",
             kSecAttrAccount: account,
             kSecReturnData: true,
             kSecMatchLimit: kSecMatchLimitOne
@@ -295,7 +325,7 @@ class VPNManager {
     private func setKeychainData(_ data: Data, for account: String) {
         let query: [CFString: Any] = [
             kSecClass: kSecClassGenericPassword,
-            kSecAttrService: "com.proidentity.ios.vpn",
+            kSecAttrService: "com.proidentity.access.vpn",
             kSecAttrAccount: account
         ]
         SecItemDelete(query as CFDictionary)
@@ -308,7 +338,7 @@ class VPNManager {
     private func deleteKeychainData(for account: String) {
         let query: [CFString: Any] = [
             kSecClass: kSecClassGenericPassword,
-            kSecAttrService: "com.proidentity.ios.vpn",
+            kSecAttrService: "com.proidentity.access.vpn",
             kSecAttrAccount: account
         ]
         SecItemDelete(query as CFDictionary)

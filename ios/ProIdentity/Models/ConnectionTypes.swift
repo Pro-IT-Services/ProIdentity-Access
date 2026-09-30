@@ -150,6 +150,11 @@ enum UserMessage {
             }
         }
         if let vpnError = error as? NEVPNError {
+            #if targetEnvironment(simulator)
+            // The simulator can't install or run a packet tunnel.
+            _ = vpnError
+            return "VPN connections can't run in the iOS Simulator. Use an iPhone to connect."
+            #else
             switch vpnError.code {
             case .configurationReadWriteFailed:
                 return "VPN permission wasn't granted. Allow the VPN configuration to connect."
@@ -158,6 +163,7 @@ enum UserMessage {
             default:
                 return "The VPN couldn't start. Try again."
             }
+            #endif
         }
         return error.localizedDescription
     }

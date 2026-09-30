@@ -23,3 +23,6 @@ build/
 # Pods (if used)
 Pods/
 Dependencies/
+
+# xcodegen output (regenerate from project.yml)
+*.xcodeproj/

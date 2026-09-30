@@ -44,11 +44,21 @@ class ManagedClient {
         let (data, response) = try await session.data(for: req)
         guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
         let authenticatedRequest = req.value(forHTTPHeaderField: "Authorization")?.isEmpty == false
+        let aad = AppSettings.shared.deviceID.data(using: .utf8) ?? Data()
+
+        // Encrypted endpoints encrypt their errors too, so decrypt before
+        // reading either. Some errors (e.g. a revoked device) come back plain.
+        var decrypted: Data?
+        if let key = aesKey, !data.isEmpty, let envelope = String(data: data, encoding: .utf8),
+           let plain = try? DeviceCrypto.shared.decrypt(envelope: envelope, key: key, aad: aad) {
+            decrypted = plain.data(using: .utf8)
+        }
+        let body = decrypted ?? data
 
         // Check for device revocation
         if http.statusCode == 401,
-           let json = try? JSONSerialization.jsonObject(with: data) as? [String: String],
-           let error = json["error"]?.lowercased() {
+           let json = try? JSONSerialization.jsonObject(with: body) as? [String: Any],
+           let error = (json["error"] as? String)?.lowercased() {
             if error.contains("device revoked") || error.contains("unknown device") {
                 throw APIError.deviceRevoked
             }
@@ -60,13 +70,13 @@ class ManagedClient {
             throw APIError.authInvalid
         }
         guard (200..<300).contains(http.statusCode) else {
-            throw APIError.serverError(Self.errorMessage(data, status: http.statusCode))
+            throw APIError.serverError(Self.errorMessage(body, status: http.statusCode))
         }
 
         if let key = aesKey {
-            let envelope = String(data: data, encoding: .utf8) ?? ""
-            let aad = AppSettings.shared.deviceID.data(using: .utf8) ?? Data()
-            let plain = try DeviceCrypto.shared.decrypt(envelope: envelope, key: key, aad: aad)
+            if let decrypted { return try JSONSerialization.jsonObject(with: decrypted) }
+            // Surface the decryption error itself.
+            let plain = try DeviceCrypto.shared.decrypt(envelope: String(data: data, encoding: .utf8) ?? "", key: key, aad: aad)
             return try JSONSerialization.jsonObject(with: plain.data(using: .utf8)!)
         }
         return try JSONSerialization.jsonObject(with: data)
@@ -99,7 +109,7 @@ class ManagedClient {
             return msg.prefix(1).uppercased() + msg.dropFirst()
         }
         if let text = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines),
-           !text.isEmpty, text.count < 200, !text.hasPrefix("<") {
+           !text.isEmpty, text.count < 200, !text.hasPrefix("<"), !text.hasPrefix("{\"ct\"") {
             return text
         }
         return "The server returned an error (HTTP \(status))."

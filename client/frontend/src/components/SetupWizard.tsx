@@ -195,14 +195,17 @@ function StepServer({ serverURL, onURLChange, onNext, error, onClearError }: {
         <label className="block text-xs font-medium text-text-secondary mb-1.5">Management server URL</label>
         <input
           className="w-full px-3 py-2 bg-bg-base border border-bg-border rounded-lg text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent transition-colors"
-          placeholder="https://vpn.example.com"
+          placeholder="vpn.example.com"
           value={serverURL}
           onChange={e => onURLChange(e.target.value)}
           required
           autoFocus
-          type="url"
+          type="text"
+          inputMode="url"
+          autoCapitalize="none"
+          spellCheck={false}
         />
-        <p className="text-xs text-text-muted mt-1.5">The URL of your WG Manager instance</p>
+        <p className="text-xs text-text-muted mt-1.5">Address of your ProIdentity Access server. https:// is added if you leave it out.</p>
       </div>
 
       <button

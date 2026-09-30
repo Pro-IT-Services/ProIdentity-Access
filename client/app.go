@@ -532,6 +532,7 @@ func (a *App) ManagedGetSettings() ManagedSettings {
 
 // ManagedSaveServerURL updates the management server URL and fetches the VPN name.
 func (a *App) ManagedSaveServerURL(serverURL string) error {
+	serverURL = managed.NormalizeServerURL(serverURL)
 	a.mMu.Lock()
 	a.mSettings.ServerURL = serverURL
 	if a.mClient != nil && a.mClient.BaseURL != serverURL {
@@ -1270,6 +1271,7 @@ func (a *App) ManagedDefaultDeviceName() string {
 
 // ManagedRegisterDevice registers this installation with the server.
 func (a *App) ManagedRegisterDevice(serverURL, deviceName string) error {
+	serverURL = managed.NormalizeServerURL(serverURL)
 	deviceName = strings.TrimSpace(deviceName)
 	if deviceName == "" {
 		deviceName = defaultDeviceName()

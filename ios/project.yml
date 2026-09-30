@@ -1,4 +1,4 @@
-name: ProIdentity
+name: ProIdentity Access
 options:
   bundleIdPrefix: com.proidentity
   deploymentTarget:
@@ -10,23 +10,31 @@ packages:
 
 settings:
   base:
-    DEVELOPMENT_TEAM: ""
+    DEVELOPMENT_TEAM: L2JYD8UU7X
     SWIFT_VERSION: "5"
 
 targets:
-  ProIdentity:
+  ProIdentity Access:
     type: application
     platform: iOS
+    # Shared scheme for the app, so Xcode doesn't auto-create one per target
+    # (and select the PacketTunnel extension, which can't run on its own).
+    scheme: {}
     sources:
       - ProIdentity
+      - Shared
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.proidentity.ios
+        PRODUCT_NAME: ProIdentity Access
+        PRODUCT_MODULE_NAME: ProIdentityAccess
+        PRODUCT_BUNDLE_IDENTIFIER: com.proidentity.access
         CODE_SIGN_ENTITLEMENTS: ProIdentity/ProIdentity.entitlements
         INFOPLIST_FILE: ProIdentity/Info.plist
         CODE_SIGN_STYLE: Automatic
     dependencies:
       - target: PacketTunnel
+        embed: true
+      - target: ConnectionActivity
         embed: true
 
   PacketTunnel:
@@ -36,13 +44,34 @@ targets:
       - PacketTunnel
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.proidentity.ios.tunnel
+        PRODUCT_BUNDLE_IDENTIFIER: com.proidentity.access.tunnel
         CODE_SIGN_ENTITLEMENTS: PacketTunnel/PacketTunnel.entitlements
         INFOPLIST_FILE: PacketTunnel/Info.plist
         CODE_SIGN_STYLE: Automatic
         GENERATE_INFOPLIST_FILE: false
         LIBRARY_SEARCH_PATHS:
           - "$(PROJECT_DIR)/Dependencies/wireguard-apple/Sources/WireGuardKitGo/out"
+        # The simulator needs its own libwg-go build (see Dependencies setup).
+        "LIBRARY_SEARCH_PATHS[sdk=iphonesimulator*]":
+          - "$(PROJECT_DIR)/Dependencies/wireguard-apple/Sources/WireGuardKitGo/out-sim"
     dependencies:
       - package: WireGuardKit
         product: WireGuardKit
+
+  # Live Activity (lock screen + Dynamic Island) for a connected VPN.
+  ConnectionActivity:
+    type: app-extension
+    platform: iOS
+    sources:
+      - ConnectionActivity
+      - Shared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.proidentity.access.activity
+        INFOPLIST_FILE: ConnectionActivity/Info.plist
+        GENERATE_INFOPLIST_FILE: false
+        CODE_SIGN_STYLE: Automatic
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) WIDGET_EXTENSION"
+    dependencies:
+      - sdk: WidgetKit.framework
+      - sdk: SwiftUI.framework
