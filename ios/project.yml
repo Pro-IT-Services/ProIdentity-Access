@@ -1,6 +1,7 @@
 name: ProIdentity Access
 options:
   bundleIdPrefix: com.proidentity
+  xcodeVersion: "26.4"
   deploymentTarget:
     iOS: "17.0"
 
@@ -12,6 +13,13 @@ settings:
   base:
     DEVELOPMENT_TEAM: L2JYD8UU7X
     SWIFT_VERSION: "5"
+    # App version and build for the app and both extensions (the Info.plists
+    # read these). Change them in Xcode (General > Identity) or here.
+    MARKETING_VERSION: 0.7.12
+    CURRENT_PROJECT_VERSION: 1
+    # Xcode 26.4 recommended settings
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    STRING_CATALOG_GENERATE_SYMBOLS: YES
 
 targets:
   ProIdentity Access:
@@ -27,6 +35,11 @@ targets:
       base:
         PRODUCT_NAME: ProIdentity Access
         PRODUCT_MODULE_NAME: ProIdentityAccess
+        # iPhone and iPad only (no Mac or Apple Vision "Designed for iPad")
+        SUPPORTED_PLATFORMS: iphoneos iphonesimulator
+        SUPPORTS_MACCATALYST: NO
+        SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO
+        SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD: NO
         PRODUCT_BUNDLE_IDENTIFIER: com.proidentity.access
         CODE_SIGN_ENTITLEMENTS: ProIdentity/ProIdentity.entitlements
         INFOPLIST_FILE: ProIdentity/Info.plist

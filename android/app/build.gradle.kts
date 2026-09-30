@@ -14,8 +14,8 @@ android {
         applicationId = "com.proitservices.proidentity.access"
         minSdk = 26
         targetSdk = 36
-        versionCode = 72
-        versionName = "0.7.2"
+        versionCode = 712
+        versionName = "0.7.12"
     }
 
     // Release signing: reads android/keystore.properties (git-ignored) when it exists.
