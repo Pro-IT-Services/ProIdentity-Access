@@ -16,7 +16,7 @@ settings:
     SWIFT_VERSION: "5"
     # App version and build for the app and both extensions (the Info.plists
     # read these). Change them in Xcode (General > Identity) or here.
-    MARKETING_VERSION: 0.7.12
+    MARKETING_VERSION: 0.7.15
     CURRENT_PROJECT_VERSION: 1
     # Xcode 26.4 recommended settings
     ENABLE_USER_SCRIPT_SANDBOXING: YES

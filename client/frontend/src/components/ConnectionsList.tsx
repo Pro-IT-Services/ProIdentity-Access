@@ -161,9 +161,9 @@ export function ConnectionsList({ onConnected, onConnectIntent, onConnectManaged
               {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <meta.Icon className="w-3.5 h-3.5" />}
             </span>
             <div className="min-w-0">
-              <div className="flex items-start gap-2">
-                <p className="min-w-0 text-sm font-medium leading-tight break-words" title={meta.name}>{meta.name}</p>
-                <span className="text-[10px] uppercase tracking-wider text-muted-foreground border border-border rounded px-1.5 py-0.5">
+              <div className="flex items-center gap-2">
+                <p className="min-w-0 flex-1 text-sm font-medium leading-tight truncate" title={meta.name}>{meta.name}</p>
+                <span className="shrink-0 whitespace-nowrap text-[10px] uppercase tracking-wider text-muted-foreground border border-border rounded px-1.5 py-0.5">
                   {meta.badge}
                 </span>
               </div>
@@ -184,7 +184,7 @@ export function ConnectionsList({ onConnected, onConnectIntent, onConnectManaged
                 size="sm"
                 disabled={busy}
                 onClick={(e) => { e.stopPropagation(); handleDisconnect(row) }}
-                className={cn('min-w-[150px]', busy
+                className={cn('min-w-[124px]', busy
                   ? 'text-warning bg-warning/10'
                   : 'text-destructive hover:bg-destructive/10')}
               >
@@ -199,7 +199,7 @@ export function ConnectionsList({ onConnected, onConnectIntent, onConnectManaged
                 disabled={busy || otherActive}
                 title={otherActive ? t('conns.disconnectFirst', { name: activeTunnel!.name }) : undefined}
                 onClick={(e) => { e.stopPropagation(); handleConnect(row) }}
-                className={cn('min-w-[150px]', busy && 'bg-warning/15 text-warning')}
+                className={cn('min-w-[124px]', busy && 'bg-warning/15 text-warning')}
               >
                 {busy
                   ? <><Loader2 className="w-4 h-4 animate-spin" /> {t('common.connectingEllipsis')}</>

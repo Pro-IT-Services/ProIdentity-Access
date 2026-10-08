@@ -15,7 +15,7 @@ android {
         minSdk = 26
         targetSdk = 36
         versionCode = 74
-        versionName = "0.7.13"
+        versionName = "0.7.15"
     }
 
     // Release signing: reads android/keystore.properties (git-ignored) when it exists.
