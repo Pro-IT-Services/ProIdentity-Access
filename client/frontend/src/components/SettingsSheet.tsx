@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
-import { AlertCircle, Download, Loader2, Lock, LogOut, Server, ShieldCheck, RefreshCw, Trash2, User } from 'lucide-react'
+import { AlertCircle, Download, Languages, Loader2, Lock, LogOut, Server, ShieldCheck, RefreshCw, Trash2, User } from 'lucide-react'
 import { useManagedStore } from '../stores/useManagedStore'
 import { useUpdateStore } from '../stores/useUpdateStore'
 import { Sheet } from './ui/Sheet'
 import { Button } from './ui/Button'
 import { UninstallApp } from '../../wailsjs/go/main/App'
-import { t } from '../i18n'
+import { t, LANGS, LANG_NAMES, getLangPreference, setLangPreference, type LangPreference } from '../i18n'
 
 interface Props {
   open: boolean
@@ -24,6 +24,7 @@ export function SettingsSheet({ open, onClose, onReRunSetup, onSignIn }: Props) 
   const { settings, logout, loading, error, clearError } = useManagedStore()
   const [confirmUninstall, setConfirmUninstall] = useState(false)
   const [uninstalling, setUninstalling] = useState(false)
+  const [langPref, setLangPref] = useState<LangPreference>(getLangPreference())
   const {
     status: update, checking: checkingUpdate, installing: installingUpdate,
     error: updateError, check: checkUpdate, install: installUpdate,
@@ -109,6 +110,18 @@ export function SettingsSheet({ open, onClose, onReRunSetup, onSignIn }: Props) 
               )}
             </>
           )}
+        </Section>
+
+        {/* Language */}
+        <Section title={t('settings.language')} icon={Languages}>
+          <select
+            value={langPref}
+            onChange={e => { const v = e.target.value as LangPreference; setLangPref(v); void setLangPreference(v) }}
+            className="w-full h-9 rounded-md border border-border bg-secondary/40 px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            <option value="system">{t('settings.languageSystem')}</option>
+            {LANGS.map(l => <option key={l} value={l}>{LANG_NAMES[l]}</option>)}
+          </select>
         </Section>
 
         {/* Updates */}

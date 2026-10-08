@@ -1,0 +1,215 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ProIdentity Access</string>
+
+    <!-- Ongoing VPN notification (WgVpnService) -->
+    <string name="vpn_channel_name">Připojení VPN</string>
+    <string name="vpn_channel_description">Zobrazuje se během aktivního připojení VPN, s tlačítkem pro odpojení.</string>
+    <string name="vpn_notification_connected">Připojeno k %1$s</string>
+    <plurals name="vpn_notification_connected_many">
+        <item quantity="one">Připojeno k %1$d síti</item>
+        <item quantity="few">Připojeno k %1$d sítím</item>
+        <item quantity="other">Připojeno k %1$d sítím</item>
+    </plurals>
+    <string name="vpn_notification_public">VPN je připojena</string>
+    <string name="vpn_notification_disconnect">Odpojit</string>
+
+    <!-- Common -->
+    <string name="common_back">Zpět</string>
+    <string name="common_cancel">Zrušit</string>
+    <string name="common_continue">Pokračovat</string>
+    <string name="common_sign_in">Přihlásit se</string>
+    <string name="common_sign_out">Odhlásit se</string>
+    <string name="common_undo">Zpět</string>
+    <string name="common_import_configuration">Importovat konfiguraci</string>
+    <string name="common_settings">Nastavení</string>
+    <string name="common_name">Název</string>
+    <string name="common_disconnect">Odpojit</string>
+    <string name="common_connect_to">Připojit k %1$s</string>
+    <string name="common_disconnect_named">Odpojit %1$s</string>
+    <string name="common_send_again">Poslat znovu</string>
+    <string name="common_enter_code_instead">Zadat raději kód</string>
+    <string name="common_received">Přijato</string>
+    <string name="common_sent">Odesláno</string>
+    <string name="common_open_source_licenses">Licence open-source softwaru</string>
+
+    <!-- Connection status -->
+    <string name="status_connected">Připojeno</string>
+    <string name="status_connecting">Připojování…</string>
+    <string name="status_error">Nepodařilo se připojit</string>
+    <string name="status_available">Dostupné</string>
+    <string name="status_not_connected">Nepřipojeno</string>
+    <string name="aperture_connecting">Připojování</string>
+    <string name="aperture_error">Chyba připojení</string>
+    <string name="aperture_content_description">Stav připojení: %1$s</string>
+
+    <!-- Connection kinds -->
+    <string name="kind_managed">Spravované</string>
+    <string name="kind_imported">Importované</string>
+    <string name="kind_synced">Synchronizované</string>
+
+    <!-- Relative time -->
+    <string name="time_never">Nikdy</string>
+    <string name="time_just_now">Právě teď</string>
+    <string name="time_seconds_ago">před %1$d s</string>
+    <string name="time_minutes_ago">před %1$d min</string>
+    <string name="time_hours_ago">před %1$d h</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_step_of">Krok %1$d z %2$d</string>
+    <string name="onboarding_welcome_title">Vítejte v\nProIdentity Access</string>
+    <string name="onboarding_welcome_body">Bezpečný přístup k síti vaší organizace. Jak se chcete připojit?</string>
+    <string name="onboarding_mode_managed_title">Spravováno mou organizací</string>
+    <string name="onboarding_mode_managed_body">Přihlaste se k firemnímu serveru ProIdentity a získejte svá připojení.</string>
+    <string name="onboarding_mode_standalone_title">Použít vlastní konfiguraci</string>
+    <string name="onboarding_mode_standalone_body">Importujte konfigurační soubory WireGuard a připojte se bez serveru.</string>
+    <string name="onboarding_server_title">Připojte se ke svému serveru</string>
+    <string name="onboarding_server_body">Zadejte adresu, kterou vám dalo vaše IT oddělení, například vpn.company.com.</string>
+    <string name="onboarding_server_address">Adresa serveru</string>
+    <string name="onboarding_register_title">Zaregistrujte toto zařízení</string>
+    <string name="onboarding_register_body">ProIdentity Access vytvoří pro tento telefon bezpečnou identitu a zaregistruje jej u %1$s.</string>
+    <string name="onboarding_register_button">Zaregistrovat zařízení</string>
+    <string name="onboarding_device_name">Název zařízení</string>
+    <string name="onboarding_device_name_hint">Zobrazí se vašemu správci v seznamu zařízení.</string>
+
+    <!-- Sign in -->
+    <string name="signin_continue_signed_out">Pokračovat bez přihlášení</string>
+    <string name="signin_welcome_back">Vítejte zpět</string>
+    <string name="signin_reauth_body">Vaše relace skončila. Přihlaste se znovu a pokračujte — toto zařízení zůstává zaregistrováno.</string>
+    <string name="signin_body">Použijte účet vaší organizace.</string>
+    <string name="signin_username">Uživatelské jméno</string>
+    <string name="signin_password">Heslo</string>
+    <string name="signin_show_password">Zobrazit heslo</string>
+    <string name="signin_hide_password">Skrýt heslo</string>
+    <string name="signin_totp_title">Dvoufázové ověření</string>
+    <string name="signin_totp_body">Zadejte 6místný kód z aplikace autentizátoru.</string>
+    <string name="signin_verify">Ověřit</string>
+    <string name="signin_use_push_instead">Poslat raději push oznámení</string>
+    <!-- Push approval -->
+    <string name="push_approved_title">Schváleno</string>
+    <string name="push_approved_body">Přihlašování…</string>
+    <string name="push_denied_title">Žádost zamítnuta</string>
+    <string name="push_denied_body">Žádost byla na vašem telefonu zamítnuta. Zkuste to znovu nebo použijte kód.</string>
+    <string name="push_expired_title">Platnost žádosti vypršela</string>
+    <string name="push_expired_body">Čas na schválení vypršel. Odešlete novou žádost nebo použijte kód.</string>
+    <string name="push_pending_title">Schvalte na svém telefonu</string>
+    <string name="push_pending_body">Odeslali jsme push oznámení do aplikace ProIdentity. Pokračujte jeho schválením.</string>
+    <string name="push_waiting">Čekání na schválení…</string>
+    <string name="push_connect_request">Připojit k %1$s</string>
+
+    <!-- Connect 2FA sheet -->
+    <string name="connect_auth_connecting_to">Připojování k %1$s</string>
+    <string name="connect_auth_check_app">Zkontrolujte oznámení v aplikaci ProIdentity.</string>
+    <string name="connect_auth_code_title">Vyžadováno ověření</string>
+    <string name="connect_auth_code_body">Pro připojení k %1$s zadejte 6místný kód z aplikace autentizátoru.</string>
+    <string name="connect_auth_verify_and_connect">Ověřit a připojit</string>
+    <string name="connect_auth_use_push_instead">Použít raději push oznámení</string>
+    <string name="connect_auth_your_server">vašemu serveru</string>
+
+    <!-- Import sheet -->
+    <string name="import_body">Vyberte soubor WireGuard .conf nebo vložte jeho obsah.</string>
+    <string name="import_choose_file">Vybrat soubor</string>
+    <string name="import_name_placeholder">Domácí kancelář</string>
+    <string name="import_configuration">Konfigurace</string>
+    <string name="import_button">Importovat</string>
+    <string name="import_default_name">Tunel</string>
+    <string name="import_error_invalid">Toto nevypadá jako platná konfigurace WireGuard.</string>
+    <string name="import_user_config_name">Uživatelská konfigurace</string>
+
+    <!-- Home -->
+    <string name="home_signed_out_title">Jste odhlášeni</string>
+    <string name="home_signed_out_body">Přihlaste se a načtěte připojení vaší organizace.</string>
+    <string name="home_empty_assigned_title">Žádná přiřazená připojení</string>
+    <string name="home_empty_assigned_body">Správce vám zatím nepřidělil přístup k žádnému serveru. Obnovíte tažením dolů.</string>
+    <string name="home_empty_managed_title">Zatím tu nic není</string>
+    <string name="home_empty_managed_body">Přihlaste se a zobrazí se servery, které vám poskytuje vaše organizace, nebo importujte konfiguraci.</string>
+    <string name="home_empty_standalone_title">Zatím žádné konfigurace</string>
+    <string name="home_empty_standalone_body">Začněte importem konfiguračního souboru WireGuard.</string>
+    <string name="home_connections">Připojení</string>
+    <string name="home_ready_to_connect">Připraveno k připojení k %1$s</string>
+    <string name="home_add_connection">Začněte přidáním připojení</string>
+    <string name="home_select_connection_title">Vyberte připojení</string>
+    <string name="home_select_connection_body">Vyberte připojení vlevo a zobrazí se jeho podrobnosti.</string>
+    <string name="snackbar_deleted">Smazáno: %1$s</string>
+    <string name="snackbar_deleted_configuration">Konfigurace byla smazána</string>
+    <string name="snackbar_imported">Importováno: %1$s</string>
+
+    <!-- Connection details -->
+    <string name="detail_delete">Smazat %1$s</string>
+    <string name="detail_connection">Připojení</string>
+    <string name="detail_type">Typ</string>
+    <string name="detail_type_managed">Spravovaný server</string>
+    <string name="detail_type_imported">Importováno do tohoto zařízení</string>
+    <string name="detail_type_synced">Synchronizováno s vaším účtem</string>
+    <string name="detail_network">Síť</string>
+    <string name="detail_address">Adresa</string>
+    <string name="detail_dns">DNS</string>
+    <string name="detail_endpoint">Koncový bod</string>
+    <string name="detail_routes">Trasy</string>
+    <string name="detail_mtu">MTU</string>
+    <string name="detail_traffic">Provoz</string>
+    <string name="detail_last_handshake">Poslední handshake</string>
+    <string name="detail_connected_for">už %1$s</string>
+
+    <!-- Settings -->
+    <string name="settings_account">Účet</string>
+    <string name="settings_organization">Organizace</string>
+    <string name="settings_server">Server</string>
+    <string name="settings_signed_in_as">Přihlášený účet</string>
+    <string name="settings_not_signed_in">Nejste přihlášeni</string>
+    <string name="settings_this_device">Toto zařízení</string>
+    <string name="settings_mode">Režim</string>
+    <string name="settings_mode_managed">Spravováno organizací</string>
+    <string name="settings_mode_standalone">Vlastní konfigurace</string>
+    <string name="settings_registration">Registrace</string>
+    <string name="settings_registered">Zaregistrováno</string>
+    <string name="settings_not_registered">Nezaregistrováno</string>
+    <string name="settings_about">O aplikaci</string>
+    <string name="settings_version">Verze</string>
+    <string name="settings_website">Webová stránka ProIdentity Access</string>
+    <string name="settings_privacy_policy">Zásady ochrany osobních údajů</string>
+    <string name="settings_reset_section">Resetování</string>
+    <string name="settings_reset_app">Resetovat aplikaci</string>
+    <string name="settings_reset_hint">Odstraní z tohoto telefonu všechna připojení a registraci tohoto zařízení.</string>
+    <string name="settings_sign_out_title">Odhlásit se?</string>
+    <string name="settings_sign_out_body">Budete odpojeni od spravovaných serverů. Zařízení zůstane zaregistrováno, takže k opětovnému přihlášení vám bude stačit heslo.</string>
+    <string name="settings_reset_title">Resetovat ProIdentity Access?</string>
+    <string name="settings_reset_body">Vše se odpojí a z tohoto telefonu se odstraní všechny konfigurace i registrace zařízení. Aplikaci bude nutné znovu nastavit.</string>
+    <string name="settings_reset_confirm">Resetovat</string>
+
+    <!-- Open-source licenses -->
+    <string name="licenses_included_software">Zahrnutý software</string>
+    <string name="licenses_wireguard_trademark">WireGuard je registrovaná ochranná známka, jejímž vlastníkem je Jason A. Donenfeld.</string>
+    <string name="licenses_this_app">Tato aplikace</string>
+    <string name="licenses_source_code">Zdrojový kód</string>
+    <string name="licenses_text_not_found">Text licence nebyl nalezen.</string>
+    <string name="licenses_detail_wireguard_go">Implementace WireGuard</string>
+    <string name="licenses_detail_go">Běhové prostředí Go, standardní knihovna a golang.org/x</string>
+    <string name="licenses_detail_okhttp">HTTP klient</string>
+    <string name="licenses_detail_bouncycastle">Kryptografický poskytovatel</string>
+    <string name="licenses_detail_kotlin">Běhové prostředí jazyka</string>
+    <string name="licenses_detail_androidx">Včetně Security Crypto a ikon Material</string>
+    <string name="licenses_detail_tink">Knihovny Google, které používá Security Crypto</string>
+
+    <!-- Errors created in the app (server error text is shown as-is) -->
+    <string name="error_server_url_empty">Adresa serveru nemůže být prázdná</string>
+    <string name="error_cannot_reach_server">Server je nedostupný: %1$s</string>
+    <string name="error_registration_failed">Registrace selhala: %1$s</string>
+    <string name="error_username_password_required">Zadejte uživatelské jméno a heslo</string>
+    <string name="error_login_failed">Přihlášení selhalo: %1$s</string>
+    <string name="error_invalid_code">Neplatný kód</string>
+    <string name="error_vpn_service_not_running">Služba VPN není spuštěna</string>
+    <string name="error_could_not_connect">Nepodařilo se připojit k %1$s</string>
+    <string name="error_no_endpoint">K žádnému z koncových bodů se nepodařilo připojit</string>
+    <string name="error_vpn_permission_denied">Oprávnění pro VPN bylo zamítnuto</string>
+    <string name="error_connect_failed">Připojení selhalo</string>
+    <string name="error_login_expired_or_revoked">Přihlášení vypršelo nebo bylo zrušeno</string>
+    <string name="error_invalid_server_url">Neplatná adresa serveru</string>
+    <string name="error_server_url_scheme">Adresa serveru musí obsahovat https://</string>
+    <string name="error_server_url_host">Adresa serveru musí obsahovat název hostitele</string>
+    <string name="error_server_url_https">Adresa serveru musí používat HTTPS</string>
+    <string name="error_server_url_query">Adresa serveru nesmí obsahovat parametry ani fragment</string>
+    <string name="error_server_http">Server vrátil chybu (HTTP %1$d).</string>
+    <string name="settings_language">Jazyk</string>
+    <string name="settings_language_system">Podle systému</string>
+</resources>

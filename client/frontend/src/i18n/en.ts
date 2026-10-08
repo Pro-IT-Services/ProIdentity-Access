@@ -301,6 +301,8 @@ export const en = {
 
   // ── Errors ──────────────────────────────────────────────────────────────
   'error.somethingWrong': 'Something went wrong',
+  'settings.language': 'Language',
+  'settings.languageSystem': 'System default',
 } satisfies Record<string, string | PluralForms>
 
 export type Dict = typeof en

@@ -212,4 +212,6 @@
     <string name="error_server_url_https">Adresa servera musí používať HTTPS</string>
     <string name="error_server_url_query">Adresa servera nesmie obsahovať parametre ani fragment</string>
     <string name="error_server_http">Server vrátil chybu (HTTP %1$d).</string>
+    <string name="settings_language">Jazyk</string>
+    <string name="settings_language_system">Podľa systému</string>
 </resources>

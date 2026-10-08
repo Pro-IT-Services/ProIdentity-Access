@@ -1,0 +1,214 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ProIdentity Access</string>
+
+    <!-- Ongoing VPN notification (WgVpnService) -->
+    <string name="vpn_channel_name">Conexión VPN</string>
+    <string name="vpn_channel_description">Se muestra mientras hay una conexión VPN activa, con un botón para desconectar.</string>
+    <string name="vpn_notification_connected">Conectado a %1$s</string>
+    <plurals name="vpn_notification_connected_many">
+        <item quantity="one">Conectado a %1$d red</item>
+        <item quantity="other">Conectado a %1$d redes</item>
+    </plurals>
+    <string name="vpn_notification_public">VPN conectada</string>
+    <string name="vpn_notification_disconnect">Desconectar</string>
+
+    <!-- Common -->
+    <string name="common_back">Atrás</string>
+    <string name="common_cancel">Cancelar</string>
+    <string name="common_continue">Continuar</string>
+    <string name="common_sign_in">Iniciar sesión</string>
+    <string name="common_sign_out">Cerrar sesión</string>
+    <string name="common_undo">Deshacer</string>
+    <string name="common_import_configuration">Importar configuración</string>
+    <string name="common_settings">Ajustes</string>
+    <string name="common_name">Nombre</string>
+    <string name="common_disconnect">Desconectar</string>
+    <string name="common_connect_to">Conectar a %1$s</string>
+    <string name="common_disconnect_named">Desconectar %1$s</string>
+    <string name="common_send_again">Enviar de nuevo</string>
+    <string name="common_enter_code_instead">Introducir un código</string>
+    <string name="common_received">Recibido</string>
+    <string name="common_sent">Enviado</string>
+    <string name="common_open_source_licenses">Licencias de código abierto</string>
+
+    <!-- Connection status -->
+    <string name="status_connected">Conectado</string>
+    <string name="status_connecting">Conectando…</string>
+    <string name="status_error">No se pudo conectar</string>
+    <string name="status_available">Disponible</string>
+    <string name="status_not_connected">Sin conexión</string>
+    <string name="aperture_connecting">Conectando</string>
+    <string name="aperture_error">Error de conexión</string>
+    <string name="aperture_content_description">Estado de la conexión: %1$s</string>
+
+    <!-- Connection kinds -->
+    <string name="kind_managed">Gestionada</string>
+    <string name="kind_imported">Importada</string>
+    <string name="kind_synced">Sincronizada</string>
+
+    <!-- Relative time -->
+    <string name="time_never">Nunca</string>
+    <string name="time_just_now">Ahora mismo</string>
+    <string name="time_seconds_ago">hace %1$d s</string>
+    <string name="time_minutes_ago">hace %1$d min</string>
+    <string name="time_hours_ago">hace %1$d h</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_step_of">Paso %1$d de %2$d</string>
+    <string name="onboarding_welcome_title">Le damos la bienvenida a\nProIdentity Access</string>
+    <string name="onboarding_welcome_body">Acceso seguro a la red de su organización. ¿Cómo desea conectarse?</string>
+    <string name="onboarding_mode_managed_title">Gestionado por mi organización</string>
+    <string name="onboarding_mode_managed_body">Inicie sesión en el servidor ProIdentity de su empresa para obtener sus conexiones.</string>
+    <string name="onboarding_mode_standalone_title">Usar mi propia configuración</string>
+    <string name="onboarding_mode_standalone_body">Importe archivos de configuración de WireGuard y conéctese sin un servidor.</string>
+    <string name="onboarding_server_title">Conéctese a su servidor</string>
+    <string name="onboarding_server_body">Introduzca la dirección que le facilitó su equipo de TI, por ejemplo vpn.company.com.</string>
+    <string name="onboarding_server_address">Dirección del servidor</string>
+    <string name="onboarding_register_title">Registre este dispositivo</string>
+    <string name="onboarding_register_body">ProIdentity Access crea una identidad segura para este teléfono y lo registra en %1$s.</string>
+    <string name="onboarding_register_button">Registrar dispositivo</string>
+    <string name="onboarding_device_name">Nombre del dispositivo</string>
+    <string name="onboarding_device_name_hint">Se muestra a su administrador en la lista de dispositivos.</string>
+
+    <!-- Sign in -->
+    <string name="signin_continue_signed_out">Continuar sin iniciar sesión</string>
+    <string name="signin_welcome_back">Le damos la bienvenida de nuevo</string>
+    <string name="signin_reauth_body">Su sesión ha finalizado. Inicie sesión de nuevo para continuar; este dispositivo permanece registrado.</string>
+    <string name="signin_body">Use la cuenta de su organización.</string>
+    <string name="signin_username">Nombre de usuario</string>
+    <string name="signin_password">Contraseña</string>
+    <string name="signin_show_password">Mostrar contraseña</string>
+    <string name="signin_hide_password">Ocultar contraseña</string>
+    <string name="signin_totp_title">Verificación en dos pasos</string>
+    <string name="signin_totp_body">Introduzca el código de 6 dígitos de su aplicación de autenticación.</string>
+    <string name="signin_verify">Verificar</string>
+    <string name="signin_use_push_instead">Enviar una notificación push</string>
+    <!-- Push approval -->
+    <string name="push_approved_title">Aprobado</string>
+    <string name="push_approved_body">Iniciando sesión…</string>
+    <string name="push_denied_title">Solicitud denegada</string>
+    <string name="push_denied_body">La solicitud se rechazó en su teléfono. Inténtelo de nuevo o use un código.</string>
+    <string name="push_expired_title">Solicitud caducada</string>
+    <string name="push_expired_body">Se agotó el tiempo de la solicitud. Envíe una nueva o use un código.</string>
+    <string name="push_pending_title">Apruebe en su teléfono</string>
+    <string name="push_pending_body">Hemos enviado una notificación push a la aplicación ProIdentity. Apruébela para continuar.</string>
+    <string name="push_waiting">Esperando la aprobación…</string>
+    <string name="push_connect_request">Conectar a %1$s</string>
+
+    <!-- Connect 2FA sheet -->
+    <string name="connect_auth_connecting_to">Conectando a %1$s</string>
+    <string name="connect_auth_check_app">Busque una notificación en la aplicación ProIdentity.</string>
+    <string name="connect_auth_code_title">Se requiere verificación</string>
+    <string name="connect_auth_code_body">Introduzca el código de 6 dígitos de su aplicación de autenticación para conectarse a %1$s.</string>
+    <string name="connect_auth_verify_and_connect">Verificar y conectar</string>
+    <string name="connect_auth_use_push_instead">Usar una notificación push</string>
+    <string name="connect_auth_your_server">su servidor</string>
+
+    <!-- Import sheet -->
+    <string name="import_body">Elija un archivo .conf de WireGuard o pegue su contenido.</string>
+    <string name="import_choose_file">Elegir archivo</string>
+    <string name="import_name_placeholder">Oficina en casa</string>
+    <string name="import_configuration">Configuración</string>
+    <string name="import_button">Importar</string>
+    <string name="import_default_name">Túnel</string>
+    <string name="import_error_invalid">Esto no parece una configuración de WireGuard válida.</string>
+    <string name="import_user_config_name">Configuración de usuario</string>
+
+    <!-- Home -->
+    <string name="home_signed_out_title">Ha cerrado la sesión</string>
+    <string name="home_signed_out_body">Inicie sesión para cargar las conexiones de su organización.</string>
+    <string name="home_empty_assigned_title">No hay conexiones asignadas</string>
+    <string name="home_empty_assigned_body">Su administrador aún no le ha dado acceso a ningún servidor. Deslice hacia abajo para actualizar.</string>
+    <string name="home_empty_managed_title">Aún no hay nada aquí</string>
+    <string name="home_empty_managed_body">Inicie sesión para ver los servidores que le ofrece su organización, o importe una configuración.</string>
+    <string name="home_empty_standalone_title">Aún no hay configuraciones</string>
+    <string name="home_empty_standalone_body">Importe un archivo de configuración de WireGuard para empezar.</string>
+    <string name="home_connections">Conexiones</string>
+    <string name="home_ready_to_connect">Listo para conectar a %1$s</string>
+    <string name="home_add_connection">Añada una conexión para empezar</string>
+    <string name="home_select_connection_title">Seleccione una conexión</string>
+    <string name="home_select_connection_body">Elija una conexión a la izquierda para ver sus detalles.</string>
+    <string name="snackbar_deleted">%1$s eliminada</string>
+    <string name="snackbar_deleted_configuration">Configuración eliminada</string>
+    <string name="snackbar_imported">%1$s importada</string>
+
+    <!-- Connection details -->
+    <string name="detail_delete">Eliminar %1$s</string>
+    <string name="detail_connection">Conexión</string>
+    <string name="detail_type">Tipo</string>
+    <string name="detail_type_managed">Servidor gestionado</string>
+    <string name="detail_type_imported">Importada en este dispositivo</string>
+    <string name="detail_type_synced">Sincronizada con su cuenta</string>
+    <string name="detail_network">Red</string>
+    <string name="detail_address">Dirección</string>
+    <string name="detail_dns">DNS</string>
+    <string name="detail_endpoint">Endpoint</string>
+    <string name="detail_routes">Rutas</string>
+    <string name="detail_mtu">MTU</string>
+    <string name="detail_traffic">Tráfico</string>
+    <string name="detail_last_handshake">Último handshake</string>
+    <string name="detail_connected_for">durante %1$s</string>
+
+    <!-- Settings -->
+    <string name="settings_account">Cuenta</string>
+    <string name="settings_organization">Organización</string>
+    <string name="settings_server">Servidor</string>
+    <string name="settings_signed_in_as">Sesión iniciada como</string>
+    <string name="settings_not_signed_in">Sin sesión iniciada</string>
+    <string name="settings_this_device">Este dispositivo</string>
+    <string name="settings_mode">Modo</string>
+    <string name="settings_mode_managed">Gestionado por la organización</string>
+    <string name="settings_mode_standalone">Configuraciones propias</string>
+    <string name="settings_registration">Registro</string>
+    <string name="settings_registered">Registrado</string>
+    <string name="settings_not_registered">No registrado</string>
+    <string name="settings_about">Acerca de</string>
+    <string name="settings_version">Versión</string>
+    <string name="settings_website">Sitio web de ProIdentity Access</string>
+    <string name="settings_privacy_policy">Política de privacidad</string>
+    <string name="settings_reset_section">Restablecer</string>
+    <string name="settings_reset_app">Restablecer la aplicación</string>
+    <string name="settings_reset_hint">Elimina de este teléfono todas las conexiones y el registro de este dispositivo.</string>
+    <string name="settings_sign_out_title">¿Cerrar sesión?</string>
+    <string name="settings_sign_out_body">Se desconectará de los servidores gestionados. Este dispositivo permanece registrado, así que para volver a iniciar sesión solo necesitará su contraseña.</string>
+    <string name="settings_reset_title">¿Restablecer ProIdentity Access?</string>
+    <string name="settings_reset_body">Esto desconecta todo y elimina de este teléfono todas las configuraciones y el registro del dispositivo. Tendrá que configurarlo de nuevo.</string>
+    <string name="settings_reset_confirm">Restablecer</string>
+
+    <!-- Open-source licenses -->
+    <string name="licenses_included_software">Software incluido</string>
+    <string name="licenses_wireguard_trademark">WireGuard es una marca registrada de Jason A. Donenfeld.</string>
+    <string name="licenses_this_app">Esta aplicación</string>
+    <string name="licenses_source_code">Código fuente</string>
+    <string name="licenses_text_not_found">No se encontró el texto de la licencia.</string>
+    <string name="licenses_detail_wireguard_go">Implementación de WireGuard</string>
+    <string name="licenses_detail_go">Entorno de ejecución de Go, biblioteca estándar y golang.org/x</string>
+    <string name="licenses_detail_okhttp">Cliente HTTP</string>
+    <string name="licenses_detail_bouncycastle">Proveedor de criptografía</string>
+    <string name="licenses_detail_kotlin">Entorno de ejecución del lenguaje</string>
+    <string name="licenses_detail_androidx">Incluye Security Crypto e iconos de Material</string>
+    <string name="licenses_detail_tink">Bibliotecas de Google usadas por Security Crypto</string>
+
+    <!-- Errors created in the app (server error text is shown as-is) -->
+    <string name="error_server_url_empty">La URL del servidor no puede estar vacía</string>
+    <string name="error_cannot_reach_server">No se puede conectar con el servidor: %1$s</string>
+    <string name="error_registration_failed">Error en el registro: %1$s</string>
+    <string name="error_username_password_required">Se requieren nombre de usuario y contraseña</string>
+    <string name="error_login_failed">Error al iniciar sesión: %1$s</string>
+    <string name="error_invalid_code">Código no válido</string>
+    <string name="error_vpn_service_not_running">El servicio VPN no está en ejecución</string>
+    <string name="error_could_not_connect">No se pudo conectar a %1$s</string>
+    <string name="error_no_endpoint">Ningún endpoint candidato pudo conectarse</string>
+    <string name="error_vpn_permission_denied">Permiso de VPN denegado</string>
+    <string name="error_connect_failed">Error de conexión</string>
+    <string name="error_login_expired_or_revoked">La sesión caducó o fue revocada</string>
+    <string name="error_invalid_server_url">URL del servidor no válida</string>
+    <string name="error_server_url_scheme">La URL del servidor debe incluir https://</string>
+    <string name="error_server_url_host">La URL del servidor debe incluir un host</string>
+    <string name="error_server_url_https">La URL del servidor debe usar HTTPS</string>
+    <string name="error_server_url_query">La URL del servidor no debe incluir una consulta ni un fragmento</string>
+    <string name="error_server_http">El servidor devolvió un error (HTTP %1$d).</string>
+    <string name="settings_language">Idioma</string>
+    <string name="settings_language_system">Predeterminado del sistema</string>
+</resources>

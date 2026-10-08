@@ -213,4 +213,6 @@
     <string name="error_server_url_https">Server URL must use HTTPS</string>
     <string name="error_server_url_query">Server URL must not include query or fragment</string>
     <string name="error_server_http">The server returned an error (HTTP %1$d).</string>
+    <string name="settings_language">Language</string>
+    <string name="settings_language_system">System default</string>
 </resources>

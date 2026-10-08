@@ -1,0 +1,214 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ProIdentity Access</string>
+
+    <!-- Ongoing VPN notification (WgVpnService) -->
+    <string name="vpn_channel_name">VPN-kapcsolat</string>
+    <string name="vpn_channel_description">Aktív VPN-kapcsolat közben jelenik meg, a leválasztáshoz használható gombbal.</string>
+    <string name="vpn_notification_connected">Csatlakoztatva ehhez: %1$s</string>
+    <plurals name="vpn_notification_connected_many">
+        <item quantity="one">Csatlakoztatva %1$d hálózathoz</item>
+        <item quantity="other">Csatlakoztatva %1$d hálózathoz</item>
+    </plurals>
+    <string name="vpn_notification_public">VPN csatlakoztatva</string>
+    <string name="vpn_notification_disconnect">Leválasztás</string>
+
+    <!-- Common -->
+    <string name="common_back">Vissza</string>
+    <string name="common_cancel">Mégse</string>
+    <string name="common_continue">Folytatás</string>
+    <string name="common_sign_in">Bejelentkezés</string>
+    <string name="common_sign_out">Kijelentkezés</string>
+    <string name="common_undo">Visszavonás</string>
+    <string name="common_import_configuration">Konfiguráció importálása</string>
+    <string name="common_settings">Beállítások</string>
+    <string name="common_name">Név</string>
+    <string name="common_disconnect">Leválasztás</string>
+    <string name="common_connect_to">Csatlakozás ehhez: %1$s</string>
+    <string name="common_disconnect_named">%1$s leválasztása</string>
+    <string name="common_send_again">Küldés újra</string>
+    <string name="common_enter_code_instead">Inkább kód megadása</string>
+    <string name="common_received">Fogadva</string>
+    <string name="common_sent">Elküldve</string>
+    <string name="common_open_source_licenses">Nyílt forráskódú licencek</string>
+
+    <!-- Connection status -->
+    <string name="status_connected">Csatlakoztatva</string>
+    <string name="status_connecting">Csatlakozás…</string>
+    <string name="status_error">Nem sikerült csatlakozni</string>
+    <string name="status_available">Elérhető</string>
+    <string name="status_not_connected">Nincs csatlakoztatva</string>
+    <string name="aperture_connecting">Csatlakozás</string>
+    <string name="aperture_error">Kapcsolódási hiba</string>
+    <string name="aperture_content_description">Kapcsolat állapota: %1$s</string>
+
+    <!-- Connection kinds -->
+    <string name="kind_managed">Felügyelt</string>
+    <string name="kind_imported">Importált</string>
+    <string name="kind_synced">Szinkronizált</string>
+
+    <!-- Relative time -->
+    <string name="time_never">Soha</string>
+    <string name="time_just_now">Az imént</string>
+    <string name="time_seconds_ago">%1$d mp-e</string>
+    <string name="time_minutes_ago">%1$d perce</string>
+    <string name="time_hours_ago">%1$d órája</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_step_of">%1$d. lépés a(z) %2$d lépésből</string>
+    <string name="onboarding_welcome_title">Üdvözli a\nProIdentity Access</string>
+    <string name="onboarding_welcome_body">Biztonságos hozzáférés a szervezete hálózatához. Hogyan szeretne csatlakozni?</string>
+    <string name="onboarding_mode_managed_title">A szervezetem felügyeli</string>
+    <string name="onboarding_mode_managed_body">Jelentkezzen be a vállalata ProIdentity-kiszolgálójára a kapcsolatai lekéréséhez.</string>
+    <string name="onboarding_mode_standalone_title">Saját konfiguráció használata</string>
+    <string name="onboarding_mode_standalone_body">Importáljon WireGuard-konfigurációs fájlokat, és csatlakozzon kiszolgáló nélkül.</string>
+    <string name="onboarding_server_title">Csatlakozzon a kiszolgálójához</string>
+    <string name="onboarding_server_body">Adja meg az informatikai csapatától kapott címet, például: vpn.company.com.</string>
+    <string name="onboarding_server_address">Kiszolgáló címe</string>
+    <string name="onboarding_register_title">Regisztrálja ezt az eszközt</string>
+    <string name="onboarding_register_body">A ProIdentity Access biztonságos azonosítót hoz létre ehhez a telefonhoz, és regisztrálja a(z) %1$s kiszolgálón.</string>
+    <string name="onboarding_register_button">Eszköz regisztrálása</string>
+    <string name="onboarding_device_name">Eszköz neve</string>
+    <string name="onboarding_device_name_hint">A rendszergazda számára jelenik meg az eszközlistában.</string>
+
+    <!-- Sign in -->
+    <string name="signin_continue_signed_out">Folytatás bejelentkezés nélkül</string>
+    <string name="signin_welcome_back">Üdvözöljük újra</string>
+    <string name="signin_reauth_body">A munkamenete véget ért. A folytatáshoz jelentkezzen be újra — ez az eszköz regisztrálva marad.</string>
+    <string name="signin_body">Használja a szervezeti fiókját.</string>
+    <string name="signin_username">Felhasználónév</string>
+    <string name="signin_password">Jelszó</string>
+    <string name="signin_show_password">Jelszó megjelenítése</string>
+    <string name="signin_hide_password">Jelszó elrejtése</string>
+    <string name="signin_totp_title">Kétlépcsős azonosítás</string>
+    <string name="signin_totp_body">Adja meg a hitelesítő alkalmazásban látható 6 jegyű kódot.</string>
+    <string name="signin_verify">Ellenőrzés</string>
+    <string name="signin_use_push_instead">Inkább push értesítés küldése</string>
+    <!-- Push approval -->
+    <string name="push_approved_title">Jóváhagyva</string>
+    <string name="push_approved_body">Bejelentkeztetés…</string>
+    <string name="push_denied_title">Kérés elutasítva</string>
+    <string name="push_denied_body">A kérést elutasították a telefonján. Próbálja újra, vagy használjon kódot.</string>
+    <string name="push_expired_title">A kérés lejárt</string>
+    <string name="push_expired_body">A kérés ideje lejárt. Küldjön újat, vagy használjon kódot.</string>
+    <string name="push_pending_title">Hagyja jóvá a telefonján</string>
+    <string name="push_pending_body">Push értesítést küldtünk a ProIdentity alkalmazásnak. A folytatáshoz hagyja jóvá.</string>
+    <string name="push_waiting">Várakozás a jóváhagyásra…</string>
+    <string name="push_connect_request">Csatlakozás ehhez: %1$s</string>
+
+    <!-- Connect 2FA sheet -->
+    <string name="connect_auth_connecting_to">Csatlakozás ehhez: %1$s</string>
+    <string name="connect_auth_check_app">Keresse az értesítést a ProIdentity alkalmazásban.</string>
+    <string name="connect_auth_code_title">Ellenőrzés szükséges</string>
+    <string name="connect_auth_code_body">A(z) %1$s kiszolgálóhoz való csatlakozáshoz adja meg a hitelesítő alkalmazásban látható 6 jegyű kódot.</string>
+    <string name="connect_auth_verify_and_connect">Ellenőrzés és csatlakozás</string>
+    <string name="connect_auth_use_push_instead">Inkább push értesítés használata</string>
+    <string name="connect_auth_your_server">a kiszolgálójához</string>
+
+    <!-- Import sheet -->
+    <string name="import_body">Válasszon egy WireGuard .conf fájlt, vagy illessze be a tartalmát.</string>
+    <string name="import_choose_file">Fájl kiválasztása</string>
+    <string name="import_name_placeholder">Otthoni iroda</string>
+    <string name="import_configuration">Konfiguráció</string>
+    <string name="import_button">Importálás</string>
+    <string name="import_default_name">Alagút</string>
+    <string name="import_error_invalid">Ez nem tűnik érvényes WireGuard-konfigurációnak.</string>
+    <string name="import_user_config_name">Felhasználói konfiguráció</string>
+
+    <!-- Home -->
+    <string name="home_signed_out_title">Ki van jelentkezve</string>
+    <string name="home_signed_out_body">Jelentkezzen be a szervezete kapcsolatainak betöltéséhez.</string>
+    <string name="home_empty_assigned_title">Nincs hozzárendelt kapcsolat</string>
+    <string name="home_empty_assigned_body">A rendszergazda még nem adott hozzáférést egyetlen kiszolgálóhoz sem. A frissítéshez húzza lefelé.</string>
+    <string name="home_empty_managed_title">Itt még nincs semmi</string>
+    <string name="home_empty_managed_body">Jelentkezzen be a szervezete által biztosított kiszolgálók megtekintéséhez, vagy importáljon egy konfigurációt.</string>
+    <string name="home_empty_standalone_title">Még nincs konfiguráció</string>
+    <string name="home_empty_standalone_body">A kezdéshez importáljon egy WireGuard-konfigurációs fájlt.</string>
+    <string name="home_connections">Kapcsolatok</string>
+    <string name="home_ready_to_connect">Készen áll a csatlakozásra ehhez: %1$s</string>
+    <string name="home_add_connection">A kezdéshez adjon hozzá egy kapcsolatot</string>
+    <string name="home_select_connection_title">Válasszon kapcsolatot</string>
+    <string name="home_select_connection_body">Válasszon egy kapcsolatot a bal oldalon a részletek megtekintéséhez.</string>
+    <string name="snackbar_deleted">%1$s törölve</string>
+    <string name="snackbar_deleted_configuration">Konfiguráció törölve</string>
+    <string name="snackbar_imported">%1$s importálva</string>
+
+    <!-- Connection details -->
+    <string name="detail_delete">%1$s törlése</string>
+    <string name="detail_connection">Kapcsolat</string>
+    <string name="detail_type">Típus</string>
+    <string name="detail_type_managed">Felügyelt kiszolgáló</string>
+    <string name="detail_type_imported">Importálva erre az eszközre</string>
+    <string name="detail_type_synced">Szinkronizálva a fiókjával</string>
+    <string name="detail_network">Hálózat</string>
+    <string name="detail_address">Cím</string>
+    <string name="detail_dns">DNS</string>
+    <string name="detail_endpoint">Végpont</string>
+    <string name="detail_routes">Útvonalak</string>
+    <string name="detail_mtu">MTU</string>
+    <string name="detail_traffic">Forgalom</string>
+    <string name="detail_last_handshake">Utolsó kézfogás</string>
+    <string name="detail_connected_for">%1$s ideje</string>
+
+    <!-- Settings -->
+    <string name="settings_account">Fiók</string>
+    <string name="settings_organization">Szervezet</string>
+    <string name="settings_server">Kiszolgáló</string>
+    <string name="settings_signed_in_as">Bejelentkezve mint</string>
+    <string name="settings_not_signed_in">Nincs bejelentkezve</string>
+    <string name="settings_this_device">Ez az eszköz</string>
+    <string name="settings_mode">Mód</string>
+    <string name="settings_mode_managed">A szervezet felügyeli</string>
+    <string name="settings_mode_standalone">Saját konfigurációk</string>
+    <string name="settings_registration">Regisztráció</string>
+    <string name="settings_registered">Regisztrálva</string>
+    <string name="settings_not_registered">Nincs regisztrálva</string>
+    <string name="settings_about">Névjegy</string>
+    <string name="settings_version">Verzió</string>
+    <string name="settings_website">ProIdentity Access webhely</string>
+    <string name="settings_privacy_policy">Adatvédelmi irányelvek</string>
+    <string name="settings_reset_section">Visszaállítás</string>
+    <string name="settings_reset_app">Alkalmazás visszaállítása</string>
+    <string name="settings_reset_hint">Eltávolít minden kapcsolatot és ennek az eszköznek a regisztrációját erről a telefonról.</string>
+    <string name="settings_sign_out_title">Kijelentkezik?</string>
+    <string name="settings_sign_out_body">Leválik a felügyelt kiszolgálókról. Ez az eszköz regisztrálva marad, így az ismételt bejelentkezéshez csak a jelszavára lesz szükség.</string>
+    <string name="settings_reset_title">Visszaállítja a ProIdentity Accesst?</string>
+    <string name="settings_reset_body">Ez mindent leválaszt, és eltávolít minden konfigurációt, valamint az eszköz regisztrációját erről a telefonról. Újra be kell majd állítania.</string>
+    <string name="settings_reset_confirm">Visszaállítás</string>
+
+    <!-- Open-source licenses -->
+    <string name="licenses_included_software">Mellékelt szoftver</string>
+    <string name="licenses_wireguard_trademark">A WireGuard a Jason A. Donenfeld bejegyzett védjegye.</string>
+    <string name="licenses_this_app">Ez az alkalmazás</string>
+    <string name="licenses_source_code">Forráskód</string>
+    <string name="licenses_text_not_found">A licenc szövege nem található.</string>
+    <string name="licenses_detail_wireguard_go">WireGuard-megvalósítás</string>
+    <string name="licenses_detail_go">Go futtatókörnyezet, standard könyvtár és golang.org/x</string>
+    <string name="licenses_detail_okhttp">HTTP-kliens</string>
+    <string name="licenses_detail_bouncycastle">Kriptográfiai szolgáltató</string>
+    <string name="licenses_detail_kotlin">Nyelvi futtatókörnyezet</string>
+    <string name="licenses_detail_androidx">Beleértve a Security Cryptót és a Material ikonokat</string>
+    <string name="licenses_detail_tink">A Security Crypto által használt Google-könyvtárak</string>
+
+    <!-- Errors created in the app (server error text is shown as-is) -->
+    <string name="error_server_url_empty">A kiszolgáló URL-címe nem lehet üres</string>
+    <string name="error_cannot_reach_server">A kiszolgáló nem érhető el: %1$s</string>
+    <string name="error_registration_failed">A regisztráció sikertelen: %1$s</string>
+    <string name="error_username_password_required">Felhasználónév és jelszó szükséges</string>
+    <string name="error_login_failed">A bejelentkezés sikertelen: %1$s</string>
+    <string name="error_invalid_code">Érvénytelen kód</string>
+    <string name="error_vpn_service_not_running">A VPN-szolgáltatás nem fut</string>
+    <string name="error_could_not_connect">Nem sikerült csatlakozni ehhez: %1$s</string>
+    <string name="error_no_endpoint">Egyik végpontjelölthöz sem sikerült csatlakozni</string>
+    <string name="error_vpn_permission_denied">A VPN-engedély megtagadva</string>
+    <string name="error_connect_failed">A csatlakozás sikertelen</string>
+    <string name="error_login_expired_or_revoked">A bejelentkezés lejárt vagy visszavonták</string>
+    <string name="error_invalid_server_url">Érvénytelen kiszolgáló-URL</string>
+    <string name="error_server_url_scheme">A kiszolgáló URL-címének tartalmaznia kell a https:// előtagot</string>
+    <string name="error_server_url_host">A kiszolgáló URL-címének tartalmaznia kell egy állomásnevet</string>
+    <string name="error_server_url_https">A kiszolgáló URL-címének HTTPS-t kell használnia</string>
+    <string name="error_server_url_query">A kiszolgáló URL-címe nem tartalmazhat lekérdezést vagy töredéket</string>
+    <string name="error_server_http">A kiszolgáló hibát adott vissza (HTTP %1$d).</string>
+    <string name="settings_language">Nyelv</string>
+    <string name="settings_language_system">Rendszer szerinti</string>
+</resources>

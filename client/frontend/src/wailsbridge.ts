@@ -15,13 +15,24 @@ async function App() {
   return mod
 }
 
-/** The OS UI language as seen by the Go side: "sk" or "en" ("" outside Wails). */
+/** The OS UI language as seen by the Go side ("" outside Wails). */
 export async function systemLanguage(): Promise<string> {
   if (!isWails()) return ''
   try {
     return await (await App()).SystemLanguage()
   } catch {
     return ''
+  }
+}
+
+/** Override the Go side's UI language (tray menu, service errors). "" = follow the OS. */
+export async function setUILanguage(lang: string): Promise<void> {
+  if (!isWails()) return
+  try {
+    const app = await App() as { SetUILanguage?: (l: string) => Promise<void> }
+    await app.SetUILanguage?.(lang)
+  } catch {
+    /* non-fatal */
   }
 }
 

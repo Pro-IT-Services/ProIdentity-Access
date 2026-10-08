@@ -13,6 +13,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -37,8 +38,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.os.LocaleListCompat
+import java.util.Locale
 import com.proitservices.proidentity.access.R
 import com.proitservices.proidentity.access.model.ManagedSettings
 import com.proitservices.proidentity.access.ui.design.InfoCard
@@ -48,6 +53,15 @@ import com.proitservices.proidentity.access.ui.screen.onboarding.hostOf
 
 private const val WEBSITE = "https://access.proidentity.cloud/"
 private const val PRIVACY_POLICY = "https://access.proidentity.cloud/privacy"
+
+/** Languages offered in the in-app picker (besides "follow system"). */
+private val LANGUAGE_TAGS = listOf("en", "sk", "cs", "pl", "hu", "de", "it", "es")
+
+/** The language's own name, e.g. "de" -> "Deutsch". */
+private fun languageEndonym(tag: String): String {
+    val l = Locale(tag)
+    return l.getDisplayLanguage(l).replaceFirstChar { it.uppercase(l) }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -64,6 +78,8 @@ fun SettingsScreen(
     val managed = settings.mode == "managed"
     var confirmSignOut by rememberSaveable { mutableStateOf(false) }
     var confirmReset by rememberSaveable { mutableStateOf(false) }
+    var showLang by rememberSaveable { mutableStateOf(false) }
+    val currentLang = AppCompatDelegate.getApplicationLocales().get(0)?.language ?: ""
     val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val uri = LocalUriHandler.current
 
@@ -121,6 +137,19 @@ fun SettingsScreen(
             }
 
             Spacer(Modifier.height(20.dp))
+            SectionLabel(stringResource(R.string.settings_language))
+            InfoCard {
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.settings_language)) },
+                    supportingContent = {
+                        Text(if (currentLang.isEmpty()) stringResource(R.string.settings_language_system) else languageEndonym(currentLang))
+                    },
+                    colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                    modifier = Modifier.clickable(role = Role.Button) { showLang = true },
+                )
+            }
+
+            Spacer(Modifier.height(20.dp))
             SectionLabel(stringResource(R.string.settings_about))
             InfoCard {
                 InfoRow(stringResource(R.string.settings_version), version, mono = true)
@@ -160,6 +189,32 @@ fun SettingsScreen(
         }
     }
 
+    if (showLang) {
+        AlertDialog(
+            onDismissRequest = { showLang = false },
+            title = { Text(stringResource(R.string.settings_language)) },
+            text = {
+                Column(Modifier.verticalScroll(rememberScrollState())) {
+                    (listOf("") + LANGUAGE_TAGS).forEach { tag ->
+                        val label = if (tag.isEmpty()) stringResource(R.string.settings_language_system) else languageEndonym(tag)
+                        ListItem(
+                            headlineContent = { Text(label) },
+                            trailingContent = { if (tag == currentLang) Icon(Icons.Outlined.Check, contentDescription = null) },
+                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                            modifier = Modifier.clickable(role = Role.Button) {
+                                AppCompatDelegate.setApplicationLocales(
+                                    if (tag.isEmpty()) LocaleListCompat.getEmptyLocaleList()
+                                    else LocaleListCompat.forLanguageTags(tag)
+                                )
+                                showLang = false
+                            },
+                        )
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { showLang = false }) { Text(stringResource(R.string.common_cancel)) } },
+        )
+    }
     if (confirmSignOut) {
         AlertDialog(
             onDismissRequest = { confirmSignOut = false },

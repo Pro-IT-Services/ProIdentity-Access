@@ -7,8 +7,13 @@ func TestLangFromLANGID(t *testing.T) {
 		0x041B: langSK, // sk-SK
 		0x001B: langSK, // neutral Slovak
 		0x0409: langEN, // en-US
-		0x0405: langEN, // cs-CZ
-		0x0407: langEN, // de-DE
+		0x0405: langCS, // cs-CZ
+		0x0407: langDE, // de-DE
+		0x0415: langPL, // pl-PL
+		0x040E: langHU, // hu-HU
+		0x0410: langIT, // it-IT
+		0x040A: langES, // es-ES
+		0x0C0A: langES, // es-ES (modern sort)
 		0x0000: langEN,
 	}
 	for id, want := range cases {
@@ -27,8 +32,15 @@ func TestLangFromTag(t *testing.T) {
 		`"sk-SK"`:     langSK,
 		"en-US":       langEN,
 		"en":          langEN,
-		"de":          langEN,
-		"cs-CZ":       langEN,
+		"de":          langDE,
+		"de_DE.UTF-8": langDE,
+		"cs-CZ":       langCS,
+		"cz":          langCS,
+		"pl":          langPL,
+		"hu-HU":       langHU,
+		"it":          langIT,
+		"es-ES":       langES,
+		"ca":          langES,
 		"sked":        langEN,
 		"":            langEN,
 		"C":           langEN,
@@ -79,9 +91,15 @@ func TestTrIn(t *testing.T) {
 	if got := trIn(langSK, "missing.key"); got != "missing.key" {
 		t.Errorf("unknown key = %q", got)
 	}
-	for k, v := range goStrings {
-		if v[0] == "" || v[1] == "" {
-			t.Errorf("goStrings[%q] has an empty translation", k)
+	if got := trIn(langDE, "tray.quit"); got != "Beenden" {
+		t.Errorf("de tray.quit = %q", got)
+	}
+	// Every shipped language must have a non-empty value for every key.
+	for k, m := range goStrings {
+		for _, lang := range []string{langEN, langSK, langCS, langPL, langHU, langDE, langIT, langES} {
+			if m[lang] == "" {
+				t.Errorf("goStrings[%q] missing %s translation", k, lang)
+			}
 		}
 	}
 }

@@ -3,11 +3,14 @@ import SwiftUI
 @main
 struct ProIdentityApp: App {
     @State private var app = AppModel()
+    // "" = follow the system language; otherwise a specific language code.
+    @AppStorage("appLanguage") private var appLanguage = ""
 
     var body: some Scene {
         WindowGroup {
             RootView()
                 .environment(app)
+                .environment(\.locale, appLanguage.isEmpty ? Locale.autoupdatingCurrent : Locale(identifier: appLanguage))
         }
     }
 }

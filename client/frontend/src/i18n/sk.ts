@@ -300,4 +300,6 @@ export const sk: Translation = {
 
   // ── Errors ──────────────────────────────────────────────────────────────
   'error.somethingWrong': 'Niečo sa pokazilo',
+  'settings.language': 'Jazyk',
+  'settings.languageSystem': 'Podľa systému',
 }
