@@ -42,6 +42,7 @@ type App struct {
 	mUserConfigs       map[string]string         // "uconf:{serverID}" → config name
 	mUserConfigTunnels map[string]string         // "uconf:{serverID}" → ephemeral daemon tunnel ID (connected only)
 	mPollCancel        context.CancelFunc        // cancels background poll loop
+	mAllowImport       bool                      // server policy: may the user import personal profiles
 
 	quitForUpdate sync.Once // quit once when the service starts installing an update
 }
@@ -57,6 +58,7 @@ func NewApp() *App {
 		mSessions:          make(map[string]*activeSession),
 		mUserConfigs:       make(map[string]string),
 		mUserConfigTunnels: make(map[string]string),
+		mAllowImport:       true, // allowed until the server says otherwise
 	}
 	// Restore encrypted client if device is registered and token exists.
 	// NEVER fall back to unencrypted client when a device ID is present.
@@ -78,6 +80,7 @@ func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 	a.tryConnect()
 	go a.forwardDaemonEvents()
+	go a.refreshManagedInfo() // pick up VPN name + personal-import policy
 }
 
 func (a *App) domReady(ctx context.Context) {
@@ -525,12 +528,13 @@ func (a *App) GetStats(id string) (*ipc.StatsInfo, error) {
 
 // ManagedSettings is the data returned to the frontend.
 type ManagedSettings struct {
-	ServerURL   string `json:"server_url"`
-	Username    string `json:"username"`
-	IsAdmin     bool   `json:"is_admin"`
-	LoggedIn    bool   `json:"logged_in"`
-	VPNName     string `json:"vpn_name"`
-	TOTPEnabled bool   `json:"totp_enabled"`
+	ServerURL           string `json:"server_url"`
+	Username            string `json:"username"`
+	IsAdmin             bool   `json:"is_admin"`
+	LoggedIn            bool   `json:"logged_in"`
+	VPNName             string `json:"vpn_name"`
+	TOTPEnabled         bool   `json:"totp_enabled"`
+	AllowPersonalImport bool   `json:"allow_personal_import"`
 }
 
 // ManagedLoginResult is returned after a successful login.
@@ -548,13 +552,36 @@ func (a *App) ManagedGetSettings() ManagedSettings {
 	a.mMu.Lock()
 	defer a.mMu.Unlock()
 	return ManagedSettings{
-		ServerURL:   a.mSettings.ServerURL,
-		Username:    a.mSettings.Username,
-		IsAdmin:     a.mSettings.IsAdmin,
-		LoggedIn:    a.mSettings.Token != "",
-		VPNName:     a.mSettings.VPNName,
-		TOTPEnabled: a.mSettings.TOTPEnabled,
+		ServerURL:           a.mSettings.ServerURL,
+		Username:            a.mSettings.Username,
+		IsAdmin:             a.mSettings.IsAdmin,
+		LoggedIn:            a.mSettings.Token != "",
+		VPNName:             a.mSettings.VPNName,
+		TOTPEnabled:         a.mSettings.TOTPEnabled,
+		AllowPersonalImport: a.mAllowImport,
 	}
+}
+
+// refreshManagedInfo fetches public server metadata (VPN name and the
+// personal-import policy) and caches it. Best-effort; failures leave the
+// current values in place.
+func (a *App) refreshManagedInfo() {
+	a.mMu.Lock()
+	url := a.mSettings.ServerURL
+	a.mMu.Unlock()
+	if url == "" {
+		return
+	}
+	info, err := managed.NewClient(url, "").GetInfo()
+	if err != nil {
+		return
+	}
+	a.mMu.Lock()
+	if info.VPNName != "" {
+		a.mSettings.VPNName = info.VPNName
+	}
+	a.mAllowImport = info.PersonalImportAllowed()
+	a.mMu.Unlock()
 }
 
 // ManagedSaveServerURL updates the management server URL and fetches the VPN name.
@@ -570,10 +597,12 @@ func (a *App) ManagedSaveServerURL(serverURL string) error {
 	}
 	a.mMu.Unlock()
 
-	c := managed.NewClient(serverURL, "")
-	if info, err := c.GetInfo(); err == nil && info.VPNName != "" {
+	if info, err := managed.NewClient(serverURL, "").GetInfo(); err == nil {
 		a.mMu.Lock()
-		a.mSettings.VPNName = info.VPNName
+		if info.VPNName != "" {
+			a.mSettings.VPNName = info.VPNName
+		}
+		a.mAllowImport = info.PersonalImportAllowed()
 		a.mMu.Unlock()
 	}
 
@@ -1416,6 +1445,7 @@ func (a *App) startPollLoop(mc *managed.Client) {
 	ctx, cancel := context.WithCancel(context.Background())
 	a.mPollCancel = cancel
 	a.mMu.Unlock()
+	go a.refreshManagedInfo() // refresh VPN name + personal-import policy on each session start
 	go a.pollLoop(ctx, mc)
 }
 

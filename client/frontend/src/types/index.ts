@@ -40,6 +40,8 @@ export interface ManagedSettings {
   logged_in: boolean
   vpn_name: string
   totp_enabled: boolean
+  /** Server policy: may the user import their own profiles. Absent = allowed. */
+  allow_personal_import?: boolean
 }
 
 export interface ManagedLoginResult {

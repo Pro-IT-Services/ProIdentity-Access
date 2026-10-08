@@ -16,14 +16,15 @@ var secretSettings = map[string]bool{
 }
 
 var visibleSettings = map[string]bool{
-	"vpn_name":           true,
-	"session_timeout":    true,
-	"keepalive_interval": true,
-	"webauthn_rp_id":     true,
-	"webauthn_rp_name":   true,
-	"webauthn_origin":    true,
-	"push_auth_enabled":  true,
-	"push_auth_api_key":  true,
+	"vpn_name":              true,
+	"session_timeout":       true,
+	"keepalive_interval":    true,
+	"webauthn_rp_id":        true,
+	"webauthn_rp_name":      true,
+	"webauthn_origin":       true,
+	"push_auth_enabled":     true,
+	"push_auth_api_key":     true,
+	"allow_personal_import": true,
 }
 
 // GET /api/v1/admin/settings

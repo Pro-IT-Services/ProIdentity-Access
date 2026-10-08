@@ -69,6 +69,7 @@ export const sk: Translation = {
   'topbar.daemonConnected': 'Služba je pripojená',
   'topbar.daemonOffline': 'Služba je nedostupná',
   'topbar.importConf': 'Importovať konfiguráciu',
+  'topbar.import': 'Importovať',
   'topbar.signOutAs': 'Odhlásiť sa ({username})',
 
   // ── Main status (Mission Control) ───────────────────────────────────────
@@ -168,6 +169,7 @@ export const sk: Translation = {
   'settings.desc': 'Server, účet a správa aplikácie.',
   'settings.managedServer': 'Spravovaný server',
   'settings.serverUrlHint': 'Adresa servera ProIdentity Access. https:// sa doplní automaticky.',
+  'settings.serverLockedHint': 'Nastavené pri inštalácii. Ak sa chcete pripojiť na iný server, znova spustite sprievodcu nastavením.',
   'settings.saveUrl': 'Uložiť adresu',
   'settings.rerunWizard': 'Znova spustiť sprievodcu nastavením',
   'settings.account': 'Účet',

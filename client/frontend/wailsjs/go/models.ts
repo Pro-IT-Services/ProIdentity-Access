@@ -186,6 +186,7 @@ export namespace main {
 	    logged_in: boolean;
 	    vpn_name: string;
 	    totp_enabled: boolean;
+	    allow_personal_import: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new ManagedSettings(source);
@@ -199,6 +200,7 @@ export namespace main {
 	        this.logged_in = source["logged_in"];
 	        this.vpn_name = source["vpn_name"];
 	        this.totp_enabled = source["totp_enabled"];
+	        this.allow_personal_import = source["allow_personal_import"];
 	    }
 	}
 	export class OpenVPNProfileView {

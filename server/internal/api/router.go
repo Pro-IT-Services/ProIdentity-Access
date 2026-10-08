@@ -299,7 +299,13 @@ func (s *Server) handleInfo(w http.ResponseWriter, r *http.Request) {
 	if vpnName == "" {
 		vpnName = "Managed VPN"
 	}
-	jsonOK(w, map[string]any{"vpn_name": vpnName, "push_auth_enabled": s.pushAuthEnabled()})
+	// Personal imports are allowed unless an admin explicitly turned them off.
+	allowImport := s.setting("allow_personal_import") != "false"
+	jsonOK(w, map[string]any{
+		"vpn_name":              vpnName,
+		"push_auth_enabled":     s.pushAuthEnabled(),
+		"allow_personal_import": allowImport,
+	})
 }
 
 // setting reads a value from the settings table.

@@ -24,13 +24,77 @@
 param(
     [string]$Version,
     [switch]$SkipUI,
-    [switch]$SkipServerPackage
+    [switch]$SkipServerPackage,
+    # Authenticode-sign our own binaries + installer with Azure Artifact Signing.
+    # On by default; -SkipSign produces an unsigned local build.
+    [switch]$SkipSign,
+    # Azure signing metadata JSON (endpoint/account/profile). Defaults to the
+    # per-user guide file; override with $env:ARTIFACT_SIGNING_METADATA.
+    [string]$SigningMetadata = $(if ($env:ARTIFACT_SIGNING_METADATA) { $env:ARTIFACT_SIGNING_METADATA } else { "$HOME\signing\proit.json" })
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 $Root   = $PSScriptRoot
 $BinDir = "$Root\build\bin"
+
+# ---------------------------------------------------------------------------
+# Code signing (Azure Artifact Signing — PRO IT SERVICES s.r.o.)
+# Signs only our own files (app exe, daemon exe, MSI). Third-party binaries
+# (OpenVPN, OpenSSL, wintun, driver MSMs) keep their vendor signatures and are
+# never re-signed. Guide: C:\Users\Marko\signing\README.md
+# ---------------------------------------------------------------------------
+function Resolve-SignTool {
+    $c = Get-Command signtool.exe -ErrorAction SilentlyContinue
+    if ($c) { return $c.Source }
+    $kitBin = "${env:ProgramFiles(x86)}\Windows Kits\10\bin"
+    if (Test-Path $kitBin) {
+        $found = Get-ChildItem -Path $kitBin -Recurse -Filter signtool.exe -ErrorAction SilentlyContinue |
+                 Where-Object { $_.FullName -match '\\x64\\signtool\.exe$' } |
+                 Sort-Object FullName -Descending | Select-Object -First 1
+        if ($found) { return $found.FullName }
+    }
+    return $null
+}
+
+function Invoke-Sign {
+    param([string[]]$Paths, [string]$Description = "ProIdentity Access")
+
+    if ($SkipSign) {
+        Write-Host "  [sign] skipped (-SkipSign): $([IO.Path]::GetFileName($Paths[0]))$(if ($Paths.Count -gt 1) { " +$($Paths.Count - 1)" })" -ForegroundColor DarkGray
+        return
+    }
+
+    $signtool = Resolve-SignTool
+    $dlib     = "$env:LOCALAPPDATA\Microsoft\MicrosoftArtifactSigningClientTools\Azure.CodeSigning.Dlib.dll"
+    if (-not $signtool) {
+        Write-Host "  ERROR: signtool.exe not found. Install the Windows SDK, or pass -SkipSign." -ForegroundColor Red; exit 1
+    }
+    if (-not (Test-Path $dlib)) {
+        Write-Host "  ERROR: Azure signing dlib not found: $dlib" -ForegroundColor Red
+        Write-Host "         winget install Microsoft.Azure.ArtifactSigningClientTools, or pass -SkipSign." -ForegroundColor Red; exit 1
+    }
+    if (-not (Test-Path $SigningMetadata)) {
+        Write-Host "  ERROR: signing metadata not found: $SigningMetadata" -ForegroundColor Red
+        Write-Host "         Set `$env:ARTIFACT_SIGNING_METADATA, or pass -SkipSign." -ForegroundColor Red; exit 1
+    }
+    foreach ($p in $Paths) {
+        if (-not (Test-Path $p)) { Write-Host "  ERROR: cannot sign missing file: $p" -ForegroundColor Red; exit 1 }
+    }
+
+    Write-Host "  [sign] $([IO.Path]::GetFileName($Paths[0]))$(if ($Paths.Count -gt 1) { " +$($Paths.Count - 1)" })" -ForegroundColor Green
+    & $signtool sign /v /fd SHA256 /tr http://timestamp.acs.microsoft.com /td SHA256 `
+        /d $Description /dlib $dlib /dmdf $SigningMetadata @Paths
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "  ERROR: signing failed (exit $LASTEXITCODE). Run 'az login' as the signer identity, or pass -SkipSign." -ForegroundColor Red; exit 1
+    }
+    foreach ($p in $Paths) {
+        $sig = Get-AuthenticodeSignature -LiteralPath $p
+        if ($sig.Status -ne 'Valid') {
+            Write-Host "  ERROR: signature not Valid on $([IO.Path]::GetFileName($p)): $($sig.Status)" -ForegroundColor Red; exit 1
+        }
+    }
+}
 
 # ---------------------------------------------------------------------------
 # Version
@@ -143,6 +207,13 @@ if (-not (Test-Path "$BinDir\ProIdentity Daemon.exe")) {
 }
 
 # ---------------------------------------------------------------------------
+# Step 3b -- Sign our binaries (before packaging, so the MSI embeds signed exes)
+# The daemon carries the embedded wintun DLL; signing the daemon covers it.
+# ---------------------------------------------------------------------------
+Write-Host "[3/4] Sign -- app + daemon" -ForegroundColor Green
+Invoke-Sign -Paths @("$BinDir\ProIdentity Access.exe", "$BinDir\ProIdentity Daemon.exe")
+
+# ---------------------------------------------------------------------------
 # Step 4 -- MSI installer
 # ---------------------------------------------------------------------------
 Write-Host "[4/4] Installer -- wix build (x64)" -ForegroundColor Green
@@ -163,6 +234,11 @@ wix build "Product.wxs" `
 $rc = $LASTEXITCODE
 Pop-Location
 if ($rc -ne 0) { exit 1 }
+
+# Sign the installer. Must happen before the update feed is generated so the
+# Ed25519 feed signature covers the Authenticode-signed bytes.
+Write-Host "[4/4] Sign -- installer" -ForegroundColor Green
+Invoke-Sign -Paths @($OutMsi)
 
 # ---------------------------------------------------------------------------
 # Done

@@ -593,6 +593,7 @@ export default function App() {
     <div className="flex flex-col h-full bg-background">
       <Topbar
         onImport={() => setShowImport(true)}
+        canImport={settings.allow_personal_import !== false}
         onSettings={() => setShowSettings(true)}
         onSignIn={!settings.logged_in ? () => setShowLogin(true) : undefined}
         onSignOut={settings.logged_in ? () => logout() : undefined}
@@ -606,7 +607,7 @@ export default function App() {
           <MissionControl
             tunnel={focusedTunnel}
             onOpenConnections={() => setShowConns(true)}
-            onImport={() => setShowImport(true)}
+            onImport={settings.allow_personal_import !== false ? () => setShowImport(true) : undefined}
             onConnect={handleConnect}
             onDisconnect={handleDisconnect}
           />

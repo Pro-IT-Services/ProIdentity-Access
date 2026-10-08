@@ -10,6 +10,8 @@ import { t, tp } from '../i18n'
 
 interface TopbarProps {
   onImport: () => void
+  /** Server policy: show the Import action. */
+  canImport?: boolean
   onSettings: () => void
   onSignIn?: () => void
   onSignOut?: () => void
@@ -18,7 +20,7 @@ interface TopbarProps {
   configEnabled: boolean
 }
 
-export function Topbar({ onImport, onSettings, onSignIn, onSignOut, onOpenConnections, onOpenConfig, configEnabled }: TopbarProps) {
+export function Topbar({ onImport, canImport = true, onSettings, onSignIn, onSignOut, onOpenConnections, onOpenConfig, configEnabled }: TopbarProps) {
   const { daemonOnline } = useTunnelStore()
   const conns = useActiveConnections()
   const { settings } = useManagedStore()
@@ -76,15 +78,9 @@ export function Topbar({ onImport, onSettings, onSignIn, onSignOut, onOpenConnec
           {t('topbar.daemon')}
         </div>
 
-        <IconButton onClick={onOpenConfig} disabled={!configEnabled} label={t('common.configuration')}>
-          <Info className="w-4 h-4" />
-        </IconButton>
-        <IconButton onClick={onImport} label={t('topbar.importConf')}>
-          <Plus className="w-4 h-4" />
-        </IconButton>
-        <IconButton onClick={onOpenConnections} label={t('common.connections')} highlight>
-          <ListTree className="w-4 h-4" />
-        </IconButton>
+        <TextButton onClick={onOpenConnections} icon={ListTree} label={t('common.connections')} highlight />
+        {canImport && <TextButton onClick={onImport} icon={Plus} label={t('topbar.import')} />}
+        <TextButton onClick={onSettings} icon={Settings} label={t('common.settings')} />
 
         <div className="relative" ref={menuRef}>
           <button
@@ -95,8 +91,8 @@ export function Topbar({ onImport, onSettings, onSignIn, onSignOut, onOpenConnec
             <MoreHorizontal className="w-4 h-4" />
           </button>
           {menuOpen && (
-            <div className="absolute top-full right-0 mt-1 w-52 rounded-md border border-border bg-popover shadow-xl py-1 z-50">
-              <MenuItem icon={Settings} label={t('common.settings')} onClick={() => { setMenuOpen(false); onSettings() }} />
+            <div className="absolute top-full right-0 mt-1 w-56 rounded-md border border-border bg-popover shadow-xl py-1 z-50">
+              <MenuItem icon={Info} label={t('common.configuration')} disabled={!configEnabled} onClick={() => { setMenuOpen(false); onOpenConfig() }} />
               {!settings.logged_in && onSignIn && (
                 <MenuItem icon={LogIn} label={t('common.signIn')} onClick={() => { setMenuOpen(false); onSignIn() }} />
               )}
@@ -115,14 +111,17 @@ export function Topbar({ onImport, onSettings, onSignIn, onSignOut, onOpenConnec
 }
 
 function MenuItem({
-  icon: Icon, label, onClick, destructive,
-}: { icon: React.ElementType; label: string; onClick: () => void; destructive?: boolean }) {
+  icon: Icon, label, onClick, destructive, disabled,
+}: { icon: React.ElementType; label: string; onClick: () => void; destructive?: boolean; disabled?: boolean }) {
   return (
     <button
       onClick={onClick}
+      disabled={disabled}
       className={cn(
-        'w-full flex items-center gap-2 px-3 py-1.5 text-sm cursor-pointer transition-colors text-left',
-        destructive ? 'text-destructive hover:bg-destructive/10' : 'text-foreground hover:bg-secondary',
+        'w-full flex items-center gap-2 px-3 py-1.5 text-sm transition-colors text-left',
+        disabled ? 'text-muted-foreground/40 cursor-not-allowed'
+          : destructive ? 'text-destructive hover:bg-destructive/10 cursor-pointer'
+          : 'text-foreground hover:bg-secondary cursor-pointer',
       )}
     >
       <Icon className="w-3.5 h-3.5 shrink-0" />
@@ -131,25 +130,23 @@ function MenuItem({
   )
 }
 
-function IconButton({
-  onClick, disabled, label, highlight, children,
-}: { onClick: () => void; disabled?: boolean; label: string; highlight?: boolean; children: React.ReactNode }) {
+/** Labeled topbar action (icon + text) so the controls read clearly for every user. */
+function TextButton({
+  onClick, icon: Icon, label, highlight,
+}: { onClick: () => void; icon: React.ElementType; label: string; highlight?: boolean }) {
   return (
     <button
       onClick={onClick}
-      disabled={disabled}
-      title={label}
       aria-label={label}
       className={cn(
-        'inline-flex items-center justify-center w-8 h-8 rounded-md transition-colors',
-        disabled
-          ? 'text-muted-foreground/40 cursor-not-allowed'
-          : highlight
-            ? 'text-primary hover:bg-primary/10 cursor-pointer'
-            : 'text-muted-foreground hover:text-foreground hover:bg-secondary cursor-pointer',
+        'inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md text-[13px] font-medium transition-colors cursor-pointer',
+        highlight
+          ? 'text-primary hover:bg-primary/10'
+          : 'text-muted-foreground hover:text-foreground hover:bg-secondary',
       )}
     >
-      {children}
+      <Icon className="w-4 h-4 shrink-0" />
+      <span>{label}</span>
     </button>
   )
 }

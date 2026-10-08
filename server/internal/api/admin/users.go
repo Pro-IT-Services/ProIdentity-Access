@@ -30,6 +30,16 @@ func (h *UserHandler) canManageAdminTarget(r *http.Request, userID string) bool 
 	return !isAdmin
 }
 
+// loginNameTaken reports whether name is already another account's username or
+// email. People sign in with either, so the two share one namespace.
+func (h *UserHandler) loginNameTaken(name, exceptID string) bool {
+	var n int
+	if err := h.DB.Get(&n, "SELECT COUNT(*) FROM users WHERE (username=? OR email=?) AND id<>?", name, name, exceptID); err != nil {
+		return false
+	}
+	return n > 0
+}
+
 func requireFullAdmin(w http.ResponseWriter, r *http.Request) bool {
 	claims := claimsFrom(r)
 	if claims == nil || !claims.IsAdmin {
@@ -64,6 +74,10 @@ func (h *UserHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if req.IsAdmin && !requireFullAdmin(w, r) {
+		return
+	}
+	if h.loginNameTaken(req.Username, "") || (req.Email != "" && h.loginNameTaken(req.Email, "")) {
+		jsonError(w, 400, "username or email already exists")
 		return
 	}
 	hash, err := auth.HashPassword(req.Password)
@@ -118,6 +132,16 @@ func (h *UserHandler) Update(w http.ResponseWriter, r *http.Request) {
 		jsonError(w, http.StatusForbidden, "full admin required")
 		return
 	}
+	if req.Email != nil {
+		if *req.Email != "" && h.loginNameTaken(*req.Email, id) {
+			jsonError(w, 400, "email already in use")
+			return
+		}
+		if _, err := h.DB.Exec("UPDATE users SET email=? WHERE id=?", *req.Email, id); err != nil {
+			jsonError(w, 400, "email already in use")
+			return
+		}
+	}
 	if req.Password != nil {
 		hash, err := auth.HashPassword(*req.Password)
 		if err != nil {
@@ -125,9 +149,6 @@ func (h *UserHandler) Update(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		h.DB.Exec("UPDATE users SET password_hash=? WHERE id=?", hash, id)
-	}
-	if req.Email != nil {
-		h.DB.Exec("UPDATE users SET email=? WHERE id=?", *req.Email, id)
 	}
 	if req.FirstName != nil {
 		h.DB.Exec("UPDATE users SET first_name=? WHERE id=?", *req.FirstName, id)

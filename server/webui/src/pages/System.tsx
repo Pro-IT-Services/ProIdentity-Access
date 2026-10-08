@@ -36,6 +36,7 @@ const SETTING_DEFS: { key: string; label: string; description: string; type?: st
   { key: 'webauthn_origin',    label: 'WebAuthn origin',   description: 'Full origin URL (e.g. https://vpn.example.com).' },
   { key: 'push_auth_enabled',  label: 'Push Auth',         description: 'Enable ProIdentity Cloud push authentication. Replaces classic TOTP when enabled. Set to "true" or "false".', type: 'text' },
   { key: 'push_auth_api_key',  label: 'Push Auth API key', description: 'Your ProIdentity Cloud Service Provider API key (pi_live_xxx). Leave empty to keep the current key.', secret: true },
+  { key: 'allow_personal_import', label: 'Personal imports', description: 'Let users import their own WireGuard/OpenVPN profiles in the apps. When blocked, only connections you assign are available.', type: 'bool' },
 ]
 
 export default function System() {
@@ -678,13 +679,24 @@ function SettingsTab() {
               <p className="text-[11px] text-muted-foreground mt-0.5">{def.description}</p>
             </div>
             <div>
-              <Input
-                type={def.secret ? 'password' : def.type ?? 'text'}
-                value={settings[def.key] ?? ''}
-                onChange={e => setSettings(p => ({ ...p, [def.key]: e.target.value }))}
-                placeholder={def.secret ? '••••••••' : undefined}
-                className="font-mono text-sm"
-              />
+              {def.type === 'bool' ? (
+                <select
+                  value={settings[def.key] === 'false' ? 'false' : 'true'}
+                  onChange={e => setSettings(p => ({ ...p, [def.key]: e.target.value }))}
+                  className="w-full h-9 rounded-md border border-border bg-background px-3 text-sm"
+                >
+                  <option value="true">Allowed</option>
+                  <option value="false">Blocked</option>
+                </select>
+              ) : (
+                <Input
+                  type={def.secret ? 'password' : def.type ?? 'text'}
+                  value={settings[def.key] ?? ''}
+                  onChange={e => setSettings(p => ({ ...p, [def.key]: e.target.value }))}
+                  placeholder={def.secret ? '••••••••' : undefined}
+                  className="font-mono text-sm"
+                />
+              )}
             </div>
           </div>
         ))}

@@ -1,12 +1,12 @@
 {
   "platform": "windows-amd64",
-  "version": "0.7.13",
-  "filename": "ProIdentity-Access-0.7.13.msi",
-  "url": "/api/v1/client-updates/windows-amd64/ProIdentity-Access-0.7.13.msi",
-  "sha256": "13af019af062de22575ec1b5ffb47487bcfaae990761e0eb9854ed1b9e4d7f63",
-  "size": 11194368,
-  "published_at": "2026-09-30T22:38:06Z",
+  "version": "0.7.14",
+  "filename": "ProIdentity-Access-0.7.14.msi",
+  "url": "/api/v1/client-updates/windows-amd64/ProIdentity-Access-0.7.14.msi",
+  "sha256": "d3805745aec84c1e6bdaa7d123f734381145d63d6dc7cb3ae95b4352403b1297",
+  "size": 11231232,
+  "published_at": "2026-10-08T20:34:44Z",
   "mandatory": false,
-  "signature": "1M0DgL7k2IcewOPxLLIVmDk4+vCPKnEL7HJ/Qr70A399U6P6SNfd12Nc9HzFo6/zs2GeXO9ECnwmkemma/9bBA==",
-  "latest_version": "0.7.13"
+  "signature": "OrkKTRbuakwRti5nVDRdNwkSKJrXylRoRb+zMJzdbrKEaWJGtqWAi1uNSAFF2rjnvwFCiCG5syD0sKk0y5XPBw==",
+  "latest_version": "0.7.14"
 }

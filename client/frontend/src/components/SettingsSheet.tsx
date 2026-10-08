@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react'
-import { AlertCircle, Download, Loader2, LogOut, Server, ShieldCheck, RefreshCw, Trash2, User } from 'lucide-react'
+import { AlertCircle, Download, Loader2, Lock, LogOut, Server, ShieldCheck, RefreshCw, Trash2, User } from 'lucide-react'
 import { useManagedStore } from '../stores/useManagedStore'
 import { useUpdateStore } from '../stores/useUpdateStore'
 import { Sheet } from './ui/Sheet'
 import { Button } from './ui/Button'
-import { Input } from './ui/Input'
 import { UninstallApp } from '../../wailsjs/go/main/App'
 import { t } from '../i18n'
 
@@ -22,9 +21,7 @@ interface Props {
  * re-run the setup wizard, and uninstall.
  */
 export function SettingsSheet({ open, onClose, onReRunSetup, onSignIn }: Props) {
-  const { settings, saveServerURL, logout, loading, error, clearError } = useManagedStore()
-  const [url, setUrl] = useState('')
-  const [savingURL, setSavingURL] = useState(false)
+  const { settings, logout, loading, error, clearError } = useManagedStore()
   const [confirmUninstall, setConfirmUninstall] = useState(false)
   const [uninstalling, setUninstalling] = useState(false)
   const {
@@ -34,19 +31,9 @@ export function SettingsSheet({ open, onClose, onReRunSetup, onSignIn }: Props) 
 
   useEffect(() => {
     if (!open) return
-    setUrl(settings.server_url)
     setConfirmUninstall(false)
     clearError()
-  }, [open, settings.server_url, clearError])
-
-  const dirty = url.trim() !== settings.server_url
-  const canSave = dirty && url.trim() !== ''
-
-  const handleSaveURL = async () => {
-    setSavingURL(true)
-    try { await saveServerURL(url.trim()) } catch { /* error in store */ }
-    finally { setSavingURL(false) }
-  }
+  }, [open, clearError])
 
   const handleUninstall = async () => {
     setUninstalling(true)
@@ -69,22 +56,17 @@ export function SettingsSheet({ open, onClose, onReRunSetup, onSignIn }: Props) 
           </div>
         )}
 
-        {/* Managed server */}
+        {/* Managed server — read-only; the URL is set during setup only. */}
         <Section title={t('settings.managedServer')} icon={Server}>
           <div className="space-y-1.5">
             <label className="block text-xs text-muted-foreground">{t('common.serverUrl')}</label>
-            <Input
-              value={url}
-              onChange={e => setUrl(e.target.value)}
-              placeholder="vpn.example.com"
-              disabled={savingURL}
-            />
-            <p className="text-xs text-muted-foreground">{t('settings.serverUrlHint')}</p>
+            <div className="flex items-center gap-2 px-3 py-2.5 rounded-md border border-border bg-secondary/40">
+              <span className="font-mono text-sm text-foreground break-all min-w-0">{settings.server_url || '—'}</span>
+              <Lock className="w-3.5 h-3.5 shrink-0 text-muted-foreground/70 ml-auto" />
+            </div>
+            <p className="text-xs text-muted-foreground">{t('settings.serverLockedHint')}</p>
           </div>
-          <div className="flex items-center gap-2 pt-1">
-            <Button size="sm" onClick={handleSaveURL} disabled={!canSave || savingURL}>
-              {savingURL ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> {t('common.saving')}</> : t('settings.saveUrl')}
-            </Button>
+          <div className="pt-1">
             <Button size="sm" variant="ghost" onClick={onReRunSetup}>
               <RefreshCw className="w-3.5 h-3.5" /> {t('settings.rerunWizard')}
             </Button>

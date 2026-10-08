@@ -75,24 +75,32 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 			UserAgent:     r.UserAgent(),
 		})
 	}
-	if lockedUntil, locked := loginLocked(req.Username); locked {
+	lockedOut := func(lockedUntil time.Time) {
 		logFail("login temporarily locked", http.StatusTooManyRequests)
 		w.Header().Set("Retry-After", fmt.Sprintf("%.0f", time.Until(lockedUntil).Seconds()))
 		jsonError(w, http.StatusTooManyRequests, "too many failed login attempts")
+	}
+	if lockedUntil, locked := loginLocked(req.Username); locked {
+		lockedOut(lockedUntil)
 		return
 	}
 
-	var user model.User
-	if err := s.db.Get(&user,
-		"SELECT * FROM users WHERE username=? AND is_active=1", req.Username); err != nil {
+	user, err := s.findLoginUser(req.Username)
+	if err != nil {
 		recordLoginFailure(req.Username)
 		logFail("unknown user", http.StatusUnauthorized)
 		jsonError(w, http.StatusUnauthorized, "invalid credentials")
 		return
 	}
+	// From here failures count against the account, not what was typed, so
+	// alternating between username and email gives no extra attempts.
+	if lockedUntil, locked := loginLocked(user.Username); locked {
+		lockedOut(lockedUntil)
+		return
+	}
 
 	if !auth.CheckPassword(user.PasswordHash, req.Password) {
-		recordLoginFailure(req.Username)
+		recordLoginFailure(user.Username)
 		logFail("bad password", http.StatusUnauthorized)
 		jsonError(w, http.StatusUnauthorized, "invalid credentials")
 		return
@@ -138,7 +146,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			if err := verifyBoundPushAuth(pc, req.PushAuthID, user.ID, "login"); err != nil {
-				recordLoginFailure(req.Username)
+				recordLoginFailure(user.Username)
 				logFail("push auth not approved", http.StatusUnauthorized)
 				jsonError(w, http.StatusUnauthorized, "push auth not approved")
 				return
@@ -146,7 +154,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		} else if req.TOTPCode != "" {
 			// TOTP code path — verify locally.
 			if user.TOTPSecret == nil || !auth.ValidateTOTP(*user.TOTPSecret, req.TOTPCode) {
-				recordLoginFailure(req.Username)
+				recordLoginFailure(user.Username)
 				logFail("bad totp", http.StatusUnauthorized)
 				jsonError(w, http.StatusUnauthorized, "invalid 2FA code")
 				return
@@ -160,6 +168,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	clearLoginFailures(req.Username)
+	clearLoginFailures(user.Username)
 
 	// Link installation to user if this request came from a registered device
 	if deviceID := r.Header.Get("X-Device-ID"); deviceID != "" {
@@ -182,6 +191,19 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		"is_admin":     user.IsAdmin,
 		"totp_enabled": user.TOTPEnabled,
 	})
+}
+
+// findLoginUser resolves what someone typed at sign-in, a username or an email
+// address, to an active account. A username match wins, so an account whose
+// username happens to be someone else's email address stays reachable.
+func (s *Server) findLoginUser(login string) (model.User, error) {
+	var user model.User
+	err := s.db.Get(&user, `
+		SELECT * FROM users
+		WHERE (username=? OR email=?) AND is_active=1
+		ORDER BY username=? DESC
+		LIMIT 1`, login, login, login)
+	return user, err
 }
 
 func loginFailureKey(username string) string {
@@ -463,8 +485,8 @@ func (s *Server) handlePasskeyLoginBegin(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	var user model.User
-	if err := s.db.Get(&user, "SELECT * FROM users WHERE username=? AND is_active=1", req.Username); err != nil {
+	user, err := s.findLoginUser(req.Username)
+	if err != nil {
 		jsonError(w, http.StatusNotFound, "user not found")
 		return
 	}
@@ -498,8 +520,8 @@ func (s *Server) handlePasskeyLoginFinish(w http.ResponseWriter, r *http.Request
 	}
 	username := r.URL.Query().Get("username")
 
-	var user model.User
-	if err := s.db.Get(&user, "SELECT * FROM users WHERE username=? AND is_active=1", username); err != nil {
+	user, err := s.findLoginUser(username)
+	if err != nil {
 		jsonError(w, http.StatusNotFound, "user not found")
 		return
 	}

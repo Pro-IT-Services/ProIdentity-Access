@@ -166,14 +166,9 @@ func validateSettingValue(key, value string) (string, error) {
 	case "webauthn_origin":
 		return validateOrigin(value)
 	case "push_auth_enabled":
-		switch strings.ToLower(strings.TrimSpace(value)) {
-		case "true", "1", "yes", "on":
-			return "true", nil
-		case "false", "0", "no", "off":
-			return "false", nil
-		default:
-			return "", fmt.Errorf("push_auth_enabled must be true or false")
-		}
+		return validateBoolSetting(key, value)
+	case "allow_personal_import":
+		return validateBoolSetting(key, value)
 	case "push_auth_api_key":
 		if strings.TrimSpace(value) == "" || value == configuredSecretMarker {
 			return "", nil
@@ -181,6 +176,17 @@ func validateSettingValue(key, value string) (string, error) {
 		return cleanText(key, value, 512)
 	default:
 		return "", fmt.Errorf("unknown setting %q", key)
+	}
+}
+
+func validateBoolSetting(key, value string) (string, error) {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "true", "1", "yes", "on":
+		return "true", nil
+	case "false", "0", "no", "off":
+		return "false", nil
+	default:
+		return "", fmt.Errorf("%s must be true or false", key)
 	}
 }
 

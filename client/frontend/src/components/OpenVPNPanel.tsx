@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { WindowSetTitle } from '../../wailsjs/runtime/runtime'
 import { MonoChip } from './ui/MonoChip'
 import { useOpenVPNStore } from '../stores/useOpenVPNStore'
+import { useManagedStore } from '../stores/useManagedStore'
 import { Loader2, Power, Trash2, ShieldCheck, Plus, Search } from 'lucide-react'
 import {
   managedListOpenVPNProfiles,
@@ -24,6 +25,7 @@ function fmtBytes(n: number): string {
 
 export function OpenVPNPanel() {
   const [profiles, setProfiles] = useState<OpenVPNProfileView[]>([])
+  const canImport = useManagedStore(s => s.settings.allow_personal_import !== false)
   const sessions = useOpenVPNStore(s => s.sessions)
   const reloadSessions = useOpenVPNStore(s => s.load)
   const [openForm, setOpenForm] = useState<string | null>(null)
@@ -132,13 +134,17 @@ export function OpenVPNPanel() {
         </div>
       )}
 
-      <div className="flex justify-end pt-0.5">
-        <button onClick={() => setImportOpen(v => !v)}
-          className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors">
-          <Plus className="w-3 h-3" /> {t('ovpn.import')}
-        </button>
-      </div>
-      {importOpen && <ImportForm onDone={() => { setImportOpen(false); load() }} />}
+      {canImport && (
+        <>
+          <div className="flex justify-end pt-0.5">
+            <button onClick={() => setImportOpen(v => !v)}
+              className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors">
+              <Plus className="w-3 h-3" /> {t('ovpn.import')}
+            </button>
+          </div>
+          {importOpen && <ImportForm onDone={() => { setImportOpen(false); load() }} />}
+        </>
+      )}
     </div>
   )
 }

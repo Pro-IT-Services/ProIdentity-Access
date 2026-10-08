@@ -115,6 +115,15 @@ type PushAuthStatus struct {
 // InfoResponse is the response from GET /api/v1/info.
 type InfoResponse struct {
 	VPNName string `json:"vpn_name"`
+	// AllowPersonalImport is a pointer so a server that predates this field
+	// (nil) is treated as "allowed", not "blocked".
+	AllowPersonalImport *bool `json:"allow_personal_import"`
+}
+
+// PersonalImportAllowed reports the policy, defaulting to allowed when the
+// server did not send the field.
+func (i *InfoResponse) PersonalImportAllowed() bool {
+	return i.AllowPersonalImport == nil || *i.AllowPersonalImport
 }
 
 // RegisterResponse is the response from POST /api/v1/register.

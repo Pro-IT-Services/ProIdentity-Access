@@ -125,7 +125,7 @@ export default function Login() {
   }
 
   const handlePasskey = async () => {
-    if (!username) { setError('Enter username first'); return }
+    if (!username) { setError('Enter your username or email first'); return }
     setError(''); setLoading(true)
     try {
       const options = await api.passkeyLoginBegin(username)
@@ -219,7 +219,7 @@ export default function Login() {
               {!needTotp && (
                 <>
                   <div className="space-y-1.5">
-                    <Label htmlFor="username" className="text-xs text-muted-foreground">Username</Label>
+                    <Label htmlFor="username" className="text-xs text-muted-foreground">Username or email</Label>
                     <Input id="username" value={username} onChange={e => setUsername(e.target.value)}
                       placeholder="admin" autoComplete="username"
                       className="bg-secondary/50 border-border focus-visible:ring-primary/50" required />

@@ -70,6 +70,7 @@ export const en = {
   'topbar.daemonConnected': 'Daemon connected',
   'topbar.daemonOffline': 'Daemon offline',
   'topbar.importConf': 'Import .conf',
+  'topbar.import': 'Import',
   'topbar.signOutAs': 'Sign out ({username})',
 
   // ── Main status (Mission Control) ───────────────────────────────────────
@@ -169,6 +170,7 @@ export const en = {
   'settings.desc': 'Server, account, and app management.',
   'settings.managedServer': 'Managed server',
   'settings.serverUrlHint': 'Address of the ProIdentity Access server. https:// is added if you leave it out.',
+  'settings.serverLockedHint': 'Set during setup. To connect to a different server, re-run setup.',
   'settings.saveUrl': 'Save URL',
   'settings.rerunWizard': 'Re-run setup wizard',
   'settings.account': 'Account',
