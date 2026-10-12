@@ -10,12 +10,17 @@ interface Props {
   open: boolean
   serverName?: string
   pushAuthEnabled?: boolean
+  /** When set, the parent drives the push poll and this is its live status;
+   *  the sheet then only displays it (no own polling). */
+  externalPushStatus?: string
+  /** Called when the user switches from parent-driven push to entering a code. */
+  onSwitchToCode?: () => void
   onCancel: () => void
   onSubmit: (code: string) => Promise<void>
   onPushApproved?: (requestId: string) => Promise<void>
 }
 
-export function TotpPromptSheet({ open, serverName, pushAuthEnabled, onCancel, onSubmit, onPushApproved }: Props) {
+export function TotpPromptSheet({ open, serverName, pushAuthEnabled, externalPushStatus, onSwitchToCode, onCancel, onSubmit, onPushApproved }: Props) {
   const [mode, setMode] = useState<'push' | 'totp'>('totp')
   const [code, setCode] = useState('')
   const [loading, setLoading] = useState(false)
@@ -37,8 +42,12 @@ export function TotpPromptSheet({ open, serverName, pushAuthEnabled, onCancel, o
     setMode(pushAuthEnabled ? 'push' : 'totp')
   }, [open, pushAuthEnabled])
 
+  // Parent-driven push (connect-time): the parent owns the poll, we only display.
+  const parentDriven = externalPushStatus !== undefined
+  const shownStatus = externalPushStatus ?? pushStatus
+
   useEffect(() => {
-    if (!open || mode !== 'push') return
+    if (!open || mode !== 'push' || parentDriven) return
     let cancelled = false
 
     const startPush = async () => {
@@ -72,7 +81,7 @@ export function TotpPromptSheet({ open, serverName, pushAuthEnabled, onCancel, o
     }
     startPush()
     return () => { cancelled = true; stopPolling() }
-  }, [open, mode])
+  }, [open, mode, parentDriven])
 
   const submitTotp = async () => {
     if (code.length !== 6) return
@@ -117,26 +126,26 @@ export function TotpPromptSheet({ open, serverName, pushAuthEnabled, onCancel, o
         {mode === 'push' ? (
           <div className="text-center py-6 space-y-4">
             <div className="w-16 h-16 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center mx-auto">
-              {pushStatus === 'approved'
+              {shownStatus === 'approved'
                 ? <ShieldCheck className="w-8 h-8 text-success" />
                 : <Smartphone className="w-8 h-8 text-primary animate-pulse" />}
             </div>
             <div>
               <p className="text-sm font-medium">
-                {pushStatus === 'pending' && t('push.waiting')}
-                {pushStatus === 'approved' && t('totp.approvedConnecting')}
-                {pushStatus === 'denied' && t('push.denied')}
-                {pushStatus === 'expired' && t('push.expired')}
+                {shownStatus === 'pending' && t('push.waiting')}
+                {shownStatus === 'approved' && t('totp.approvedConnecting')}
+                {shownStatus === 'denied' && t('push.denied')}
+                {shownStatus === 'expired' && t('push.expired')}
               </p>
               <p className="text-xs text-muted-foreground mt-1">
-                {pushStatus === 'pending' && t('totp.checkPhone')}
-                {pushStatus === 'denied' && t('totp.deniedUseCode')}
-                {pushStatus === 'expired' && t('totp.expiredUseCode')}
+                {shownStatus === 'pending' && t('totp.checkPhone')}
+                {shownStatus === 'denied' && t('totp.deniedUseCode')}
+                {shownStatus === 'expired' && t('totp.expiredUseCode')}
               </p>
             </div>
-            {(pushStatus === 'pending' || pushStatus === 'denied' || pushStatus === 'expired') && (
+            {(shownStatus === 'pending' || shownStatus === 'denied' || shownStatus === 'expired') && (
               <button
-                onClick={() => { stopPolling(); setError(''); setMode('totp') }}
+                onClick={() => { stopPolling(); setError(''); setMode('totp'); onSwitchToCode?.() }}
                 className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
               >
                 <KeyRound className="w-3.5 h-3.5" /> {t('push.enterCode')}

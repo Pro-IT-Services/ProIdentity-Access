@@ -122,6 +122,10 @@ export default function App() {
   const [totpForServer, setTotpForServer] = useState<ServerInfo | null>(null)
   const [pushApprovingServer, setPushApprovingServer] = useState<ServerInfo | null>(null)
   const [pushAuthAvailable, setPushAuthAvailable] = useState(false)
+  // Live status of a connect-time push approval driven by the poll loop below,
+  // so the main-window sheet can show "waiting / denied / expired".
+  const [pushStatus, setPushStatus] = useState<string>('pending')
+  const [pushDriven, setPushDriven] = useState(false)
   const pushConnectRef = useRef<{ serverId: string; cancelled: boolean } | null>(null)
 
   // Optimistic "we just clicked Connect on a server" — surfaces immediately in
@@ -396,12 +400,15 @@ export default function App() {
     } catch (e: any) {
       const msg = String(e?.message ?? e)
       if (msg.includes('require_push_auth')) {
-        pushConnectRef.current = { ...(pushConnectRef.current ?? { serverId: srv.id, cancelled: false }), cancelled: true }
+        if (pushConnectRef.current) pushConnectRef.current.cancelled = true
         const run = { serverId: srv.id, cancelled: false }
         pushConnectRef.current = run
-        setPushAuthAvailable(false)
-        setPushApprovingServer(srv)
-        setTotpForServer(null)
+        // Open the verification sheet in push mode (waiting + switch-to-code + cancel).
+        setPushApprovingServer(null)
+        setPushAuthAvailable(true)
+        setPushDriven(true)
+        setPushStatus('pending')
+        setTotpForServer(srv)
         setPendingServerId(srv.id)
         try {
           const push = await managedCreatePushAuth(`Connect to ${srv.name}`)
@@ -410,6 +417,8 @@ export default function App() {
             await delay(2000)
             if (run.cancelled) return
             const status = await managedPollPushAuth(push.request_id)
+            if (run.cancelled) return
+            setPushStatus(status)
             if (status === 'approved') {
               const tunnel = await withConnectTimeout(
                 managedConnectServerPush(srv.id, srv.name, push.request_id),
@@ -424,23 +433,19 @@ export default function App() {
               }))
               rememberLastServer(srv.id)
               setTotpForServer(null)
-              setPushApprovingServer(null)
+              setPushDriven(false)
               setPushAuthAvailable(false)
               await loadServers()
               return
             }
-            if (status === 'denied' || status === 'expired') {
-              throw new Error(status === 'denied' ? t('app.pushDenied') : t('app.pushExpired'))
-            }
+            // Denied/expired: keep the sheet open so the user can enter a code or cancel.
+            if (status === 'denied' || status === 'expired') return
           }
-          throw new Error(t('app.pushTimedOut'))
+          setPushStatus('expired') // ran out of attempts
         } catch (pushErr: any) {
           if (!run.cancelled) {
-            toast(String(pushErr?.message ?? pushErr), 'warning', 8000)
-            setPushApprovingServer(null)
-            setPushAuthAvailable(false)
-            setTotpForServer(srv)
-            setPendingServerId(null)
+            console.warn('push connect failed', pushErr)
+            setPushStatus('expired')
           }
         } finally {
           if (pushConnectRef.current === run) pushConnectRef.current = null
@@ -448,6 +453,7 @@ export default function App() {
       } else if (msg.includes('require_totp') || msg.includes('totp')) {
         setPendingServerId(null)
         setPushApprovingServer(null)
+        setPushDriven(false)
         setPushAuthAvailable(false)
         setTotpForServer(srv)
       } else {
@@ -664,9 +670,18 @@ export default function App() {
         open={!!totpForServer}
         serverName={totpForServer?.name}
         pushAuthEnabled={pushAuthAvailable}
-        onCancel={() => { setTotpForServer(null); setPendingServerId(null) }}
+        externalPushStatus={pushDriven ? pushStatus : undefined}
+        onSwitchToCode={() => { if (pushConnectRef.current) pushConnectRef.current.cancelled = true; setPushDriven(false) }}
+        onCancel={() => {
+          if (pushConnectRef.current) pushConnectRef.current.cancelled = true
+          setPushDriven(false)
+          setTotpForServer(null)
+          setPendingServerId(null)
+        }}
         onSubmit={async (code) => {
           if (!totpForServer) return
+          if (pushConnectRef.current) pushConnectRef.current.cancelled = true
+          setPushDriven(false)
           setPendingServerId(totpForServer.id)
           try {
             await withConnectTimeout(connectServer(totpForServer, code), CONNECT_TIMEOUT_MS)

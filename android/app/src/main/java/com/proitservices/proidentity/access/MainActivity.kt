@@ -8,8 +8,8 @@ import android.net.VpnService
 import android.os.Build
 import android.os.Bundle
 import android.provider.OpenableColumns
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
@@ -34,7 +34,7 @@ import com.proitservices.proidentity.access.ui.viewmodel.StartRoute
 import com.proitservices.proidentity.access.ui.viewmodel.TunnelViewModel
 import kotlinx.coroutines.launch
 
-class MainActivity : ComponentActivity() {
+class MainActivity : AppCompatActivity() {
 
     private val tunnelVm: TunnelViewModel by viewModels()
     private val setupVm: SetupViewModel by viewModels()
