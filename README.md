@@ -11,6 +11,12 @@ Public repository:
 - HTTPS: https://github.com/Pro-IT-Services/ProIdentity-Access
 - SSH: git@github.com:Pro-IT-Services/ProIdentity-Access.git
 
+## Download
+
+- **Android:** [Get it on Google Play](https://play.google.com/store/apps/details?id=com.proitservices.proidentity.access)
+- **iOS:** Coming soon (awaiting App Store review)
+- **Windows / macOS:** [GitHub Releases](https://github.com/Pro-IT-Services/ProIdentity-Access/releases/latest)
+
 ## What Is Included
 
 - `server/` - Go API server, admin Web UI, WireGuard session management,
