@@ -277,7 +277,7 @@ function rowMeta(row: Row): { name: string; badge: string; sub: string; status: 
       return {
         name: row.tunnel.name,
         badge: t('conns.badgeImported'),
-        sub: row.tunnel.addresses[0] ?? '',
+        sub: row.tunnel.addresses?.[0] ?? '',
         status: row.tunnel.status as any,
         Icon: FileKey,
       }
@@ -285,7 +285,7 @@ function rowMeta(row: Row): { name: string; badge: string; sub: string; status: 
       return {
         name: row.server.server.name,
         badge: t('conns.badgeManaged'),
-        sub: row.tunnel.addresses[0] ?? row.server.server.subnet,
+        sub: row.tunnel.addresses?.[0] ?? row.server.server.subnet,
         status: row.tunnel.status as any,
         Icon: Globe,
       }

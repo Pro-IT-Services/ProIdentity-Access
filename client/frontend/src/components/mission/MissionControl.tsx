@@ -105,9 +105,9 @@ export function MissionControl({ tunnel, onOpenConnections, onImport, onConnect,
     }
   }
 
-  const endpoint = tunnel.peers[0]?.endpoint ?? ''
+  const endpoint = tunnel.peers?.[0]?.endpoint ?? ''
   const endpointHost = endpoint.split(':')[0] || endpoint
-  const addr = tunnel.addresses[0] ?? '—'
+  const addr = tunnel.addresses?.[0] ?? '—'
 
   return (
     <div className="relative flex-1 flex flex-col">

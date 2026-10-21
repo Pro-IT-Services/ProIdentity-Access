@@ -346,10 +346,14 @@ func (a *App) ImportTunnel(name, configContent string) (*ipc.TunnelInfo, error) 
 		a.mUserConfigs[uconfKey] = name
 		a.mMu.Unlock()
 		log.Printf("imported config %q → server (id=%s)", name, serverID)
+		// Non-nil slices so the frontend never sees JSON null for these arrays.
 		return &ipc.TunnelInfo{
-			ID:     uconfKey,
-			Name:   name,
-			Status: ipc.StatusDisconnected,
+			ID:        uconfKey,
+			Name:      name,
+			Status:    ipc.StatusDisconnected,
+			Addresses: []string{},
+			DNS:       []string{},
+			Peers:     []ipc.PeerInfo{},
 		}, nil
 	}
 

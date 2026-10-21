@@ -182,6 +182,11 @@ function ConnectForm({ profile, onDone }: { profile: OpenVPNProfileView; onDone:
   const totpRef = useRef<HTMLInputElement>(null)
   useAutofillTitle(autofill)
 
+  // When the login is already saved (or none is needed) and only a TOTP code is
+  // left, put the cursor straight on the code field instead of the username.
+  const credsReady = !needsCreds || (!!profile.remembered_user && profile.has_saved_password)
+  const focusTotp = profile.requires_totp && credsReady
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     // A filled-in login ends with Enter after the password; the code still
@@ -206,7 +211,7 @@ function ConnectForm({ profile, onDone }: { profile: OpenVPNProfileView; onDone:
           <input id="ovpn-username" name="username" autoComplete="username" aria-label={t('common.username')}
             value={username} onChange={e => setUsername(e.target.value)}
             onFocus={e => e.currentTarget.select()}
-            placeholder={t('common.username')} className={inputCls} autoFocus />
+            placeholder={t('common.username')} className={inputCls} autoFocus={!focusTotp} />
           <input id="ovpn-password" name="password" type="password" autoComplete="current-password" aria-label={t('common.password')}
             value={password} onChange={e => setPassword(e.target.value)}
             placeholder={profile.has_saved_password ? t('ovpn.passwordSaved') : t('common.password')} className={inputCls} />
@@ -214,7 +219,7 @@ function ConnectForm({ profile, onDone }: { profile: OpenVPNProfileView; onDone:
       )}
       {profile.requires_totp && (
         <input ref={totpRef} id="ovpn-otp" name="otp" autoComplete="one-time-code" aria-label={t('ovpn.totpCode')}
-          value={totp} onChange={e => setTotp(e.target.value)} placeholder={t('ovpn.totpPlaceholder')} inputMode="numeric" className={inputCls} />
+          value={totp} onChange={e => setTotp(e.target.value)} placeholder={t('ovpn.totpPlaceholder')} inputMode="numeric" className={inputCls} autoFocus={focusTotp} />
       )}
       {needsIP && (
         <input value={customIP} onChange={e => setCustomIP(e.target.value)} placeholder={t('ovpn.customIp')} className={`${inputCls} font-mono`} />
