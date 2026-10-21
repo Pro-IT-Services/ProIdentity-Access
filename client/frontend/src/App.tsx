@@ -4,7 +4,7 @@ import { useManagedStore } from './stores/useManagedStore'
 import { useSetupStore } from './stores/useSetupStore'
 import { useTrafficHistory } from './stores/useTrafficHistory'
 import { useUpdateStore } from './stores/useUpdateStore'
-import { useOpenVPNStore, openvpnAsTunnel, isOpenVPNTunnel, isLive, OVPN_PREFIX } from './stores/useOpenVPNStore'
+import { useOpenVPNStore, openvpnAsTunnel, isOpenVPNTunnel, isLive, OVPN_PREFIX, ovpnErrorText } from './stores/useOpenVPNStore'
 import { Topbar } from './components/Topbar'
 import { MissionControl } from './components/mission/MissionControl'
 import { ConnectionsList } from './components/ConnectionsList'
@@ -28,6 +28,7 @@ import {
   managedDisconnectByTunnelID,
   managedDisconnectOpenVPN,
   managedPollPushAuth,
+  placeTrayWindow,
 } from './wailsbridge'
 import type { ServerInfo, StatsInfo, TunnelInfo } from './types'
 import type { OpenVPNStatus, UpdateState } from './wailsbridge'
@@ -202,22 +203,28 @@ export default function App() {
     WindowSetMinSize(width, height)
     WindowSetMaxSize(width, height)
     WindowSetSize(width, height)
-    ScreenGetAll()
+
+    // Fallback (non-Windows): the Wails runtime, always on the primary screen.
+    // macOS keeps the popover top-right under the menu bar, next to the tray icon.
+    const placeWithRuntime = () => ScreenGetAll()
       .then(screens => {
-        const screen = screens.find(s => s.isCurrent || s.isPrimary) ?? screens[0]
-        if (!screen) {
-          WindowCenter()
-          return
-        }
-        WindowSetPosition(
-          Math.max(16, screen.width - width - 24),
-          Math.max(16, screen.height - height - 72),
-        )
+        const screen = screens.find(s => s.isPrimary) ?? screens.find(s => s.isCurrent) ?? screens[0]
+        if (!screen) { WindowCenter(); return }
+        const x = Math.max(16, screen.width - width - 16)
+        const y = isMac ? 32 : Math.max(16, screen.height - height - 72)
+        WindowSetPosition(x, y)
       })
       .catch(() => WindowCenter())
-    WindowSetAlwaysOnTop(true)
-    WindowShow()
-    WindowUnminimise()
+
+    // Windows: native placement in the primary monitor's work area (excludes the
+    // taskbar, handles DPI and multiple screens). Position first, then show.
+    placeTrayWindow(width, height)
+      .then(placed => (placed ? undefined : placeWithRuntime()))
+      .finally(() => {
+        WindowSetAlwaysOnTop(true)
+        WindowShow()
+        WindowUnminimise()
+      })
   }, [loadServers, settings.logged_in])
 
   useEffect(() => {
@@ -253,7 +260,7 @@ export default function App() {
       // Say why it failed even when the connections sheet is closed (e.g.
       // "... is already connected and also uses 172.16.0.0/24").
       if (st.status === 'error' && st.error && (prev?.status !== 'error' || prev.error !== st.error)) {
-        toastFailure(`${st.name}: ${st.error}`)
+        toastFailure(`${st.name}: ${ovpnErrorText(st)}`)
       }
     })
     rt.EventsOn('update.state', (...args: unknown[]) => {
@@ -635,6 +642,7 @@ export default function App() {
             onConnectIntent={handleConnectIntent}
             onConnectManaged={connectManaged}
             onSignIn={() => { setShowConns(false); setShowLogin(true) }}
+            onImportWireGuard={settings.allow_personal_import !== false ? () => { setShowConns(false); setShowImport(true) } : undefined}
           />
         </ErrorBoundary>
       </Sheet>

@@ -1,6 +1,6 @@
 # Versioning
 
-Current version: **0.7.19**
+Current version: **0.7.20**
 
 Version is defined in `wails.json` → `info.productVersion`.  
 The build script (`build.ps1` / `build.bat`) reads it from there automatically.

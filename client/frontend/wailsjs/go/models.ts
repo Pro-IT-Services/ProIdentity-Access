@@ -10,6 +10,7 @@ export namespace ipc {
 	    rx_bytes: number;
 	    tx_bytes: number;
 	    error?: string;
+	    error_code?: string;
 	    remote?: string;
 	    networks?: string[];
 	    connected_at?: number;
@@ -29,6 +30,7 @@ export namespace ipc {
 	        this.rx_bytes = source["rx_bytes"];
 	        this.tx_bytes = source["tx_bytes"];
 	        this.error = source["error"];
+	        this.error_code = source["error_code"];
 	        this.remote = source["remote"];
 	        this.networks = source["networks"];
 	        this.connected_at = source["connected_at"];
@@ -215,6 +217,8 @@ export namespace main {
 	    custom_ip?: string;
 	    remembered_user?: string;
 	    has_saved_password: boolean;
+	    key_encrypted: boolean;
+	    has_saved_passphrase: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new OpenVPNProfileView(source);
@@ -233,6 +237,8 @@ export namespace main {
 	        this.custom_ip = source["custom_ip"];
 	        this.remembered_user = source["remembered_user"];
 	        this.has_saved_password = source["has_saved_password"];
+	        this.key_encrypted = source["key_encrypted"];
+	        this.has_saved_passphrase = source["has_saved_passphrase"];
 	    }
 	}
 

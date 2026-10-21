@@ -78,3 +78,11 @@
     padding: calc(var(--tray-safe-top, 0px) + 12px) 16px 12px var(--tray-safe-left, 16px);
   }
 }
+
+/* Indeterminate sweep along a connection row while it connects. */
+.conn-row-progress { animation: conn-row-progress-anim 1.1s linear infinite; }
+@keyframes conn-row-progress-anim {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(400%); }
+}
+@media (prefers-reduced-motion: reduce) { .conn-row-progress { animation: none; left: 33%; } }

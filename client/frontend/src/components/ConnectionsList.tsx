@@ -1,19 +1,16 @@
 import { useState } from 'react'
-import { Power, Globe, FileKey, Loader2, LogIn } from 'lucide-react'
+import { Building2, FileKey, LogIn, Plus, Search } from 'lucide-react'
 import { useTunnelStore } from '../stores/useTunnelStore'
 import { useManagedStore } from '../stores/useManagedStore'
-import type { TunnelInfo, ServerStatus } from '../types'
+import type { TunnelInfo, ServerStatus, ServerInfo } from '../types'
 import { Button } from './ui/Button'
-import { StatusDot, type Status } from './ui/StatusDot'
-import { MonoChip } from './ui/MonoChip'
+import type { Status } from './ui/StatusDot'
 import { managedDisconnectByTunnelID } from '../wailsbridge'
-import { OpenVPNPanel } from './OpenVPNPanel'
-import { cn } from '../lib/cn'
+import { ConnRow, ConnGroupCard, ProtocolHeader } from './ConnRow'
+import { useOpenVPN, OpenVPNRow, OpenVPNImport, ovpnSessionId } from './OpenVPNPanel'
 import { t, tNode } from '../i18n'
 
-import type { ServerInfo } from '../types'
-
-type Row =
+type WgRow =
   | { key: string; kind: 'imported'; tunnel: TunnelInfo }
   | { key: string; kind: 'managed-active'; tunnel: TunnelInfo; server: ServerStatus }
   | { key: string; kind: 'managed-available'; server: ServerStatus }
@@ -28,31 +25,46 @@ interface Props {
   onConnectManaged?: (server: ServerInfo) => Promise<void>
   /** Open the login sheet — shown as a CTA when not logged in. */
   onSignIn?: () => void
+  /** Open the WireGuard import sheet. */
+  onImportWireGuard?: () => void
 }
 
-export function ConnectionsList({ onConnected, onConnectIntent, onConnectManaged, onSignIn }: Props) {
+/**
+ * Every connection, grouped by where it comes from: "ProIdentity Access"
+ * (assigned by the organization) and "Imported" (added on this device), each
+ * split by protocol. Connections run side by side; the daemon refuses only
+ * ones whose networks overlap, and says why.
+ */
+export function ConnectionsList({ onConnected, onConnectIntent, onConnectManaged, onSignIn, onImportWireGuard }: Props) {
   const { tunnels, selectedId, setSelected, connect, disconnect } = useTunnelStore()
   const { servers, settings, connectServer, loadServers } = useManagedStore()
+  const canImport = settings.allow_personal_import !== false
+  const ovpn = useOpenVPN()
   const [busyKey, setBusyKey] = useState<string | null>(null)
+  const [query, setQuery] = useState('')
 
-  const rows = buildRows(tunnels, servers)
-  const activeTunnel = tunnels.find(t => t.status === 'connected' || t.status === 'connecting')
+  const wgRows = buildRows(tunnels, servers)
+  const q = query.trim().toLocaleLowerCase()
+  const match = (name: string) => !q || name.toLocaleLowerCase().includes(q)
 
-  const handleConnect = async (row: Row) => {
+  const accessWg = wgRows.filter(r => r.kind !== 'imported' && match(rowName(r)))
+  const importedWg = wgRows.filter(r => r.kind === 'imported' && match(rowName(r)))
+  const accessOvpn = ovpn.profiles.filter(p => p.source === 'assigned' && match(p.name))
+  const importedOvpn = ovpn.profiles.filter(p => p.source === 'local' && match(p.name))
+  const total = wgRows.length + ovpn.profiles.length
+  const shown = accessWg.length + importedWg.length + accessOvpn.length + importedOvpn.length
+
+  const handleConnect = async (row: WgRow) => {
     setBusyKey(row.key)
     try {
       if (row.kind === 'managed-available') {
         onConnectIntent?.(row.server.server)
-        if (onConnectManaged) {
-          await onConnectManaged(row.server.server)
-        } else {
-          await connectServer(row.server.server)
-        }
-        onConnected?.()
+        if (onConnectManaged) await onConnectManaged(row.server.server)
+        else await connectServer(row.server.server)
       } else {
         await connect(row.tunnel.id)
-        onConnected?.()
       }
+      onConnected?.()
     } catch (e: any) {
       console.warn('connect failed', e)
     } finally {
@@ -60,7 +72,7 @@ export function ConnectionsList({ onConnected, onConnectIntent, onConnectManaged
     }
   }
 
-  const handleDisconnect = async (row: Row) => {
+  const handleDisconnect = async (row: WgRow) => {
     setBusyKey(row.key)
     try {
       if (row.kind === 'managed-active') {
@@ -74,11 +86,51 @@ export function ConnectionsList({ onConnected, onConnectIntent, onConnectManaged
     }
   }
 
-  const showSignIn = !settings.logged_in && !!onSignIn
+  const renderWg = (row: WgRow) => {
+    const busy = busyKey === row.key
+    const status = rowStatus(row)
+    const live = status === 'connected' || status === 'connecting'
+    const tunnelId = row.kind === 'managed-available' ? null : row.tunnel.id
+    return (
+      <ConnRow
+        key={row.key}
+        name={rowName(row)}
+        icon={row.kind === 'imported' ? FileKey : Building2}
+        status={busy && !live ? 'connecting' : status}
+        sub={rowSub(row)}
+        busy={busy}
+        live={live}
+        selected={!!tunnelId && tunnelId === selectedId}
+        onSelect={tunnelId ? () => setSelected(tunnelId) : undefined}
+        onConnect={() => handleConnect(row)}
+        onDisconnect={() => handleDisconnect(row)}
+      />
+    )
+  }
 
-  const wgSection = rows.length === 0 ? (
+  const renderOvpn = (p: (typeof ovpn.profiles)[number]) => {
+    const id = ovpnSessionId(p)
+    return (
+      <OpenVPNRow
+        key={id}
+        profile={p}
+        session={ovpn.sessions[id]}
+        formOpen={ovpn.openForm === id}
+        onToggleForm={() => ovpn.setOpenForm(cur => (cur === id ? null : id))}
+        onFormDone={() => ovpn.setOpenForm(null)}
+        onDeleted={ovpn.reload}
+      />
+    )
+  }
+
+  const showSignIn = !settings.logged_in && !!onSignIn
+  const hasAccess = accessWg.length + accessOvpn.length > 0
+  const hasImported = importedWg.length + importedOvpn.length > 0
+
+  if (total === 0 && ovpn.loaded) {
+    return (
       <div className="space-y-3">
-        <p className="text-sm text-muted-foreground italic px-1">
+        <p className="text-sm text-muted-foreground px-1">
           {showSignIn
             ? tNode('conns.signInHint', { file: <span key="f" className="font-mono">.conf</span> })
             : tNode('conns.empty', { file: <span key="f" className="font-mono">.conf</span> })}
@@ -88,141 +140,106 @@ export function ConnectionsList({ onConnected, onConnectIntent, onConnectManaged
             <LogIn className="w-3.5 h-3.5" /> {t('common.signIn')}
           </Button>
         )}
+        {canImport && <ImportLinks onImportWireGuard={onImportWireGuard} onImported={ovpn.reload} />}
       </div>
-  ) : (
-    <div className="space-y-3">
-      {showSignIn && (
-        <div className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg border border-dashed border-border bg-secondary/20">
-          <span className="text-xs text-muted-foreground">{t('conns.signInBanner')}</span>
-          <Button variant="primary" size="sm" onClick={onSignIn}>
-            <LogIn className="w-3.5 h-3.5" /> {t('common.signIn')}
-          </Button>
-        </div>
-      )}
-    <div className="rounded-xl border border-border bg-card overflow-hidden">
-      <div className="px-4 py-2 border-b border-border bg-secondary/30 flex items-center justify-between">
-        <span className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">
-          {t('conns.available')}
-        </span>
-        <span className="text-[11px] text-muted-foreground">{t('common.countTotal', { count: rows.length })}</span>
-      </div>
-      {rows.map(row => {
-        const meta = rowMeta(row)
-        const isActive = !!activeTunnel
-          && (row.kind === 'imported' && row.tunnel.id === activeTunnel.id
-            || row.kind === 'managed-active' && row.tunnel.id === activeTunnel.id)
-        const status: Status = isActive
-          ? (activeTunnel!.status as any) || 'disconnected'
-          : meta.status
-        const showSelected = (row.kind === 'imported' || row.kind === 'managed-active') && row.tunnel.id === selectedId
-        const busy = busyKey === row.key
-        const otherActive = !!activeTunnel && !isActive
-        // While busy, treat the row's effective status as "connecting" so the
-        // status dot and label visibly change immediately on click — even before
-        // the managed store flips its own connecting flag.
-        const effectiveStatus: Status = busy && !isActive ? 'connecting' : status
-        return (
-          <div
-            key={row.key}
-            onClick={() => {
-              if (row.kind !== 'managed-available') setSelected(row.tunnel.id)
-            }}
-            className={cn(
-              'relative w-full grid grid-cols-[auto_1fr_auto] gap-3 items-center text-left px-4 py-2.5 border-b border-border last:border-0',
-              'hover:bg-secondary/30 transition-colors cursor-pointer overflow-hidden',
-              showSelected && 'bg-secondary/40',
-              busy && 'bg-warning/5',
-            )}
-          >
-            {/* Indeterminate progress sweep along the row's bottom edge — loud signal that something is happening. */}
-            {busy && (
-              <span aria-hidden="true" className="absolute left-0 right-0 bottom-0 h-0.5 overflow-hidden">
-                <span className="absolute inset-y-0 w-1/3 bg-warning conn-row-progress" />
-                <style>{`
-                  .conn-row-progress {
-                    animation: conn-row-progress-anim 1.1s linear infinite;
-                  }
-                  @keyframes conn-row-progress-anim {
-                    0%   { transform: translateX(-100%); }
-                    100% { transform: translateX(400%); }
-                  }
-                `}</style>
-              </span>
-            )}
-
-            <span className={cn(
-              'w-7 h-7 rounded-md flex items-center justify-center shrink-0 border transition-colors',
-              isActive
-                ? 'bg-success/10 border-success/30 text-success'
-                : busy
-                  ? 'bg-warning/10 border-warning/30 text-warning'
-                  : 'bg-secondary/40 border-border text-muted-foreground',
-            )}>
-              {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <meta.Icon className="w-3.5 h-3.5" />}
-            </span>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <p className="min-w-0 flex-1 text-sm font-medium leading-tight truncate" title={meta.name}>{meta.name}</p>
-                <span className="shrink-0 whitespace-nowrap text-[10px] uppercase tracking-wider text-muted-foreground border border-border rounded px-1.5 py-0.5">
-                  {meta.badge}
-                </span>
-              </div>
-              <div className="flex items-center gap-2 mt-0.5">
-                <StatusDot status={effectiveStatus} pulse={busy || effectiveStatus === 'connecting'} />
-                <span className={cn(
-                  'text-[11px]',
-                  busy ? 'text-warning font-medium' : 'text-muted-foreground',
-                )}>
-                  {busy ? (isActive ? t('common.disconnectingEllipsis') : t('common.connectingEllipsis')) : labelFor(effectiveStatus)}
-                </span>
-                {!busy && meta.sub && <MonoChip value={meta.sub} bare copy={false} className="text-[11px]" />}
-              </div>
-            </div>
-            {isActive ? (
-              <Button
-                variant="ghost"
-                size="sm"
-                disabled={busy}
-                onClick={(e) => { e.stopPropagation(); handleDisconnect(row) }}
-                className={cn('min-w-[124px]', busy
-                  ? 'text-warning bg-warning/10'
-                  : 'text-destructive hover:bg-destructive/10')}
-              >
-                {busy
-                  ? <><Loader2 className="w-4 h-4 animate-spin" /> {t('common.disconnectingEllipsis')}</>
-                  : <><Power className="w-3.5 h-3.5" /> {t('common.disconnect')}</>}
-              </Button>
-            ) : (
-              <Button
-                variant={busy ? 'secondary' : 'primary'}
-                size="sm"
-                disabled={busy || otherActive}
-                title={otherActive ? t('conns.disconnectFirst', { name: activeTunnel!.name }) : undefined}
-                onClick={(e) => { e.stopPropagation(); handleConnect(row) }}
-                className={cn('min-w-[124px]', busy && 'bg-warning/15 text-warning')}
-              >
-                {busy
-                  ? <><Loader2 className="w-4 h-4 animate-spin" /> {t('common.connectingEllipsis')}</>
-                  : <><Power className="w-3.5 h-3.5" /> {t('common.connect')}</>}
-              </Button>
-            )}
-          </div>
-        )
-      })}
-    </div>
-    </div>
-  )
+    )
+  }
 
   return (
-    <div className="space-y-4">
-      {wgSection}
-      <OpenVPNPanel />
+    <div className="space-y-6">
+      {total > 6 && (
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+          <input
+            value={query} onChange={e => setQuery(e.target.value)}
+            placeholder={t('conns.search')} aria-label={t('conns.search')}
+            className="w-full h-9 rounded-lg border border-border bg-background pl-8 pr-2 text-sm"
+          />
+        </div>
+      )}
+
+      {(hasAccess || showSignIn) && (
+        <section className="space-y-2.5">
+          <GroupHeading icon={Building2} title={t('conns.groupAccess')} desc={t('conns.groupAccessDesc')} />
+          {showSignIn && (
+            <div className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg border border-dashed border-border bg-secondary/20">
+              <span className="text-xs text-muted-foreground">{t('conns.signInBanner')}</span>
+              <Button variant="primary" size="sm" onClick={onSignIn}>
+                <LogIn className="w-3.5 h-3.5" /> {t('common.signIn')}
+              </Button>
+            </div>
+          )}
+          {hasAccess && (
+            <ConnGroupCard>
+              {accessWg.length > 0 && <>
+                <ProtocolHeader label="WireGuard" count={accessWg.length} />
+                {accessWg.map(renderWg)}
+              </>}
+              {accessOvpn.length > 0 && <>
+                <ProtocolHeader label="OpenVPN" count={accessOvpn.length} />
+                {accessOvpn.map(renderOvpn)}
+              </>}
+            </ConnGroupCard>
+          )}
+        </section>
+      )}
+
+      {(hasImported || canImport) && (
+        <section className="space-y-2.5">
+          <GroupHeading icon={FileKey} title={t('conns.groupImported')} desc={t('conns.groupImportedDesc')} />
+          {hasImported ? (
+            <ConnGroupCard>
+              {importedWg.length > 0 && <>
+                <ProtocolHeader label="WireGuard" count={importedWg.length} />
+                {importedWg.map(renderWg)}
+              </>}
+              {importedOvpn.length > 0 && <>
+                <ProtocolHeader label="OpenVPN" count={importedOvpn.length} />
+                {importedOvpn.map(renderOvpn)}
+              </>}
+            </ConnGroupCard>
+          ) : !q && (
+            <p className="text-xs text-muted-foreground px-1">{t('conns.importedEmpty')}</p>
+          )}
+          {canImport && <ImportLinks onImportWireGuard={onImportWireGuard} onImported={ovpn.reload} />}
+        </section>
+      )}
+
+      {q && shown === 0 && (
+        <p className="text-sm text-muted-foreground text-center py-4">{t('ovpn.noMatches')}</p>
+      )}
     </div>
   )
 }
 
-function buildRows(tunnels: TunnelInfo[], servers: ServerStatus[]): Row[] {
-  const rows: Row[] = []
+function ImportLinks({ onImportWireGuard, onImported }: { onImportWireGuard?: () => void; onImported: () => void }) {
+  return (
+    <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-1">
+      {onImportWireGuard && (
+        <button onClick={onImportWireGuard}
+          className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors">
+          <Plus className="w-3 h-3" /> {t('conns.importConf')}
+        </button>
+      )}
+      <OpenVPNImport onImported={onImported} />
+    </div>
+  )
+}
+
+function GroupHeading({ icon: Icon, title, desc }: { icon: React.ElementType; title: string; desc: string }) {
+  return (
+    <div className="flex items-start gap-2.5 px-1">
+      <Icon className="w-4 h-4 mt-0.5 text-primary shrink-0" />
+      <div className="min-w-0">
+        <h3 className="text-sm font-semibold leading-tight">{title}</h3>
+        <p className="text-xs text-muted-foreground mt-0.5">{desc}</p>
+      </div>
+    </div>
+  )
+}
+
+function buildRows(tunnels: TunnelInfo[], servers: ServerStatus[]): WgRow[] {
+  const rows: WgRow[] = []
   const managedTunnelIds = new Set<string>()
   for (const ss of servers) {
     const t = resolveManagedTunnel(ss, tunnels, managedTunnelIds)
@@ -271,41 +288,21 @@ function normalizeName(name: string): string {
   return name.trim().toLocaleLowerCase()
 }
 
-function rowMeta(row: Row): { name: string; badge: string; sub: string; status: Status; Icon: React.ElementType } {
+function rowName(row: WgRow): string {
+  return row.kind === 'imported' ? row.tunnel.name : row.server.server.name
+}
+
+function rowSub(row: WgRow): string {
   switch (row.kind) {
-    case 'imported':
-      return {
-        name: row.tunnel.name,
-        badge: t('conns.badgeImported'),
-        sub: row.tunnel.addresses?.[0] ?? '',
-        status: row.tunnel.status as any,
-        Icon: FileKey,
-      }
-    case 'managed-active':
-      return {
-        name: row.server.server.name,
-        badge: t('conns.badgeManaged'),
-        sub: row.tunnel.addresses?.[0] ?? row.server.server.subnet,
-        status: row.tunnel.status as any,
-        Icon: Globe,
-      }
-    case 'managed-available':
-      return {
-        name: row.server.server.name,
-        badge: t('conns.badgeManaged'),
-        sub: row.server.server.subnet,
-        status: row.server.connecting ? 'connecting' : row.server.error ? 'error' : 'disconnected',
-        Icon: Globe,
-      }
+    case 'imported':          return row.tunnel.addresses?.[0] ?? ''
+    case 'managed-active':    return row.tunnel.addresses?.[0] ?? row.server.server.subnet
+    case 'managed-available': return row.server.server.subnet
   }
 }
 
-function labelFor(s: Status): string {
-  switch (s) {
-    case 'connected':    return t('status.connected')
-    case 'connecting':   return t('status.connecting')
-    case 'reconnecting': return t('status.reconnecting')
-    case 'error':        return t('status.error')
-    case 'disconnected': return t('status.available')
-  }
+function rowStatus(row: WgRow): Status {
+  const s = row.kind === 'managed-available'
+    ? (row.server.connecting ? 'connecting' : row.server.error ? 'error' : 'disconnected')
+    : row.tunnel.status
+  return s === 'connected' || s === 'connecting' || s === 'error' ? s : 'disconnected'
 }

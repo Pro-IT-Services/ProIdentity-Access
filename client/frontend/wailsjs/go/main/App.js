@@ -66,8 +66,8 @@ export function ManagedCompleteSetup() {
   return window['go']['main']['App']['ManagedCompleteSetup']();
 }
 
-export function ManagedConnectOpenVPN(arg1, arg2, arg3, arg4, arg5, arg6, arg7) {
-  return window['go']['main']['App']['ManagedConnectOpenVPN'](arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+export function ManagedConnectOpenVPN(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8) {
+  return window['go']['main']['App']['ManagedConnectOpenVPN'](arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
 }
 
 export function ManagedConnectServer(arg1, arg2, arg3) {
@@ -144,6 +144,10 @@ export function ManagedSaveServerURL(arg1) {
 
 export function ManagedSetMode(arg1) {
   return window['go']['main']['App']['ManagedSetMode'](arg1);
+}
+
+export function PlaceTrayWindow(arg1, arg2) {
+  return window['go']['main']['App']['PlaceTrayWindow'](arg1, arg2);
 }
 
 export function SetUILanguage(arg1) {

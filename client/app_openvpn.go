@@ -31,6 +31,10 @@ type OpenVPNProfileView struct {
 	CustomIP         string `json:"custom_ip,omitempty"`
 	RememberedUser   string `json:"remembered_user,omitempty"`
 	HasSavedPassword bool   `json:"has_saved_password"`
+	// KeyEncrypted: the profile's private key needs a passphrase (known for
+	// imported profiles; for assigned ones the first connect attempt tells).
+	KeyEncrypted       bool `json:"key_encrypted"`
+	HasSavedPassphrase bool `json:"has_saved_passphrase"`
 }
 
 type localOVPNProfile struct {
@@ -40,12 +44,20 @@ type localOVPNProfile struct {
 	AuthUserPass  bool   `json:"auth_user_pass"`
 	AllowCustomIP bool   `json:"allow_custom_ip"`
 	RequiresTOTP  bool   `json:"requires_totp"`
+	KeyEncrypted  bool   `json:"key_encrypted,omitempty"`
 }
 
 // secretstore key helpers (config held only for locally-imported profiles).
-func ovpnCfgKey(id string) string  { return "openvpn-cfg-" + id }
-func ovpnPwKey(id string) string   { return "openvpn-pw-" + id }
-func ovpnUserKey(id string) string { return "openvpn-user-" + id }
+func ovpnCfgKey(id string) string     { return "openvpn-cfg-" + id }
+func ovpnPwKey(id string) string      { return "openvpn-pw-" + id }
+func ovpnUserKey(id string) string    { return "openvpn-user-" + id }
+func ovpnKeyPassKey(id string) string { return "openvpn-keypass-" + id }
+
+// configKeyEncrypted reports whether a profile carries a passphrase-protected
+// private key (PKCS#8 "ENCRYPTED PRIVATE KEY" or legacy PEM "Proc-Type: 4,ENCRYPTED").
+func configKeyEncrypted(cfg string) bool {
+	return strings.Contains(cfg, "BEGIN ENCRYPTED PRIVATE KEY") || strings.Contains(cfg, "Proc-Type: 4,ENCRYPTED")
+}
 
 func localOVPNIndexPath() (string, error) {
 	dir, err := os.UserConfigDir()
@@ -115,6 +127,7 @@ func (a *App) ManagedListOpenVPNProfiles() ([]OpenVPNProfileView, error) {
 					RequiresTOTP: p.RequiresTOTP, AuthUserPass: p.AuthUserPass,
 					DevType: p.DevType, AllowCustomIP: p.AllowCustomIP, CustomIP: p.CustomIP,
 					RememberedUser: rememberedUser(p.ID), HasSavedPassword: hasSecret(ovpnPwKey(p.ID)),
+					HasSavedPassphrase: hasSecret(ovpnKeyPassKey(p.ID)),
 				})
 			}
 		} else {
@@ -128,6 +141,7 @@ func (a *App) ManagedListOpenVPNProfiles() ([]OpenVPNProfileView, error) {
 			RequiresTOTP: lp.RequiresTOTP, AuthUserPass: lp.AuthUserPass,
 			DevType: lp.DevType, AllowCustomIP: lp.AllowCustomIP,
 			RememberedUser: rememberedUser(lp.ID), HasSavedPassword: hasSecret(ovpnPwKey(lp.ID)),
+			KeyEncrypted: lp.KeyEncrypted, HasSavedPassphrase: hasSecret(ovpnKeyPassKey(lp.ID)),
 		})
 	}
 	return views, nil
@@ -141,10 +155,10 @@ func (a *App) ManagedListOpenVPNSessions() ([]ipc.OpenVPNStatus, error) {
 	return a.client.ListOpenVPN()
 }
 
-// ManagedConnectOpenVPN connects an OpenVPN profile. password may be empty when
-// a saved password should be used; totp is appended to the password for
-// profiles flagged requires_totp.
-func (a *App) ManagedConnectOpenVPN(id, source, username, password, totp, customIP string, remember bool) (*ipc.OpenVPNStatus, error) {
+// ManagedConnectOpenVPN connects an OpenVPN profile. password and
+// keyPassphrase may be empty when saved ones should be used; totp is appended
+// to the password for profiles flagged requires_totp.
+func (a *App) ManagedConnectOpenVPN(id, source, username, password, totp, customIP, keyPassphrase string, remember bool) (*ipc.OpenVPNStatus, error) {
 	var cfg, name, devType string
 	var requiresTOTP bool
 
@@ -193,12 +207,22 @@ func (a *App) ManagedConnectOpenVPN(id, source, username, password, totp, custom
 		finalPassword = basePassword + strings.TrimSpace(totp)
 	}
 
+	passphrase := keyPassphrase
+	if passphrase == "" {
+		if data, err := secretstore.Get(ovpnKeyPassKey(id)); err == nil {
+			passphrase = string(data)
+		}
+	}
+
 	if remember {
 		if username != "" {
 			_ = secretstore.Put(ovpnUserKey(id), []byte(username))
 		}
 		if basePassword != "" {
 			_ = secretstore.Put(ovpnPwKey(id), []byte(basePassword))
+		}
+		if keyPassphrase != "" {
+			_ = secretstore.Put(ovpnKeyPassKey(id), []byte(keyPassphrase))
 		}
 	}
 
@@ -211,8 +235,9 @@ func (a *App) ManagedConnectOpenVPN(id, source, username, password, totp, custom
 		Config:   cfg,
 		DevType:  devType,
 		CustomIP: customIP,
-		Username: username,
-		Password: finalPassword,
+		Username:      username,
+		Password:      finalPassword,
+		KeyPassphrase: passphrase,
 	})
 }
 
@@ -241,6 +266,7 @@ func (a *App) ImportOpenVPNProfile(name, config string, requiresTotp bool) (*Ope
 	lp := localOVPNProfile{
 		ID: id, Name: name, DevType: devType, AuthUserPass: authUserPass,
 		AllowCustomIP: devType == "tap", RequiresTOTP: requiresTotp,
+		KeyEncrypted: configKeyEncrypted(config),
 	}
 	profiles := append(loadLocalOVPNIndex(), lp)
 	if err := saveLocalOVPNIndex(profiles); err != nil {
@@ -250,6 +276,7 @@ func (a *App) ImportOpenVPNProfile(name, config string, requiresTotp bool) (*Ope
 	return &OpenVPNProfileView{
 		ID: id, Name: name, Source: "local", AutofillName: autofillName("", name), RequiresTOTP: requiresTotp,
 		AuthUserPass: authUserPass, DevType: devType, AllowCustomIP: lp.AllowCustomIP,
+		KeyEncrypted: lp.KeyEncrypted,
 	}, nil
 }
 
@@ -271,13 +298,15 @@ func (a *App) DeleteLocalOpenVPNProfile(id string) error {
 	_ = secretstore.Delete(ovpnCfgKey(id))
 	_ = secretstore.Delete(ovpnPwKey(id))
 	_ = secretstore.Delete(ovpnUserKey(id))
+	_ = secretstore.Delete(ovpnKeyPassKey(id))
 	return saveLocalOVPNIndex(out)
 }
 
-// ForgetOpenVPNPassword clears a saved password/username for a profile.
+// ForgetOpenVPNPassword clears a saved password/username/key passphrase for a profile.
 func (a *App) ForgetOpenVPNPassword(id string) error {
 	_ = secretstore.Delete(ovpnPwKey(id))
 	_ = secretstore.Delete(ovpnUserKey(id))
+	_ = secretstore.Delete(ovpnKeyPassKey(id))
 	return nil
 }
 

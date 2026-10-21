@@ -53,14 +53,16 @@ type ovpnSession struct {
 	ip      string
 	rx, tx  int64
 	errMsg  string
+	errCode string
 
-	cmd     *exec.Cmd
+	cmd    *exec.Cmd
 	mgmt    *mgmtChannel
 	cfgPath string
 
-	username string
-	password string
-	stopped  bool
+	username      string
+	password      string
+	keyPassphrase string
+	stopped       bool
 
 	mgmtPassword string // per-session management password
 	mgmtPwPath   string
@@ -79,7 +81,7 @@ func (s *ovpnSession) snapshot() ipc.OpenVPNStatus {
 	defer s.mu.Unlock()
 	return ipc.OpenVPNStatus{
 		ID: s.id, OwnerID: s.ownerID, Name: s.name, Status: s.status,
-		DevType: s.devType, IP: s.ip, RxBytes: s.rx, TxBytes: s.tx, Error: s.errMsg,
+		DevType: s.devType, IP: s.ip, RxBytes: s.rx, TxBytes: s.tx, Error: s.errMsg, ErrorCode: s.errCode,
 		Remote: s.remote, Networks: s.networks.prefixStrings(), ConnectedAt: unixOrZero(s.connectedAt),
 	}
 }
@@ -173,7 +175,7 @@ func (m *OpenVPNManager) ConnectOpenVPN(ownerID string, p ipc.OpenVPNConnectPara
 	sess := &ovpnSession{
 		id: paramsID(p), ownerID: ownerID, name: p.Name, devType: devType,
 		status: ipc.StatusConnecting, cmd: cmd, cfgPath: cfgPath,
-		username: p.Username, password: p.Password,
+		username: p.Username, password: p.Password, keyPassphrase: p.KeyPassphrase,
 		logPipe: logW, mgmtPassword: mgmtPassword, mgmtPwPath: mgmtPwPath,
 		profileNets: profileNets, networks: profileNets,
 	}
@@ -342,16 +344,27 @@ func (m *OpenVPNManager) handleMgmtLine(sess *ovpnSession, ch *mgmtChannel, line
 		ch.send(`username "Auth" ` + mgmtEscape(sess.username))
 		ch.send(`password "Auth" ` + mgmtEscape(sess.password))
 
+	case strings.HasPrefix(line, ">PASSWORD:Need 'Private Key'"):
+		if sess.keyPassphrase != "" {
+			ch.send(`password "Private Key" ` + mgmtEscape(sess.keyPassphrase))
+			break
+		}
+		// The UI asks for the passphrase and connects again.
+		sess.setCodedError("key_passphrase_required", "This profile's private key is protected by a passphrase. Enter it to connect.")
+		m.emit(sess)
+		go m.stop(sess)
+
+	case strings.HasPrefix(line, ">PASSWORD:Verification Failed: 'Private Key'"):
+		sess.setCodedError("key_passphrase_wrong", "The private key passphrase is incorrect.")
+		m.emit(sess)
+		go m.stop(sess)
+
 	case strings.HasPrefix(line, ">PASSWORD:Verification Failed"):
 		sess.setError("The server rejected the username or password.")
 		m.emit(sess)
 		m.stop(sess)
 
 	// Prompts the app can't answer: say so instead of waiting forever.
-	case strings.HasPrefix(line, ">PASSWORD:Need 'Private Key'"):
-		sess.setError("This profile's private key is protected by a passphrase, which isn't supported. Ask your administrator for a profile without one.")
-		m.emit(sess)
-		go m.stop(sess)
 	case strings.HasPrefix(line, ">PASSWORD:Need 'HTTP Proxy'"):
 		sess.setError("This profile needs an HTTP proxy password, which isn't supported.")
 		m.emit(sess)
@@ -495,6 +508,20 @@ func quoted(line string) string {
 		return ""
 	}
 	return line[i+1 : i+1+j]
+}
+
+// setCodedError is a final error the UI recognizes by code (e.g. to ask for a
+// key passphrase); openvpn's own shutdown messages must not replace it.
+func (s *ovpnSession) setCodedError(code, msg string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.errFinal {
+		return
+	}
+	s.status = ipc.StatusError
+	s.errMsg = msg
+	s.errCode = code
+	s.errFinal = true
 }
 
 func (s *ovpnSession) setError(msg string) {

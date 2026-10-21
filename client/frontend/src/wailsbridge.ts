@@ -25,6 +25,17 @@ export async function systemLanguage(): Promise<string> {
   }
 }
 
+/** Place the tray popover in the primary screen's work area (Windows). False = not handled. */
+export async function placeTrayWindow(width: number, height: number): Promise<boolean> {
+  if (!isWails()) return false
+  try {
+    const app = await App() as { PlaceTrayWindow?: (w: number, h: number) => Promise<boolean> }
+    return (await app.PlaceTrayWindow?.(width, height)) ?? false
+  } catch {
+    return false
+  }
+}
+
 /** Override the Go side's UI language (tray menu, service errors). "" = follow the OS. */
 export async function setUILanguage(lang: string): Promise<void> {
   if (!isWails()) return
@@ -274,6 +285,9 @@ export type OpenVPNProfileView = {
   custom_ip?: string
   remembered_user?: string
   has_saved_password: boolean
+  /** The private key needs a passphrase (known for imported profiles). */
+  key_encrypted: boolean
+  has_saved_passphrase: boolean
 }
 
 export type OpenVPNStatus = {
@@ -285,6 +299,8 @@ export type OpenVPNStatus = {
   rx_bytes: number
   tx_bytes: number
   error?: string
+  /** Errors the UI reacts to: "key_passphrase_required" | "key_passphrase_wrong". */
+  error_code?: string
   /** Server address it connects to, e.g. "203.0.113.10:1194 (UDP)". */
   remote?: string
   /** Networks this connection routes (profile + pushed by the server). */
@@ -305,9 +321,9 @@ export async function managedListOpenVPNSessions(): Promise<OpenVPNStatus[]> {
 
 export async function managedConnectOpenVPN(
   id: string, source: string, username: string, password: string,
-  totp: string, customIP: string, remember: boolean,
+  totp: string, customIP: string, keyPassphrase: string, remember: boolean,
 ): Promise<OpenVPNStatus> {
-  return await (await App()).ManagedConnectOpenVPN(id, source, username, password, totp, customIP, remember) as OpenVPNStatus
+  return await (await App()).ManagedConnectOpenVPN(id, source, username, password, totp, customIP, keyPassphrase, remember) as OpenVPNStatus
 }
 
 export async function managedDisconnectOpenVPN(sessionID: string): Promise<void> {

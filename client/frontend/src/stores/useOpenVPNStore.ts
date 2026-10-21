@@ -2,9 +2,17 @@ import { create } from 'zustand'
 import * as api from '../wailsbridge'
 import type { OpenVPNStatus } from '../wailsbridge'
 import type { TunnelInfo } from '../types'
+import { t } from '../i18n'
 
 /** Prefix for OpenVPN sessions shown in places that expect a TunnelInfo. */
 export const OVPN_PREFIX = 'ovpn:'
+
+/** A session's error in the UI language when the daemon tagged it with a code. */
+export function ovpnErrorText(s: OpenVPNStatus): string | undefined {
+  if (s.error_code === 'key_passphrase_required') return t('ovpn.keyPassphraseRequired')
+  if (s.error_code === 'key_passphrase_wrong') return t('ovpn.keyPassphraseWrong')
+  return s.error
+}
 
 export function isOpenVPNTunnel(t: TunnelInfo | null): boolean {
   return !!t && t.id.startsWith(OVPN_PREFIX)
@@ -23,7 +31,7 @@ export function openvpnAsTunnel(s: OpenVPNStatus): TunnelInfo {
     listen_port: 0,
     private_key: '',
     peers: [{ public_key: '', endpoint: host, allowed_ips: s.networks ?? [], persistent_keepalive: 0 }],
-    error: s.error,
+    error: ovpnErrorText(s),
   }
 }
 

@@ -89,6 +89,9 @@ type OpenVPNStatus struct {
 	RxBytes int64        `json:"rx_bytes"`
 	TxBytes int64        `json:"tx_bytes"`
 	Error   string       `json:"error,omitempty"`
+	// ErrorCode marks errors the UI reacts to: "key_passphrase_required",
+	// "key_passphrase_wrong".
+	ErrorCode string `json:"error_code,omitempty"`
 	// Details for the "connected now" view.
 	Remote      string   `json:"remote,omitempty"`       // server address:port it connects to
 	Networks    []string `json:"networks,omitempty"`     // networks routed through it ("all traffic" for a full tunnel)
@@ -112,6 +115,8 @@ type OpenVPNConnectParams struct {
 	CustomIP string `json:"custom_ip,omitempty"`
 	Username string `json:"username,omitempty"`
 	Password string `json:"password,omitempty"`
+	// KeyPassphrase unlocks an encrypted private key in the profile.
+	KeyPassphrase string `json:"key_passphrase,omitempty"`
 }
 
 type SetEncryptionKeyParams struct {

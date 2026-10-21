@@ -36,7 +36,7 @@ export function ManagedCheckSetup():Promise<boolean>;
 
 export function ManagedCompleteSetup():Promise<void>;
 
-export function ManagedConnectOpenVPN(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:string,arg7:boolean):Promise<ipc.OpenVPNStatus>;
+export function ManagedConnectOpenVPN(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:string,arg7:string,arg8:boolean):Promise<ipc.OpenVPNStatus>;
 
 export function ManagedConnectServer(arg1:string,arg2:string,arg3:string):Promise<ipc.TunnelInfo>;
 
@@ -75,6 +75,8 @@ export function ManagedRegisterDevice(arg1:string,arg2:string):Promise<void>;
 export function ManagedSaveServerURL(arg1:string):Promise<void>;
 
 export function ManagedSetMode(arg1:string):Promise<void>;
+
+export function PlaceTrayWindow(arg1:number,arg2:number):Promise<boolean>;
 
 export function SetUILanguage(arg1:string):Promise<void>;
 

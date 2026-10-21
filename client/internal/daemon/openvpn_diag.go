@@ -116,6 +116,19 @@ func (m *OpenVPNManager) watchOutput(sess *ovpnSession, r io.Reader) {
 			m.onPushedNetworks(sess, pushed)
 			continue
 		}
+		// With some key formats OpenSSL doesn't report a bad decrypt over the
+		// management interface; the key just fails to load.
+		if strings.Contains(line, "Cannot load private key") || strings.Contains(line, "Private key password verification failed") {
+			sess.mu.Lock()
+			hadPassphrase := sess.keyPassphrase != ""
+			sess.mu.Unlock()
+			if hadPassphrase {
+				sess.setCodedError("key_passphrase_wrong", "The private key passphrase is incorrect.")
+				m.emit(sess)
+				go m.stop(sess)
+				continue
+			}
+		}
 		d, ok := diagnose(line)
 		if !ok {
 			continue
