@@ -117,6 +117,7 @@ export const de: Translation = {
   'conns.search': 'Verbindungen suchen',
   'conns.importConf': '.conf importieren',
   'conns.badgeShared': 'Geteilt',
+  'conns.inUse': 'In Verwendung',
   'conns.inUseBy': 'Verwendet von {name} ({device})',
   'conns.inUseByYou': 'Von Ihnen verwendet auf {device}',
 

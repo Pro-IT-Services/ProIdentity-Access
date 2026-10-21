@@ -11,6 +11,7 @@ import com.proitservices.proidentity.access.bridge.ManagedClient
 import com.proitservices.proidentity.access.bridge.defaultDeviceName
 import com.proitservices.proidentity.access.bridge.userMessage
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -54,6 +55,8 @@ class SetupViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _setupComplete = MutableSharedFlow<Unit>()
     val setupComplete = _setupComplete.asSharedFlow()
+
+    private var pushPollJob: Job? = null
 
     fun checkSetup(): Boolean = settings.setupDone
 
@@ -136,6 +139,7 @@ class SetupViewModel(application: Application) : AndroidViewModel(application) {
                 val info = client.getInfo()
                 settings.serverURL = url
                 settings.vpnName = info.vpnName
+                settings.allowPersonalImport = info.allowPersonalImport
                 _uiState.update {
                     it.copy(
                         isLoading = false,
@@ -169,7 +173,7 @@ class SetupViewModel(application: Application) : AndroidViewModel(application) {
 
     fun login() {
         val s = _uiState.value
-        if (s.username.isEmpty() || s.password.isEmpty()) {
+        if (s.username.isBlank() || s.password.isEmpty()) {
             _uiState.update { it.copy(error = str(R.string.error_username_password_required)) }
             return
         }
@@ -177,9 +181,12 @@ class SetupViewModel(application: Application) : AndroidViewModel(application) {
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
                 val client = buildClient()
-                val resp = client.login(s.username, s.password, s.totpCode)
+                val resp = client.login(s.username.trim(), s.password, s.totpCode)
                 if (resp.requireTotp) {
-                    if (resp.pushAuthEnabled && resp.pushRequestId.isNotEmpty()) {
+                    if (resp.pushSetupMessage.isNotEmpty()) {
+                        // No push could be sent: the account needs app setup first.
+                        _uiState.update { it.copy(isLoading = false, requireTotp = true, pushAuthEnabled = resp.pushAuthEnabled, loginMode = "totp", totpCode = "", error = resp.pushSetupMessage) }
+                    } else if (resp.pushAuthEnabled && resp.pushRequestId.isNotEmpty()) {
                         _uiState.update { it.copy(isLoading = false, requireTotp = true, pushAuthEnabled = true, loginMode = "push", pushStatus = "pending") }
                         pollPushLogin(client, resp.pushRequestId)
                     } else {
@@ -200,7 +207,7 @@ class SetupViewModel(application: Application) : AndroidViewModel(application) {
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
                 val client = buildClient()
-                val resp = client.login(s.username, s.password, s.totpCode)
+                val resp = client.login(s.username.trim(), s.password, s.totpCode)
                 if (resp.requireTotp) {
                     _uiState.update { it.copy(isLoading = false, error = str(R.string.error_invalid_code)) }
                 } else {
@@ -212,14 +219,24 @@ class SetupViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun switchToTotp() { _uiState.update { it.copy(loginMode = "totp", error = null) } }
+    fun switchToTotp() {
+        pushPollJob?.cancel()
+        _uiState.update { it.copy(loginMode = "totp", pushStatus = "idle", error = null) }
+    }
+
+    /** Leave the push or code step and go back to username and password. */
+    fun cancelSecondFactor() {
+        pushPollJob?.cancel()
+        _uiState.update { it.copy(loginMode = "credentials", requireTotp = false, pushStatus = "idle", totpCode = "", isLoading = false, error = null) }
+    }
     fun switchToPush() {
         _uiState.update { it.copy(loginMode = "push", pushStatus = "pending", error = null) }
         login() // re-trigger to get a new push request
     }
 
     private fun pollPushLogin(client: ManagedClient, requestID: String) {
-        viewModelScope.launch(Dispatchers.IO) {
+        pushPollJob?.cancel()
+        pushPollJob = viewModelScope.launch(Dispatchers.IO) {
             while (isActive) {
                 delay(2000)
                 try {
@@ -229,7 +246,7 @@ class SetupViewModel(application: Application) : AndroidViewModel(application) {
                         "approved" -> {
                             _uiState.update { it.copy(isLoading = true) }
                             val s = _uiState.value
-                            val resp = client.login(s.username, s.password, pushAuthID = requestID)
+                            val resp = client.login(s.username.trim(), s.password, pushAuthID = requestID)
                             finishLogin(resp)
                             return@launch
                         }
@@ -246,6 +263,7 @@ class SetupViewModel(application: Application) : AndroidViewModel(application) {
         settings.isAdmin = resp.isAdmin
         settings.totpEnabled = resp.totpEnabled
         settings.setupDone = true
+        try { settings.allowPersonalImport = buildClient().getInfo().allowPersonalImport } catch (_: Exception) {}
         _uiState.update { it.copy(isLoading = false, pushStatus = "idle") }
         viewModelScope.launch { _setupComplete.emit(Unit) }
     }

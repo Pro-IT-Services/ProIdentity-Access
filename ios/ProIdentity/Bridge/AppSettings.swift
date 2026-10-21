@@ -11,6 +11,7 @@ class AppSettings {
         case serverURL, token, username, isAdmin, vpnName, totpEnabled
         case deviceID, clientPrivateKey, serverPublicKey
         case mode, setupDone
+        case allowPersonalImport
     }
 
     // MARK: - Keychain helpers
@@ -63,6 +64,9 @@ class AppSettings {
     var serverPublicKey: String  { get { get(.serverPublicKey) ?? "" }  set { set(newValue, for: .serverPublicKey) } }
     var mode: String         { get { get(.mode) ?? "standalone" }  set { set(newValue, for: .mode) } }
     var setupDone: Bool      { get { get(.setupDone) == "true" }   set { set(newValue ? "true" : "false", for: .setupDone) } }
+    /// Server policy for importing personal profiles (managed mode). Allowed
+    /// unless the server said otherwise, like servers that predate it.
+    var allowPersonalImport: Bool { get { get(.allowPersonalImport) != "false" } set { set(newValue ? "true" : "false", for: .allowPersonalImport) } }
 
     func wipeAll() {
         Key.allCases.forEach { delete($0) }

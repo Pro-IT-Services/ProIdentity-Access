@@ -116,6 +116,7 @@ export const cs: Translation = {
   'conns.search': 'Hledat připojení',
   'conns.importConf': 'Importovat .conf',
   'conns.badgeShared': 'Sdílený',
+  'conns.inUse': 'Používá se',
   'conns.inUseBy': 'Používá {name} ({device})',
   'conns.inUseByYou': 'Používáte na zařízení {device}',
 

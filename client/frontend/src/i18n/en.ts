@@ -117,6 +117,7 @@ export const en = {
   'conns.search': 'Search connections',
   'conns.importConf': 'Import .conf',
   'conns.badgeShared': 'Shared',
+  'conns.inUse': 'In use',
   'conns.inUseBy': 'In use by {name} ({device})',
   'conns.inUseByYou': 'In use on your device {device}',
 

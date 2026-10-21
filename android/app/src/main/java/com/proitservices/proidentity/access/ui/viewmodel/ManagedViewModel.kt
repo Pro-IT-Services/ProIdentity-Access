@@ -39,6 +39,8 @@ data class ManagedUiState(
     val pushStatus: String = "idle",
     val pushAuthEnabled: Boolean = false,
     val totpTargetServerId: String? = null,
+    /** Why a push couldn't be sent, shown inside the approval sheet. */
+    val pushError: String? = null,
     val error: String? = null
 )
 
@@ -101,7 +103,8 @@ class ManagedViewModel(application: Application) : AndroidViewModel(application)
             loggedIn = s.token.isNotEmpty(),
             vpnName = s.vpnName,
             totpEnabled = s.totpEnabled,
-            mode = s.mode
+            mode = s.mode,
+            allowPersonalImport = s.mode != "managed" || s.allowPersonalImport
         )
         _uiState.update { it.copy(settings = settings) }
         if (settings.loggedIn) {
@@ -117,7 +120,7 @@ class ManagedViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun dismissTotpModal() { _uiState.update { it.copy(showTotpModal = false, totpTargetServerId = null) } }
-    fun dismissPushAuth() { _uiState.update { it.copy(showPushAuth = false, pushStatus = "idle") } }
+    fun dismissPushAuth() { _uiState.update { it.copy(showPushAuth = false, pushStatus = "idle", pushError = null, totpTargetServerId = null) } }
     fun clearError() { _uiState.update { it.copy(error = null) } }
 
     /** Called by TunnelViewModel when one of its API calls hits an auth failure. */
@@ -157,6 +160,22 @@ class ManagedViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    /** Picks up server policy (personal imports) and the VPN name. */
+    private fun fetchInfo() {
+        if (appSettings.serverURL.isEmpty()) return
+        try {
+            val info = ManagedClient(baseURL = appSettings.serverURL).getInfo()
+            if (info.vpnName.isNotEmpty()) appSettings.vpnName = info.vpnName
+            appSettings.allowPersonalImport = info.allowPersonalImport
+            _uiState.update {
+                it.copy(settings = it.settings.copy(
+                    vpnName = appSettings.vpnName,
+                    allowPersonalImport = appSettings.mode != "managed" || info.allowPersonalImport,
+                ))
+            }
+        } catch (_: Exception) {} // offline: keep the last known policy
+    }
+
     private fun fetchServers() {
         if (appSettings.token.isEmpty()) return
         try {
@@ -194,9 +213,19 @@ class ManagedViewModel(application: Application) : AndroidViewModel(application)
                 if (sessionResp.requireTotp) {
                     setServerStatus(serverId) { it.copy(connecting = false) }
                     if (sessionResp.pushAuthEnabled) {
-                        _uiState.update { it.copy(showPushAuth = true, pushStatus = "pending", pushAuthEnabled = true, totpTargetServerId = serverId) }
-                        val (reqId, _) = client.createPushAuth(str(R.string.push_connect_request, serverName))
-                        pollPushConnect(serverId, reqId)
+                        _uiState.update { it.copy(showPushAuth = true, pushStatus = "pending", pushError = null, pushAuthEnabled = true, totpTargetServerId = serverId) }
+                        try {
+                            val (reqId, _) = client.createPushAuth(str(R.string.push_connect_request, serverName))
+                            pollPushConnect(serverId, reqId)
+                        } catch (e: AuthInvalidException) {
+                            throw e
+                        } catch (e: DeviceRevokedException) {
+                            throw e
+                        } catch (e: Exception) {
+                            // e.g. the account was just created and needs app setup:
+                            // say so in the sheet, which offers retry and a code.
+                            _uiState.update { it.copy(pushStatus = "error", pushError = errorText(e)) }
+                        }
                     } else {
                         _uiState.update { it.copy(showTotpModal = true, totpTargetServerId = serverId, pushAuthEnabled = false) }
                     }
@@ -244,12 +273,13 @@ class ManagedViewModel(application: Application) : AndroidViewModel(application)
     /** Re-issue a push request for the server currently awaiting 2FA. */
     fun retryPushConnect() {
         val serverId = _uiState.value.totpTargetServerId ?: return
+        _uiState.update { it.copy(pushError = null) }
         connectServer(serverId)
     }
 
     /** Switch the pending 2FA prompt from push to a typed code. */
     fun switchConnectToTotp() {
-        _uiState.update { it.copy(showPushAuth = false, pushStatus = "idle", showTotpModal = true) }
+        _uiState.update { it.copy(showPushAuth = false, pushStatus = "idle", pushError = null, showTotpModal = true) }
     }
 
     private fun pollPushConnect(serverId: String, requestID: String) {
@@ -306,7 +336,9 @@ class ManagedViewModel(application: Application) : AndroidViewModel(application)
     private fun startServerPolling() {
         stopServerPolling()
         serverPollJob = viewModelScope.launch(Dispatchers.IO) {
+            var tick = 0
             while (isActive) {
+                if (tick++ % 6 == 0) fetchInfo() // policy changes rarely: once a minute
                 fetchServers()
                 delay(10_000)
             }

@@ -76,6 +76,11 @@ class AppSettings(context: Context) {
         get() = prefs.getString("mode", "") ?: ""
         set(v) = prefs.edit().putString("mode", v).apply()
 
+    /** Server policy: may the user import their own WireGuard profiles (managed mode). */
+    var allowPersonalImport: Boolean
+        get() = prefs.getBoolean("allowPersonalImport", true)
+        set(v) = prefs.edit().putBoolean("allowPersonalImport", v).apply()
+
     var setupDone: Boolean
         get() = prefs.getBoolean("setupDone", false)
         set(v) = prefs.edit().putBoolean("setupDone", v).apply()

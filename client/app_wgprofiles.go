@@ -110,16 +110,21 @@ func (a *App) connectWGProfile(key string) error {
 		go mc.ReleaseWireGuardProfile(id)
 		return fmt.Errorf("import tunnel: %w", err)
 	}
-	if err := a.client.ConnectTunnel(tunnel.ID); err != nil {
-		a.client.DeleteTunnel(tunnel.ID)
-		go mc.ReleaseWireGuardProfile(id)
-		return err
-	}
-
+	// Register before connecting: the service reports "connecting" and
+	// "connected" right away, and the UI must see them under "wgp:<id>".
 	ctx, cancel := context.WithCancel(context.Background())
 	a.mMu.Lock()
 	a.mWGP[id] = &wgpSession{tunnelID: tunnel.ID, name: name, stop: cancel}
 	a.mMu.Unlock()
+	if err := a.client.ConnectTunnel(tunnel.ID); err != nil {
+		cancel()
+		a.mMu.Lock()
+		delete(a.mWGP, id)
+		a.mMu.Unlock()
+		a.client.DeleteTunnel(tunnel.ID)
+		go mc.ReleaseWireGuardProfile(id)
+		return err
+	}
 	go a.wgProfileHeartbeat(ctx, mc, id, tunnel.ID)
 	log.Printf("connected assigned WireGuard profile %q", name)
 	return nil

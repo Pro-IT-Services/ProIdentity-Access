@@ -51,6 +51,7 @@ struct HomeView: View {
         .sheet(isPresented: $showImport) {
             ImportSheet(model: model)
         }
+        .onChange(of: model.canImport) { _, allowed in if !allowed { showImport = false } }
         .sheet(isPresented: $showSettings) {
             SettingsView()
         }
@@ -77,16 +78,18 @@ struct HomeView: View {
             isManaged: app.isManaged,
             selected: selected,
             onOpen: onOpen,
-            onImport: { showImport = true },
+            onImport: model.canImport ? { showImport = true } : nil,
             onSignIn: { app.showSignIn() }
         )
         .toolbar {
             ToolbarItem(placement: .principal) { BrandTitle() }
             ToolbarItemGroup(placement: .topBarTrailing) {
-                Button { showImport = true } label: {
-                    Image(systemName: "plus")
+                if model.canImport {
+                    Button { showImport = true } label: {
+                        Image(systemName: "plus")
+                    }
+                    .accessibilityLabel("Import configuration")
                 }
-                .accessibilityLabel("Import configuration")
                 Button { showSettings = true } label: {
                     Image(systemName: "gearshape")
                 }
@@ -102,7 +105,8 @@ private struct HomeContent: View {
     let isManaged: Bool
     let selected: String?
     let onOpen: (Connection) -> Void
-    let onImport: () -> Void
+    /// nil when the server doesn't allow importing personal profiles.
+    let onImport: (() -> Void)?
     let onSignIn: () -> Void
 
     var body: some View {
@@ -131,28 +135,16 @@ private struct HomeContent: View {
                 if connections.isEmpty {
                     emptyState.padding(.top, 8)
                 } else {
-                    Text("Connections")
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                        .textCase(.uppercase)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.top, 8)
-                        .padding(.leading, 4)
-                        .accessibilityAddTraits(.isHeader)
-                    ForEach(connections) { c in
-                        ConnectionRow(
-                            connection: c,
-                            onOpen: { onOpen(c) },
-                            onToggle: {
-                                Task {
-                                    if c.isActive { await model.disconnect(c) } else { await model.connect(c) }
-                                }
-                            }
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .strokeBorder(Brand.primary, lineWidth: selected == c.id ? 2 : 0)
-                        )
+                    // Assigned by the organization, then the user's own.
+                    let access = connections.filter { $0.kind == .managed }
+                    let imported = connections.filter { $0.kind != .managed }
+                    if !access.isEmpty {
+                        sectionHeader("ProIdentity Access")
+                        rows(access)
+                    }
+                    if !imported.isEmpty {
+                        sectionHeader(isManaged ? "Imported" : "Connections")
+                        rows(imported)
                     }
                 }
             }
@@ -181,6 +173,35 @@ private struct HomeContent: View {
         .sensoryFeedback(.error, trigger: model.failedKey) { _, new in new != nil }
     }
 
+    private func sectionHeader(_ title: LocalizedStringKey) -> some View {
+        Text(title)
+            .font(.footnote.weight(.semibold))
+            .foregroundStyle(.secondary)
+            .textCase(.uppercase)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.top, 8)
+            .padding(.leading, 4)
+            .accessibilityAddTraits(.isHeader)
+    }
+
+    private func rows(_ list: [Connection]) -> some View {
+        ForEach(list) { c in
+            ConnectionRow(
+                connection: c,
+                onOpen: { onOpen(c) },
+                onToggle: {
+                    Task {
+                        if c.isActive { await model.disconnect(c) } else { await model.connect(c) }
+                    }
+                }
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .strokeBorder(Brand.primary, lineWidth: selected == c.id ? 2 : 0)
+            )
+        }
+    }
+
     @ViewBuilder
     private var emptyState: some View {
         if !model.loadedOnce {
@@ -205,8 +226,10 @@ private struct HomeContent: View {
             } description: {
                 Text(message)
             } actions: {
-                Button("Import configuration", action: onImport)
-                    .buttonStyle(.bordered)
+                if let onImport {
+                    Button("Import configuration", action: onImport)
+                        .buttonStyle(.bordered)
+                }
             }
         }
     }

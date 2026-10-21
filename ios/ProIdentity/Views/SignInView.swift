@@ -95,9 +95,10 @@ struct SignInContent<Extra: View>: View {
                 NoticeCard(tone: .info, title: notice)
             }
             VStack(spacing: 14) {
-                BrandField(label: "Username") {
-                    TextField("Username", text: $setup.username)
+                BrandField(label: "Username or email") {
+                    TextField("Username or email", text: $setup.username)
                         .textContentType(.username)
+                        .keyboardType(.emailAddress)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                         .submitLabel(.next)

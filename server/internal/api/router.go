@@ -317,13 +317,17 @@ func (s *Server) handleInfo(w http.ResponseWriter, r *http.Request) {
 	if vpnName == "" {
 		vpnName = "Managed VPN"
 	}
-	// Personal imports are allowed unless an admin explicitly turned them off.
-	allowImport := s.setting("allow_personal_import") != "false"
 	jsonOK(w, map[string]any{
 		"vpn_name":              vpnName,
 		"push_auth_enabled":     s.pushAuthEnabled(),
-		"allow_personal_import": allowImport,
+		"allow_personal_import": s.personalImportAllowed(),
 	})
+}
+
+// personalImportAllowed: personal imports are allowed unless an admin
+// explicitly turned them off.
+func (s *Server) personalImportAllowed() bool {
+	return s.setting("allow_personal_import") != "false"
 }
 
 // setting reads a value from the settings table.

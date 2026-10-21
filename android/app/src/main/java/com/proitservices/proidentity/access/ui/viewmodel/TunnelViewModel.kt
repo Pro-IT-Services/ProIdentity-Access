@@ -249,6 +249,10 @@ class TunnelViewModel(application: Application) : AndroidViewModel(application) 
                 val service = WgVpnService.instance
                     ?: throw IllegalStateException(str(R.string.error_vpn_service_not_running))
 
+                if (settings.mode == "managed" && !settings.allowPersonalImport) {
+                    withContext(Dispatchers.Main) { onDone(false, str(R.string.error_import_disabled)) }
+                    return@launch
+                }
                 if (settings.mode == "managed" && settings.token.isNotEmpty()) {
                     try {
                         val client = buildAuthClient()
@@ -281,7 +285,14 @@ class TunnelViewModel(application: Application) : AndroidViewModel(application) 
                         triggerAuthReset(revoked = false)
                         withContext(Dispatchers.Main) { onDone(false, str(R.string.error_login_expired_or_revoked)) }
                         return@launch
-                    } catch (_: Exception) { /* fall through to local */ }
+                    } catch (_: java.io.IOException) {
+                        /* server unreachable: keep it on this device */
+                    } catch (e: Exception) {
+                        // The server refused (e.g. imports turned off): say why
+                        // instead of quietly keeping a local copy.
+                        withContext(Dispatchers.Main) { onDone(false, errorText(e)) }
+                        return@launch
+                    }
                 }
 
                 val id = java.util.UUID.randomUUID().toString()

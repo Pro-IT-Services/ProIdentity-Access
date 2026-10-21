@@ -76,7 +76,7 @@
     <string name="signin_welcome_back">Üdvözöljük újra</string>
     <string name="signin_reauth_body">A munkamenete véget ért. A folytatáshoz jelentkezzen be újra — ez az eszköz regisztrálva marad.</string>
     <string name="signin_body">Használja a szervezeti fiókját.</string>
-    <string name="signin_username">Felhasználónév</string>
+    <string name="signin_username">Felhasználónév vagy e-mail</string>
     <string name="signin_password">Jelszó</string>
     <string name="signin_show_password">Jelszó megjelenítése</string>
     <string name="signin_hide_password">Jelszó elrejtése</string>
@@ -194,7 +194,7 @@
     <string name="error_server_url_empty">A kiszolgáló URL-címe nem lehet üres</string>
     <string name="error_cannot_reach_server">A kiszolgáló nem érhető el: %1$s</string>
     <string name="error_registration_failed">A regisztráció sikertelen: %1$s</string>
-    <string name="error_username_password_required">Felhasználónév és jelszó szükséges</string>
+    <string name="error_username_password_required">Adja meg a felhasználónevet vagy e-mail-címet és a jelszót.</string>
     <string name="error_login_failed">A bejelentkezés sikertelen: %1$s</string>
     <string name="error_invalid_code">Érvénytelen kód</string>
     <string name="error_vpn_service_not_running">A VPN-szolgáltatás nem fut</string>
@@ -211,4 +211,8 @@
     <string name="error_server_http">A kiszolgáló hibát adott vissza (HTTP %1$d).</string>
     <string name="settings_language">Nyelv</string>
     <string name="settings_language_system">Rendszer szerinti</string>
+    <string name="home_section_access">ProIdentity Access</string>
+    <string name="home_section_imported">Importált</string>
+    <string name="error_import_disabled">A rendszergazda kikapcsolta a saját profilok importálását.</string>
+    <string name="push_unavailable_title">A jóváhagyási kérés nem lett elküldve</string>
 </resources>

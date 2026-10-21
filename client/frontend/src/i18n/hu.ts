@@ -117,6 +117,7 @@ export const hu: Translation = {
   'conns.search': 'Kapcsolatok keresése',
   'conns.importConf': '.conf importálása',
   'conns.badgeShared': 'Megosztott',
+  'conns.inUse': 'Használatban',
   'conns.inUseBy': 'Használja: {name} ({device})',
   'conns.inUseByYou': 'Ön használja ezen az eszközön: {device}',
 

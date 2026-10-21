@@ -78,7 +78,7 @@
     <string name="signin_welcome_back">Witamy ponownie</string>
     <string name="signin_reauth_body">Twoja sesja wygasła. Zaloguj się ponownie, aby kontynuować — to urządzenie pozostaje zarejestrowane.</string>
     <string name="signin_body">Użyj konta swojej organizacji.</string>
-    <string name="signin_username">Nazwa użytkownika</string>
+    <string name="signin_username">Nazwa użytkownika lub e-mail</string>
     <string name="signin_password">Hasło</string>
     <string name="signin_show_password">Pokaż hasło</string>
     <string name="signin_hide_password">Ukryj hasło</string>
@@ -196,7 +196,7 @@
     <string name="error_server_url_empty">Adres URL serwera nie może być pusty</string>
     <string name="error_cannot_reach_server">Nie można połączyć się z serwerem: %1$s</string>
     <string name="error_registration_failed">Rejestracja nie powiodła się: %1$s</string>
-    <string name="error_username_password_required">Wymagana nazwa użytkownika i hasło</string>
+    <string name="error_username_password_required">Wpisz nazwę użytkownika lub e-mail i hasło.</string>
     <string name="error_login_failed">Logowanie nie powiodło się: %1$s</string>
     <string name="error_invalid_code">Nieprawidłowy kod</string>
     <string name="error_vpn_service_not_running">Usługa VPN nie jest uruchomiona</string>
@@ -213,4 +213,8 @@
     <string name="error_server_http">Serwer zwrócił błąd (HTTP %1$d).</string>
     <string name="settings_language">Język</string>
     <string name="settings_language_system">Domyślny systemowy</string>
+    <string name="home_section_access">ProIdentity Access</string>
+    <string name="home_section_imported">Zaimportowane</string>
+    <string name="error_import_disabled">Administrator wyłączył importowanie własnych profili.</string>
+    <string name="push_unavailable_title">Nie wysłano prośby o zatwierdzenie</string>
 </resources>

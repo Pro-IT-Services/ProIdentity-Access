@@ -116,6 +116,7 @@ export const pl: Translation = {
   'conns.search': 'Szukaj połączeń',
   'conns.importConf': 'Importuj .conf',
   'conns.badgeShared': 'Współdzielony',
+  'conns.inUse': 'W użyciu',
   'conns.inUseBy': 'Używa {name} ({device})',
   'conns.inUseByYou': 'Używasz na urządzeniu {device}',
 

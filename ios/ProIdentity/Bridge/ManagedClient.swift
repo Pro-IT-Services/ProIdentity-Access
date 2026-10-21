@@ -66,7 +66,9 @@ class ManagedClient {
                 throw APIError.authInvalid
             }
         }
-        if authenticatedRequest && (http.statusCode == 401 || http.statusCode == 403) {
+        // Only 401 means the sign-in is gone. A 403 is "not allowed" (e.g. no
+        // access to that server) and must not sign the user out.
+        if authenticatedRequest && http.statusCode == 401 {
             throw APIError.authInvalid
         }
         guard (200..<300).contains(http.statusCode) else {
@@ -176,7 +178,12 @@ class ManagedClient {
         var req = URLRequest(url: url)
         req.httpMethod = "GET"
         req.setValue("ProIdentity-Access", forHTTPHeaderField: "User-Agent")
-        let (data, _) = try await session.data(for: req)
+        let (data, response) = try await session.data(for: req)
+        let code = (response as? HTTPURLResponse)?.statusCode ?? 200
+        // 404: the server no longer knows the request (expired, or restarted).
+        // Other failures are transient: keep waiting.
+        if code == 404 { return "expired" }
+        guard (200..<300).contains(code) else { return "pending" }
         let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
         return json["status"] as? String ?? "pending"
     }

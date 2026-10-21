@@ -63,6 +63,7 @@ import com.proitservices.proidentity.access.ui.design.formatBytes
 import com.proitservices.proidentity.access.ui.design.formatDuration
 import com.proitservices.proidentity.access.ui.design.statusColor
 import com.proitservices.proidentity.access.ui.model.Connection
+import com.proitservices.proidentity.access.ui.model.ConnectionKind
 import com.proitservices.proidentity.access.ui.model.Live
 import com.proitservices.proidentity.access.ui.model.toAperture
 import com.proitservices.proidentity.access.ui.theme.MonoStyle
@@ -92,13 +93,21 @@ fun HomeScreen(
     ConnectionHaptics(active?.status)
 
     val managed = settings.mode == "managed"
+    val canImport = settings.allowPersonalImport
+    val importAction = if (canImport) onImport else null
+    val importLabel = if (canImport) stringResource(R.string.common_import_configuration) else null
+    // Connections assigned by the organization, then the user's own.
+    val access = connections.filter { it.kind == ConnectionKind.Managed }
+    val imported = connections.filter { it.kind != ConnectionKind.Managed }
     Scaffold(
         modifier = modifier,
         topBar = {
             TopAppBar(
                 title = { BrandTitle() },
                 actions = {
-                    IconButton(onClick = onImport) { Icon(Icons.Outlined.Add, contentDescription = stringResource(R.string.common_import_configuration)) }
+                    if (canImport) {
+                        IconButton(onClick = onImport) { Icon(Icons.Outlined.Add, contentDescription = stringResource(R.string.common_import_configuration)) }
+                    }
                     IconButton(onClick = onSettings) { Icon(Icons.Outlined.Settings, contentDescription = stringResource(R.string.common_settings)) }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
@@ -136,13 +145,13 @@ fun HomeScreen(
                                 icon = Icons.Outlined.Dns,
                                 title = stringResource(R.string.home_empty_assigned_title),
                                 body = stringResource(R.string.home_empty_assigned_body),
-                                actionLabel = stringResource(R.string.common_import_configuration), onAction = onImport,
+                                actionLabel = importLabel, onAction = importAction,
                             )
                             managed -> EmptyState(
                                 icon = Icons.Outlined.Dns,
                                 title = stringResource(R.string.home_empty_managed_title),
                                 body = stringResource(R.string.home_empty_managed_body),
-                                actionLabel = stringResource(R.string.common_import_configuration), onAction = onImport,
+                                actionLabel = importLabel, onAction = importAction,
                             )
                             else -> EmptyState(
                                 icon = Icons.Outlined.Description,
@@ -153,15 +162,24 @@ fun HomeScreen(
                         }
                     }
                 } else {
-                    item(key = "label") { SectionLabel(stringResource(R.string.home_connections), Modifier.padding(top = 6.dp)) }
-                    items(connections, key = { it.key }) { c ->
-                        ConnectionRow(
-                            connection = c,
-                            onOpen = { onOpen(c) },
-                            onToggle = { if (c.isActive) onDisconnect(c) else onConnect(c) },
-                            selected = c.key == selectedKey,
-                            modifier = Modifier.animateItem(),
-                        )
+                    // Standalone has only the user's own profiles: one plain list.
+                    val groups = if (managed) listOf(
+                        "access" to (R.string.home_section_access to access),
+                        "imported" to (R.string.home_section_imported to imported),
+                    ) else listOf("imported" to (R.string.home_connections to imported))
+                    groups.forEach { (groupKey, group) ->
+                        val (label, rows) = group
+                        if (rows.isEmpty()) return@forEach
+                        item(key = "label-$groupKey") { SectionLabel(stringResource(label), Modifier.padding(top = 6.dp)) }
+                        items(rows, key = { it.key }) { c ->
+                            ConnectionRow(
+                                connection = c,
+                                onOpen = { onOpen(c) },
+                                onToggle = { if (c.isActive) onDisconnect(c) else onConnect(c) },
+                                selected = c.key == selectedKey,
+                                modifier = Modifier.animateItem(),
+                            )
+                        }
                     }
                 }
                 item(key = "bottomSpace") { Spacer(Modifier.height(8.dp)) }

@@ -40,7 +40,9 @@ data class ManagedSettings(
     val vpnName: String = "",
     val totpEnabled: Boolean = false,
     /** "managed", "standalone", or "" before setup. */
-    val mode: String = ""
+    val mode: String = "",
+    /** Server policy for importing personal profiles; always true in standalone mode. */
+    val allowPersonalImport: Boolean = true
 )
 
 data class ServerStatus(

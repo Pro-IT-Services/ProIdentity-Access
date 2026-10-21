@@ -76,7 +76,7 @@
     <string name="signin_welcome_back">Bentornato</string>
     <string name="signin_reauth_body">La sua sessione è terminata. Acceda di nuovo per continuare: questo dispositivo resta registrato.</string>
     <string name="signin_body">Usi l\'account della sua organizzazione.</string>
-    <string name="signin_username">Nome utente</string>
+    <string name="signin_username">Nome utente o e-mail</string>
     <string name="signin_password">Password</string>
     <string name="signin_show_password">Mostra password</string>
     <string name="signin_hide_password">Nascondi password</string>
@@ -194,7 +194,7 @@
     <string name="error_server_url_empty">L\'URL del server non può essere vuoto</string>
     <string name="error_cannot_reach_server">Impossibile raggiungere il server: %1$s</string>
     <string name="error_registration_failed">Registrazione non riuscita: %1$s</string>
-    <string name="error_username_password_required">Nome utente e password obbligatori</string>
+    <string name="error_username_password_required">Inserisca nome utente o e-mail e password.</string>
     <string name="error_login_failed">Accesso non riuscito: %1$s</string>
     <string name="error_invalid_code">Codice non valido</string>
     <string name="error_vpn_service_not_running">Servizio VPN non in esecuzione</string>
@@ -211,4 +211,8 @@
     <string name="error_server_http">Il server ha restituito un errore (HTTP %1$d).</string>
     <string name="settings_language">Lingua</string>
     <string name="settings_language_system">Predefinita del sistema</string>
+    <string name="home_section_access">ProIdentity Access</string>
+    <string name="home_section_imported">Importate</string>
+    <string name="error_import_disabled">L\'amministratore ha disattivato l\'importazione dei propri profili.</string>
+    <string name="push_unavailable_title">Richiesta di approvazione non inviata</string>
 </resources>

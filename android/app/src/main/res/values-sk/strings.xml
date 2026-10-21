@@ -78,7 +78,7 @@
     <string name="signin_welcome_back">Vitajte späť</string>
     <string name="signin_reauth_body">Vaša relácia skončila. Prihláste sa znova a pokračujte — toto zariadenie zostáva zaregistrované.</string>
     <string name="signin_body">Použite účet vašej organizácie.</string>
-    <string name="signin_username">Používateľské meno</string>
+    <string name="signin_username">Používateľské meno alebo e-mail</string>
     <string name="signin_password">Heslo</string>
     <string name="signin_show_password">Zobraziť heslo</string>
     <string name="signin_hide_password">Skryť heslo</string>
@@ -197,7 +197,7 @@
     <string name="error_server_url_empty">Adresa servera nemôže byť prázdna</string>
     <string name="error_cannot_reach_server">Server je nedostupný: %1$s</string>
     <string name="error_registration_failed">Registrácia zlyhala: %1$s</string>
-    <string name="error_username_password_required">Zadajte používateľské meno a heslo</string>
+    <string name="error_username_password_required">Zadajte používateľské meno alebo e-mail a heslo.</string>
     <string name="error_login_failed">Prihlásenie zlyhalo: %1$s</string>
     <string name="error_invalid_code">Neplatný kód</string>
     <string name="error_vpn_service_not_running">Služba VPN nie je spustená</string>
@@ -214,4 +214,8 @@
     <string name="error_server_http">Server vrátil chybu (HTTP %1$d).</string>
     <string name="settings_language">Jazyk</string>
     <string name="settings_language_system">Podľa systému</string>
+    <string name="home_section_access">ProIdentity Access</string>
+    <string name="home_section_imported">Importované</string>
+    <string name="error_import_disabled">Správca vypol import vlastných profilov.</string>
+    <string name="push_unavailable_title">Žiadosť o schválenie sa neodoslala</string>
 </resources>

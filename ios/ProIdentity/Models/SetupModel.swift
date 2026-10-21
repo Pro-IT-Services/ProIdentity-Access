@@ -127,7 +127,7 @@ final class SetupModel {
         error = nil
         let user = username.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !user.isEmpty, !password.isEmpty else {
-            error = String(localized: "Enter your username and password.")
+            error = String(localized: "Enter your username or email and password.")
             return
         }
         username = user
@@ -139,7 +139,11 @@ final class SetupModel {
             if resp["require_totp"] as? Bool == true {
                 pushAvailable = resp["push_auth_enabled"] as? Bool ?? false
                 code = ""
-                if pushAvailable, let requestID = resp["push_request_id"] as? String {
+                if resp["push_setup_required"] as? Bool == true {
+                    // No push could be sent: the account needs app setup first.
+                    error = resp["push_setup_message"] as? String
+                    phase = .code
+                } else if pushAvailable, let requestID = resp["push_request_id"] as? String {
                     phase = .push
                     waitForPush(requestID)
                 } else {
@@ -260,6 +264,7 @@ final class SetupModel {
         s.vpnName = resp["vpn_name"] as? String ?? ""
         s.totpEnabled = resp["totp_enabled"] as? Bool ?? false
         s.setupDone = true
+        s.allowPersonalImport = true // refreshed from the server on the first poll
         password = ""
         code = ""
         pushTask?.cancel()

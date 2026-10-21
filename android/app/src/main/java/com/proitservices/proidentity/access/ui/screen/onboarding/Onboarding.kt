@@ -385,8 +385,8 @@ private fun CredentialsForm(s: SetupUiState, vm: SetupViewModel, footer: (@Compo
             onValueChange = { vm.setUsername(it); vm.clearError() },
             label = { Text(stringResource(R.string.signin_username)) },
             singleLine = true,
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next, autoCorrectEnabled = false),
-            modifier = Modifier.fillMaxWidth().semantics { contentType = ContentType.Username },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next, autoCorrectEnabled = false),
+            modifier = Modifier.fillMaxWidth().semantics { contentType = ContentType.Username + ContentType.EmailAddress },
         )
         Spacer(Modifier.height(12.dp))
         OutlinedTextField(
@@ -424,11 +424,16 @@ private fun TotpForm(s: SetupUiState, vm: SetupViewModel) {
         onPrimary = vm::loginWithTotp,
         loading = s.isLoading,
         primaryEnabled = s.totpCode.length == 6,
-        footer = if (s.pushAuthEnabled) ({
-            TextButton(onClick = vm::switchToPush, modifier = Modifier.heightIn(min = 48.dp)) {
-                Text(stringResource(R.string.signin_use_push_instead))
+        footer = {
+            if (s.pushAuthEnabled) {
+                TextButton(onClick = vm::switchToPush, modifier = Modifier.heightIn(min = 48.dp)) {
+                    Text(stringResource(R.string.signin_use_push_instead))
+                }
             }
-        }) else null,
+            TextButton(onClick = vm::cancelSecondFactor, modifier = Modifier.heightIn(min = 48.dp)) {
+                Text(stringResource(R.string.common_cancel))
+            }
+        },
     ) {
         OtpField(value = s.totpCode, onValueChange = { vm.setTotpCode(it); vm.clearError() }, isError = s.error != null)
         ErrorText(s.error)
@@ -460,12 +465,13 @@ private fun PushForm(s: SetupUiState, vm: SetupViewModel) {
         loading = s.isLoading,
         onRetry = vm::switchToPush,
         onUseCode = vm::switchToTotp,
+        onCancel = vm::cancelSecondFactor,
     )
 }
 
 /** Push-approval view shared by sign-in and the connect prompt. */
 @Composable
-fun PushApproval(status: String, loading: Boolean, onRetry: () -> Unit, onUseCode: () -> Unit) {
+fun PushApproval(status: String, loading: Boolean, onRetry: () -> Unit, onUseCode: () -> Unit, onCancel: (() -> Unit)? = null) {
     val failed = status == "denied" || status == "expired"
     val (title, body) = when (status) {
         "approved" -> stringResource(R.string.push_approved_title) to stringResource(R.string.push_approved_body)
@@ -481,6 +487,9 @@ fun PushApproval(status: String, loading: Boolean, onRetry: () -> Unit, onUseCod
         loading = loading,
         footer = if (status != "approved") ({
             TextButton(onClick = onUseCode, modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.common_enter_code_instead)) }
+            if (onCancel != null) {
+                TextButton(onClick = onCancel, modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.common_cancel)) }
+            }
         }) else null,
     ) {
         val pulse = rememberInfiniteTransition(label = "push")

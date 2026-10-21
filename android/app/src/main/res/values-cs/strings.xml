@@ -9,6 +9,7 @@
     <plurals name="vpn_notification_connected_many">
         <item quantity="one">Připojeno k %1$d síti</item>
         <item quantity="few">Připojeno k %1$d sítím</item>
+        <item quantity="many">Připojeno k %1$d sítě</item>
         <item quantity="other">Připojeno k %1$d sítím</item>
     </plurals>
     <string name="vpn_notification_public">VPN je připojena</string>
@@ -77,7 +78,7 @@
     <string name="signin_welcome_back">Vítejte zpět</string>
     <string name="signin_reauth_body">Vaše relace skončila. Přihlaste se znovu a pokračujte — toto zařízení zůstává zaregistrováno.</string>
     <string name="signin_body">Použijte účet vaší organizace.</string>
-    <string name="signin_username">Uživatelské jméno</string>
+    <string name="signin_username">Uživatelské jméno nebo e-mail</string>
     <string name="signin_password">Heslo</string>
     <string name="signin_show_password">Zobrazit heslo</string>
     <string name="signin_hide_password">Skrýt heslo</string>
@@ -195,7 +196,7 @@
     <string name="error_server_url_empty">Adresa serveru nemůže být prázdná</string>
     <string name="error_cannot_reach_server">Server je nedostupný: %1$s</string>
     <string name="error_registration_failed">Registrace selhala: %1$s</string>
-    <string name="error_username_password_required">Zadejte uživatelské jméno a heslo</string>
+    <string name="error_username_password_required">Zadejte uživatelské jméno nebo e-mail a heslo.</string>
     <string name="error_login_failed">Přihlášení selhalo: %1$s</string>
     <string name="error_invalid_code">Neplatný kód</string>
     <string name="error_vpn_service_not_running">Služba VPN není spuštěna</string>
@@ -212,4 +213,8 @@
     <string name="error_server_http">Server vrátil chybu (HTTP %1$d).</string>
     <string name="settings_language">Jazyk</string>
     <string name="settings_language_system">Podle systému</string>
+    <string name="home_section_access">ProIdentity Access</string>
+    <string name="home_section_imported">Importované</string>
+    <string name="error_import_disabled">Správce vypnul import vlastních profilů.</string>
+    <string name="push_unavailable_title">Žádost o schválení nebyla odeslána</string>
 </resources>

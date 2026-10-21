@@ -76,7 +76,7 @@
     <string name="signin_welcome_back">Willkommen zurück</string>
     <string name="signin_reauth_body">Ihre Sitzung ist abgelaufen. Melden Sie sich erneut an, um fortzufahren — dieses Gerät bleibt registriert.</string>
     <string name="signin_body">Verwenden Sie Ihr Organisationskonto.</string>
-    <string name="signin_username">Benutzername</string>
+    <string name="signin_username">Benutzername oder E-Mail</string>
     <string name="signin_password">Passwort</string>
     <string name="signin_show_password">Passwort anzeigen</string>
     <string name="signin_hide_password">Passwort ausblenden</string>
@@ -194,7 +194,7 @@
     <string name="error_server_url_empty">Serveradresse darf nicht leer sein</string>
     <string name="error_cannot_reach_server">Server nicht erreichbar: %1$s</string>
     <string name="error_registration_failed">Registrierung fehlgeschlagen: %1$s</string>
-    <string name="error_username_password_required">Benutzername und Passwort erforderlich</string>
+    <string name="error_username_password_required">Geben Sie Benutzername oder E-Mail und Passwort ein.</string>
     <string name="error_login_failed">Anmeldung fehlgeschlagen: %1$s</string>
     <string name="error_invalid_code">Ungültiger Code</string>
     <string name="error_vpn_service_not_running">VPN-Dienst läuft nicht</string>
@@ -211,4 +211,8 @@
     <string name="error_server_http">Der Server hat einen Fehler zurückgegeben (HTTP %1$d).</string>
     <string name="settings_language">Sprache</string>
     <string name="settings_language_system">Systemstandard</string>
+    <string name="home_section_access">ProIdentity Access</string>
+    <string name="home_section_imported">Importiert</string>
+    <string name="error_import_disabled">Ihr Administrator hat den Import eigener Profile deaktiviert.</string>
+    <string name="push_unavailable_title">Bestätigungsanfrage nicht gesendet</string>
 </resources>

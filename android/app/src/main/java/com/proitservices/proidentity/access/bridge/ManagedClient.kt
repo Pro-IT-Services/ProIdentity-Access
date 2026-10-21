@@ -22,9 +22,12 @@ data class LoginResponse(
     val requireTotp: Boolean,
     val totpEnabled: Boolean,
     val pushAuthEnabled: Boolean = false,
-    val pushRequestId: String = ""
+    val pushRequestId: String = "",
+    /** Set when the person's ProIdentity account was just created and no push could be sent. */
+    val pushSetupMessage: String = ""
 )
-data class InfoResponse(val vpnName: String)
+/** allowPersonalImport defaults to true: servers that predate it allow imports. */
+data class InfoResponse(val vpnName: String, val allowPersonalImport: Boolean = true)
 data class ServerInfo(
     val id: String,
     val name: String,
@@ -156,12 +159,11 @@ class ManagedClient(
         if (!response.isSuccessful) {
             val errBody = decrypted ?: bodyStr
             val errMsg = try { JSONObject(errBody).optString("error", "") } catch (_: Exception) { "" }
+            // Only 401 means the sign-in is gone. A 403 is "not allowed" (e.g. no
+            // access to that server) and must not sign the user out.
             if (response.code == 401) {
                 if (errMsg == "device revoked" || errMsg == "unknown device") throw DeviceRevokedException()
                 if (token.isNotEmpty()) throw AuthInvalidException()
-            }
-            if (token.isNotEmpty() && (response.code == 401 || response.code == 403)) {
-                throw AuthInvalidException()
             }
             if (errMsg.isNotEmpty()) throw RuntimeException(errMsg.replaceFirstChar { it.uppercase() })
             throw LocalizedException(
@@ -233,13 +235,18 @@ class ManagedClient(
             requireTotp = resp.optBoolean("require_totp", false),
             totpEnabled = resp.optBoolean("totp_enabled", false),
             pushAuthEnabled = resp.optBoolean("push_auth_enabled", false),
-            pushRequestId = resp.optString("push_request_id", "")
+            pushRequestId = resp.optString("push_request_id", ""),
+            pushSetupMessage = if (resp.optBoolean("push_setup_required", false))
+                resp.optString("push_setup_message", "") else ""
         )
     }
 
     fun getInfo(): InfoResponse {
         val resp = JSONObject(get("/info"))
-        return InfoResponse(vpnName = resp.optString("vpn_name", ""))
+        return InfoResponse(
+            vpnName = resp.optString("vpn_name", ""),
+            allowPersonalImport = resp.optBoolean("allow_personal_import", true),
+        )
     }
 
     fun listServers(): List<ServerInfo> {
@@ -351,7 +358,10 @@ class ManagedClient(
             .get().build()
         val response = http.newCall(req).execute()
         val bodyStr = response.body?.string() ?: "{}"
-        if (!response.isSuccessful) return "error"
+        // 404: the server no longer knows the request (expired, or restarted).
+        // Anything else is transient: keep waiting.
+        if (response.code == 404) return "expired"
+        if (!response.isSuccessful) return "pending"
         return JSONObject(bodyStr).optString("status", "pending")
     }
 

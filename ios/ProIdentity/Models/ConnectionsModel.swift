@@ -15,6 +15,8 @@ final class ConnectionsModel {
     private(set) var loadedOnce = false
     private(set) var stats: TunnelStats?
     private(set) var connectedSince: Date?
+    /// Whether the user may import their own profiles (always in standalone).
+    private(set) var canImport = AppSettings.shared.mode != "managed" || AppSettings.shared.allowPersonalImport
     /// Short, dismissible message for the last failure.
     var message: String?
     var authPrompt: AuthPrompt?
@@ -30,6 +32,7 @@ final class ConnectionsModel {
     @ObservationIgnored private var statsTask: Task<Void, Never>?
     @ObservationIgnored private var pushTask: Task<Void, Never>?
     @ObservationIgnored private var restored = false
+    @ObservationIgnored private var policyCheckedAt: Date?
 
     private static let sessionsKey = "managed_sessions"
 
@@ -162,6 +165,7 @@ final class ConnectionsModel {
 
     func refresh(silently: Bool = false) async {
         reloadImported()
+        await refreshPolicy()
         guard isManaged, isSignedIn else {
             servers = []
             loadedOnce = true
@@ -177,6 +181,18 @@ final class ConnectionsModel {
             if handleAuthFailure(error) { return }
             if !silently { message = UserMessage.from(error) }
         }
+    }
+
+    /// Server policy (personal imports), at most once a minute.
+    private func refreshPolicy() async {
+        guard isManaged else { canImport = true; return }
+        if let last = policyCheckedAt, Date().timeIntervalSince(last) < 60 { return }
+        guard let key = try? ManagedClient.shared.aesKey(),
+              let info = try? await ManagedClient.shared.getInfo(aesKey: key) else { return } // offline: keep the last known
+        policyCheckedAt = Date()
+        let allowed = info["allow_personal_import"] as? Bool ?? true
+        AppSettings.shared.allowPersonalImport = allowed
+        canImport = allowed
     }
 
     private func checkAuth() async {

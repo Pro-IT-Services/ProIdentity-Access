@@ -116,44 +116,62 @@ export function ConnectionsList({ onConnected, onConnectIntent, onConnectManaged
   const renderWgp = (p: WGProfileView) => {
     const busy = busyKey === p.id
     const tunnel = tunnels.find(x => x.id === p.id)
+    // Up on this device even if the tunnel list hasn't caught up yet.
     const status: Status = tunnel?.status === 'connected' || tunnel?.status === 'connecting' || tunnel?.status === 'error'
-      ? tunnel.status : 'disconnected'
+      ? tunnel.status : p.in_use_by?.this_device ? 'connected' : 'disconnected'
     const live = status === 'connected' || status === 'connecting'
     const holder = p.in_use_by && !p.in_use_by.this_device && !live ? p.in_use_by : undefined
-    const inUse = holder
+    const who = holder
       ? holder.you
         ? t('conns.inUseByYou', { device: holder.device || '?' })
         : t('conns.inUseBy', { name: holder.name, device: holder.device || '?' })
       : undefined
-    const run = async (fn: () => Promise<void>, closeAfter: boolean) => {
+    // Show the connecting state right away and close the sheet: the main
+    // screen takes over, as for managed servers.
+    const startConnect = () => {
+      useTunnelStore.setState(s => ({
+        tunnels: [...s.tunnels.filter(x => x.id !== p.id), {
+          id: p.id, name: p.name, status: 'connecting',
+          addresses: p.address ? p.address.split(',').map(a => a.trim()).filter(Boolean) : [],
+          dns: [], mtu: 0, listen_port: 0, private_key: '', peers: [],
+        }],
+        selectedId: p.id,
+      }))
+      onConnected?.()
+      connect(p.id)
+        .catch((e: any) => toast(`${p.name}: ${String(e?.message ?? e)}`, 'warning', 6000))
+        .finally(() => wgp.reload())
+    }
+    const stop = async () => {
       setBusyKey(p.id)
-      try {
-        await fn()
-        if (closeAfter) onConnected?.()
-      } catch (e: any) {
-        toast(`${p.name}: ${String(e?.message ?? e)}`, 'warning', 6000)
-      } finally {
-        setBusyKey(null)
-        wgp.reload()
-      }
+      try { await disconnect(p.id) }
+      catch (e: any) { toast(`${p.name}: ${String(e?.message ?? e)}`, 'warning', 6000) }
+      finally { setBusyKey(null); wgp.reload() }
     }
     return (
       <ConnRow
         key={p.id}
         name={p.name}
         icon={Building2}
-        status={busy && !live ? 'connecting' : status}
-        statusText={inUse}
-        connectBlocked={inUse}
-        sub={inUse ? undefined : p.address}
+        status={status}
+        statusText={holder ? t('conns.inUse') : undefined}
+        connectBlocked={who}
+        sub={holder ? undefined : p.address}
         tags={p.shared ? <RowTag><Users className="w-3 h-3" /> {t('conns.badgeShared')}</RowTag> : undefined}
         busy={busy}
         live={live}
         selected={!!tunnel && tunnel.id === selectedId}
         onSelect={tunnel ? () => setSelected(tunnel.id) : undefined}
-        onConnect={() => run(() => connect(p.id), true)}
-        onDisconnect={() => run(() => disconnect(p.id), false)}
-      />
+        onConnect={startConnect}
+        onDisconnect={stop}
+      >
+        {holder && who && (
+          <p className="text-[11px] text-warning mt-1 break-words">
+            {who}
+            {holder.held_seconds > 0 && <span className="text-muted-foreground"> · {heldFor(holder.held_seconds)}</span>}
+          </p>
+        )}
+      </ConnRow>
     )
   }
 
@@ -286,6 +304,14 @@ function GroupHeading({ icon: Icon, title, desc }: { icon: React.ElementType; ti
       </div>
     </div>
   )
+}
+
+/** "5 min", "2 h 10 min", "3 d 4 h": how long someone has had a profile up. */
+function heldFor(seconds: number): string {
+  const m = Math.max(1, Math.floor(seconds / 60))
+  if (m < 60) return `${m} min`
+  const h = Math.floor(m / 60)
+  return h < 24 ? `${h} h ${m % 60} min` : `${Math.floor(h / 24)} d ${h % 24} h`
 }
 
 /** Assigned WireGuard profiles, refreshed while the sheet is open so "in use by" stays current. */

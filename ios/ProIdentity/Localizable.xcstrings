@@ -9056,6 +9056,144 @@
           }
         }
       }
+    },
+    "Username or email": {
+      "localizations": {
+        "sk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Používateľské meno alebo e-mail"
+          }
+        },
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uživatelské jméno nebo e-mail"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nazwa użytkownika lub e-mail"
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Felhasználónév vagy e-mail"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Benutzername oder E-Mail"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nome utente o e-mail"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usuario o correo electrónico"
+          }
+        }
+      }
+    },
+    "Enter your username or email and password.": {
+      "localizations": {
+        "sk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zadajte používateľské meno alebo e-mail a heslo."
+          }
+        },
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zadejte uživatelské jméno nebo e-mail a heslo."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wpisz nazwę użytkownika lub e-mail i hasło."
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adja meg a felhasználónevet vagy e-mail-címet és a jelszót."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geben Sie Benutzername oder E-Mail und Passwort ein."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inserisca nome utente o e-mail e password."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Introduzca su usuario o correo electrónico y la contraseña."
+          }
+        }
+      }
+    },
+    "ProIdentity Access": {
+      "localizations": {
+        "sk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ProIdentity Access"
+          }
+        },
+        "cs": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ProIdentity Access"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ProIdentity Access"
+          }
+        },
+        "hu": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ProIdentity Access"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ProIdentity Access"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ProIdentity Access"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ProIdentity Access"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

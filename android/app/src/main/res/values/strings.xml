@@ -77,7 +77,7 @@
     <string name="signin_welcome_back">Welcome back</string>
     <string name="signin_reauth_body">Your session ended. Sign in again to continue — this device stays registered.</string>
     <string name="signin_body">Use your organization account.</string>
-    <string name="signin_username">Username</string>
+    <string name="signin_username">Username or email</string>
     <string name="signin_password">Password</string>
     <string name="signin_show_password">Show password</string>
     <string name="signin_hide_password">Hide password</string>
@@ -198,7 +198,7 @@
     <string name="error_server_url_empty">Server URL cannot be empty</string>
     <string name="error_cannot_reach_server">Cannot reach server: %1$s</string>
     <string name="error_registration_failed">Registration failed: %1$s</string>
-    <string name="error_username_password_required">Username and password required</string>
+    <string name="error_username_password_required">Enter your username or email and password.</string>
     <string name="error_login_failed">Login failed: %1$s</string>
     <string name="error_invalid_code">Invalid code</string>
     <string name="error_vpn_service_not_running">VPN service not running</string>
@@ -215,4 +215,8 @@
     <string name="error_server_http">The server returned an error (HTTP %1$d).</string>
     <string name="settings_language">Language</string>
     <string name="settings_language_system">System default</string>
+    <string name="home_section_access">ProIdentity Access</string>
+    <string name="home_section_imported">Imported</string>
+    <string name="error_import_disabled">Your administrator has turned off importing your own profiles.</string>
+    <string name="push_unavailable_title">Push approval not sent</string>
 </resources>

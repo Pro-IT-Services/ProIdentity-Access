@@ -234,6 +234,7 @@ fun AppNavHost(
             serverName = managedState.serverStatuses[target]?.server?.name ?: stringResource(R.string.connect_auth_your_server),
             pushMode = managedState.showPushAuth,
             pushStatus = managedState.pushStatus,
+            pushError = managedState.pushError,
             pushAvailable = managedState.pushAuthEnabled,
             onSubmitCode = managedVm::connectServerWithTotp,
             onRetryPush = managedVm::retryPushConnect,
@@ -241,7 +242,7 @@ fun AppNavHost(
             onDismiss = { managedVm.dismissTotpModal(); managedVm.dismissPushAuth() },
         )
     }
-    if (showImport) {
+    if (showImport && managedState.settings.allowPersonalImport) {
         ImportSheet(
             prefillName = pendingImport?.name,
             prefillConfig = pendingImport?.config,

@@ -79,6 +79,11 @@ func (s *Server) handleListUserConfigs(w http.ResponseWriter, r *http.Request) {
 // Uploads an encrypted config. Body: {name, encrypted_content (base64)}.
 func (s *Server) handleUploadUserConfig(w http.ResponseWriter, r *http.Request) {
 	claims := claimsFrom(r)
+	// 409, not 403: apps treat 401/403 as an expired sign-in.
+	if !s.personalImportAllowed() {
+		jsonError(w, http.StatusConflict, "Your administrator has turned off importing your own profiles.")
+		return
+	}
 
 	var req struct {
 		Name             string `json:"name"`

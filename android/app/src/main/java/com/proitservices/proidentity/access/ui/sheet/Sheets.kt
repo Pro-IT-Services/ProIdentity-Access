@@ -60,6 +60,7 @@ fun ConnectAuthSheet(
     serverName: String,
     pushMode: Boolean,
     pushStatus: String,
+    pushError: String?,
     pushAvailable: Boolean,
     onSubmitCode: (String) -> Unit,
     onRetryPush: () -> Unit,
@@ -76,15 +77,16 @@ fun ConnectAuthSheet(
                 .padding(horizontal = 24.dp)
                 .padding(bottom = 24.dp),
         ) {
-            if (pushMode) PushContent(serverName, pushStatus, onRetryPush, onUseCode)
+            if (pushMode) PushContent(serverName, pushStatus, pushError, onRetryPush, onUseCode)
             else CodeContent(serverName, pushAvailable, onSubmitCode, onRetryPush)
+            TextButton(onClick = onDismiss, modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.common_cancel)) }
         }
     }
 }
 
 @Composable
-private fun PushContent(serverName: String, status: String, onRetry: () -> Unit, onUseCode: () -> Unit) {
-    val failed = status == "denied" || status == "expired"
+private fun PushContent(serverName: String, status: String, error: String?, onRetry: () -> Unit, onUseCode: () -> Unit) {
+    val failed = status == "denied" || status == "expired" || status == "error"
     Row(verticalAlignment = Alignment.CenterVertically) {
         Box(
             Modifier.size(52.dp).clip(CircleShape)
@@ -102,6 +104,7 @@ private fun PushContent(serverName: String, status: String, onRetry: () -> Unit,
                 when (status) {
                     "denied" -> stringResource(R.string.push_denied_title)
                     "expired" -> stringResource(R.string.push_expired_title)
+                    "error" -> stringResource(R.string.push_unavailable_title)
                     else -> stringResource(R.string.push_pending_title)
                 },
                 style = MaterialTheme.typography.titleLarge,
@@ -109,6 +112,10 @@ private fun PushContent(serverName: String, status: String, onRetry: () -> Unit,
             )
             Text(stringResource(R.string.connect_auth_connecting_to, serverName), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
+    }
+    if (status == "error" && !error.isNullOrBlank()) {
+        Spacer(Modifier.height(12.dp))
+        Text(error, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
     }
     Spacer(Modifier.height(20.dp))
     if (failed) {
