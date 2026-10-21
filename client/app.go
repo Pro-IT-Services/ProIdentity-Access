@@ -1609,8 +1609,22 @@ func sanitizeTunnelInfo(tunnel *ipc.TunnelInfo) *ipc.TunnelInfo {
 		return nil
 	}
 	tunnel.PrivateKey = ""
+	// Never send JSON null for list fields: stubs for not-yet-connected user
+	// configs have no addresses/peers, and the UI indexes into these arrays.
+	if tunnel.Addresses == nil {
+		tunnel.Addresses = []string{}
+	}
+	if tunnel.DNS == nil {
+		tunnel.DNS = []string{}
+	}
+	if tunnel.Peers == nil {
+		tunnel.Peers = []ipc.PeerInfo{}
+	}
 	for i := range tunnel.Peers {
 		tunnel.Peers[i].PublicKey = ""
+		if tunnel.Peers[i].AllowedIPs == nil {
+			tunnel.Peers[i].AllowedIPs = []string{}
+		}
 	}
 	return tunnel
 }

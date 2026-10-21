@@ -61,7 +61,7 @@ export function useActiveConnections(): ActiveConnection[] {
         status: t.status,
         ip: t.addresses?.[0] ?? '',
         networks: routes((t.peers ?? []).flatMap(p => p.allowed_ips ?? [])),
-        server: host(t.peers[0]?.endpoint ?? ''),
+        server: host(t.peers?.[0]?.endpoint ?? ''),
         since: t.status === 'connected' ? wgSince.get(t.id) ?? 0 : 0,
         rx: st?.rx_bytes ?? 0,
         tx: st?.tx_bytes ?? 0,
