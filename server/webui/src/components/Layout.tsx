@@ -2,7 +2,7 @@ import { Outlet, NavLink, useNavigate, useLocation, Link } from 'react-router-do
 import { useAuthStore } from '../stores/useAuthStore'
 import {
   LayoutDashboard, Globe, Settings, LogOut,
-  Activity, User, Users, Network, History, FileKey, FileLock2, Boxes, Server,
+  Activity, User, Users, Network, History, FileKey, FileLock2, Boxes, Server, KeyRound,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ThemeToggle } from './ThemeToggle'
@@ -42,6 +42,7 @@ const NAV: NavGroup[] = [
       },
       { to: '/servers', label: 'VPN Servers', icon: Globe, anyPerm: ['servers.manage'] },
       { to: '/openvpn', label: 'Shared OpenVPN profiles', icon: FileKey, anyPerm: ['openvpn.manage'] },
+      { to: '/wireguard-profiles', label: 'Assigned WireGuard profiles', icon: KeyRound, anyPerm: ['wgprofiles.manage'] },
       { to: '/stored-profiles', label: 'Stored WireGuard Profiles', icon: FileLock2, anyPerm: ['users.manage', 'servers.manage'] },
       { to: '/topology', label: 'Topology', icon: Network, anyPerm: ['topology.read'] },
       { to: '/connection-history', label: 'Connection History', icon: History, anyPerm: ['sessions.manage'] },

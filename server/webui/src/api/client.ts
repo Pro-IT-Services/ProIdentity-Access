@@ -137,7 +137,6 @@ export const api = {
   getSettings: () => request<Record<string, string>>('GET', '/admin/settings'),
   updateSettings: (data: Record<string, string>) => request<{
     ok: boolean
-    push_auth_sync?: { checked: number; synced: number; failed: number; errors?: string[] }
   }>('PUT', '/admin/settings', data),
 
   // Admin — WireGuard servers
@@ -249,6 +248,20 @@ export const api = {
     request<{ ok: boolean }>('POST', `/admin/openvpn/profiles/${id}/assignments`, { user_id, custom_ip }),
   adminUnassignOpenVPN: (id: string, userId: string) =>
     request<{ ok: boolean }>('DELETE', `/admin/openvpn/profiles/${id}/assignments/${userId}`),
+
+  // Admin: WireGuard profiles (single user, or shared with one device at a time)
+  adminListWGProfiles: () => request<WGProfile[]>('GET', '/admin/wireguard/profiles'),
+  adminCreateWGProfile: (data: { name: string; description?: string; config: string; shared: boolean }) =>
+    request<{ id: string }>('POST', '/admin/wireguard/profiles', data),
+  adminUpdateWGProfile: (id: string, data: { name: string; description?: string; shared: boolean; config?: string }) =>
+    request<{ ok: boolean }>('PUT', `/admin/wireguard/profiles/${id}`, data),
+  adminDeleteWGProfile: (id: string) => request<{ ok: boolean }>('DELETE', `/admin/wireguard/profiles/${id}`),
+  adminReleaseWGProfile: (id: string) => request<{ ok: boolean }>('DELETE', `/admin/wireguard/profiles/${id}/holder`),
+  adminWGAssignments: (id: string) => request<WGAssignment[]>('GET', `/admin/wireguard/profiles/${id}/assignments`),
+  adminAssignWG: (id: string, user_id: string) =>
+    request<{ ok: boolean }>('POST', `/admin/wireguard/profiles/${id}/assignments`, { user_id }),
+  adminUnassignWG: (id: string, userId: string) =>
+    request<{ ok: boolean }>('DELETE', `/admin/wireguard/profiles/${id}/assignments/${userId}`),
 }
 
 // Types
@@ -292,6 +305,32 @@ export interface OpenVPNAssignment {
   username: string
   email: string
   custom_ip?: string
+  assigned_at: string
+}
+
+/** Who has a WireGuard profile up right now. */
+export interface WGHolder {
+  name: string
+  username: string
+  device: string
+  held_seconds: number
+}
+
+export interface WGProfile {
+  id: string
+  name: string
+  description?: string
+  shared: boolean
+  address?: string
+  endpoint?: string
+  assigned_count: number
+  in_use_by?: WGHolder
+}
+
+export interface WGAssignment {
+  user_id: string
+  username: string
+  email: string
   assigned_at: string
 }
 

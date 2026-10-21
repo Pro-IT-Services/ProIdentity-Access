@@ -13,6 +13,7 @@ import (
 	"proidentity/internal/audit"
 	"proidentity/internal/auth"
 	"proidentity/internal/model"
+	"proidentity/internal/pushauth"
 )
 
 // WebAuthn pending sessions (stored in memory, expire after 5 min)
@@ -124,11 +125,17 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 						jsonOK(w, resp)
 						return
 					}
-					ar, err := pc.CreateAuthRequest(user.Email, "ProIdentity Access", "Admin login", clientIP, 120)
-					if err == nil {
+					ar, err := pc.CreateAuthRequest(user.Email, pushDisplayName(user.FirstName, user.LastName, user.Username),
+						"ProIdentity Access", "Admin login", clientIP, 120)
+					switch {
+					case err == nil:
 						rememberPushAuth(ar.RequestID, user.ID, "login", "Admin login", 120)
 						resp["push_request_id"] = ar.RequestID
-					} else {
+					case pushauth.NeedsSetup(err):
+						// First use created the account: nothing reached a phone.
+						resp["push_setup_required"] = true
+						resp["push_setup_message"] = pushSetupMessage
+					default:
 						log.Printf("push auth create failed for login %s: %v", user.Email, err)
 					}
 					pushCreateMu.Unlock()

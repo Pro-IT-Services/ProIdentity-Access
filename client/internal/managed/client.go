@@ -22,6 +22,16 @@ var ErrDeviceRevoked = errors.New("device revoked")
 // the login token is expired, revoked, or no longer authorized.
 var ErrAuthInvalid = errors.New("auth invalid")
 
+// APIError is an error response from the server. Error() is the server's
+// message, so callers that only show it are unaffected.
+type APIError struct {
+	Status  int
+	Message string
+	Body    []byte // the (decrypted) JSON body, for errors that carry details
+}
+
+func (e *APIError) Error() string { return e.Message }
+
 // Client is an HTTP client for the ProIdentity management API.
 type Client struct {
 	BaseURL    string
@@ -344,6 +354,81 @@ func (c *Client) GetOpenVPNConfig(id string) (*OpenVPNProfileConfig, error) {
 	return &cfg, nil
 }
 
+// WGProfileHolder is who has an assigned WireGuard profile up.
+type WGProfileHolder struct {
+	Name        string `json:"name"`
+	Username    string `json:"username"`
+	Device      string `json:"device"`
+	HeldSeconds int64  `json:"held_seconds"`
+	You         bool   `json:"you"`
+	ThisDevice  bool   `json:"this_device"`
+}
+
+// WGProfileInfo is a WireGuard profile assigned to the user. No keys.
+type WGProfileInfo struct {
+	ID          string           `json:"id"`
+	Name        string           `json:"name"`
+	Description string           `json:"description,omitempty"`
+	Shared      bool             `json:"shared"`
+	Address     string           `json:"address,omitempty"`
+	Endpoint    string           `json:"endpoint,omitempty"`
+	InUseBy     *WGProfileHolder `json:"in_use_by,omitempty"`
+}
+
+// WGProfileInUseError is returned when another device has the profile up.
+type WGProfileInUseError struct {
+	Message string
+	Holder  WGProfileHolder
+}
+
+func (e *WGProfileInUseError) Error() string { return e.Message }
+
+// wgProfileErr turns a 409 into WGProfileInUseError.
+func wgProfileErr(err error) error {
+	var apiErr *APIError
+	if errors.As(err, &apiErr) && apiErr.Status == http.StatusConflict {
+		var body struct {
+			InUseBy *WGProfileHolder `json:"in_use_by"`
+		}
+		if json.Unmarshal(apiErr.Body, &body) == nil && body.InUseBy != nil {
+			return &WGProfileInUseError{Message: apiErr.Message, Holder: *body.InUseBy}
+		}
+	}
+	return err
+}
+
+// ListWireGuardProfiles returns WireGuard profiles assigned to the user.
+func (c *Client) ListWireGuardProfiles() ([]WGProfileInfo, error) {
+	var profiles []WGProfileInfo
+	if err := c.getAuth("/wireguard/profiles", &profiles); err != nil {
+		return nil, err
+	}
+	return profiles, nil
+}
+
+// ClaimWireGuardProfile takes the profile for this device and returns its
+// config. WGProfileInUseError when another device has it up.
+func (c *Client) ClaimWireGuardProfile(id string) (name, config string, err error) {
+	var resp struct {
+		Name   string `json:"name"`
+		Config string `json:"config"`
+	}
+	if err := c.postAuth("/wireguard/profiles/"+id+"/claim", map[string]string{}, &resp); err != nil {
+		return "", "", wgProfileErr(err)
+	}
+	return resp.Name, resp.Config, nil
+}
+
+// HeartbeatWireGuardProfile renews this device's claim while connected.
+func (c *Client) HeartbeatWireGuardProfile(id string) error {
+	return wgProfileErr(c.postAuth("/wireguard/profiles/"+id+"/heartbeat", map[string]string{}, nil))
+}
+
+// ReleaseWireGuardProfile frees the profile after disconnecting.
+func (c *Client) ReleaseWireGuardProfile(id string) error {
+	return c.postAuth("/wireguard/profiles/"+id+"/release", map[string]string{}, nil)
+}
+
 // ListUserConfigs returns metadata for all configs stored on the server.
 func (c *Client) ListUserConfigs() ([]UserConfigInfo, error) {
 	var configs []UserConfigInfo
@@ -494,7 +579,7 @@ func (c *Client) do(method, path string, headers map[string]string, body any, ou
 			if authRequest && (res.StatusCode == 401 || res.StatusCode == 403) {
 				return ErrAuthInvalid
 			}
-			return fmt.Errorf("%s", errResp.Error)
+			return &APIError{Status: res.StatusCode, Message: errResp.Error, Body: respBytes}
 		}
 		if authRequest && (res.StatusCode == 401 || res.StatusCode == 403) {
 			return ErrAuthInvalid

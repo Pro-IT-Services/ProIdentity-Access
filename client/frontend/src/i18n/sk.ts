@@ -115,6 +115,9 @@ export const sk: Translation = {
   'conns.importedEmpty': 'Zatiaľ žiadne importované profily.',
   'conns.search': 'Hľadať pripojenia',
   'conns.importConf': 'Importovať .conf',
+  'conns.badgeShared': 'Zdieľaný',
+  'conns.inUseBy': 'Používa {name} ({device})',
+  'conns.inUseByYou': 'Používate na zariadení {device}',
 
   // ── Configuration details ───────────────────────────────────────────────
   'config.interface': 'Rozhranie',

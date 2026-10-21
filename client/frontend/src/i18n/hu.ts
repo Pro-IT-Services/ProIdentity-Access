@@ -116,6 +116,9 @@ export const hu: Translation = {
   'conns.importedEmpty': 'Még nincs importált profil.',
   'conns.search': 'Kapcsolatok keresése',
   'conns.importConf': '.conf importálása',
+  'conns.badgeShared': 'Megosztott',
+  'conns.inUseBy': 'Használja: {name} ({device})',
+  'conns.inUseByYou': 'Ön használja ezen az eszközön: {device}',
 
   // ── Configuration details ───────────────────────────────────────────────
   'config.interface': 'Interfész',

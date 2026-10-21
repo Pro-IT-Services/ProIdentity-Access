@@ -57,7 +57,6 @@ func (h *SettingsHandler) Update(w http.ResponseWriter, r *http.Request) {
 		jsonError(w, 400, "bad request")
 		return
 	}
-	oldEnabled, oldAPIKey := pushAuthSettings(h.DB)
 	for k, v := range req {
 		normalized, err := validateSettingValue(k, v)
 		if err != nil {
@@ -73,17 +72,9 @@ func (h *SettingsHandler) Update(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	resp := map[string]any{"ok": true}
-	newEnabled, newAPIKey := pushAuthSettings(h.DB)
-	pushTouched := false
-	if _, ok := req["push_auth_enabled"]; ok {
-		pushTouched = true
-	}
-	if _, ok := req["push_auth_api_key"]; ok {
-		pushTouched = true
-	}
-	if pushTouched && newEnabled && (!oldEnabled || strings.TrimSpace(oldAPIKey) != strings.TrimSpace(newAPIKey)) {
-		resp["push_auth_sync"] = syncPushAuthUsers(h.DB, newAPIKey, requestIP(r))
-	}
-	jsonOK(w, resp)
+	// Turning push auth on (or changing its key) contacts nobody: the only
+	// way the ProIdentity Cloud API can create an account is an approval
+	// request, which would push to every enrolled user. Accounts are created
+	// on each person's first real sign-in or connection instead.
+	jsonOK(w, map[string]any{"ok": true})
 }

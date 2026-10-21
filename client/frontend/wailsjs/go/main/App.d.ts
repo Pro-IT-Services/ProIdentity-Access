@@ -62,6 +62,8 @@ export function ManagedListOpenVPNSessions():Promise<Array<ipc.OpenVPNStatus>>;
 
 export function ManagedListServers():Promise<Array<managed.ServerInfo>>;
 
+export function ManagedListWireGuardProfiles():Promise<Array<main.WGProfileView>>;
+
 export function ManagedLogin(arg1:string,arg2:string,arg3:string):Promise<main.ManagedLoginResult>;
 
 export function ManagedLoginWithPush(arg1:string,arg2:string,arg3:string):Promise<main.ManagedLoginResult>;

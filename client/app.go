@@ -41,6 +41,7 @@ type App struct {
 	mConfigKey         []byte                    // user's server-side config key (cached in memory)
 	mUserConfigs       map[string]string         // "uconf:{serverID}" → config name
 	mUserConfigTunnels map[string]string         // "uconf:{serverID}" → ephemeral daemon tunnel ID (connected only)
+	mWGP               map[string]*wgpSession    // assigned WireGuard profile ID → its connection (connected only)
 	mPollCancel        context.CancelFunc        // cancels background poll loop
 	mAllowImport       bool                      // server policy: may the user import personal profiles
 
@@ -58,6 +59,7 @@ func NewApp() *App {
 		mSessions:          make(map[string]*activeSession),
 		mUserConfigs:       make(map[string]string),
 		mUserConfigTunnels: make(map[string]string),
+		mWGP:               make(map[string]*wgpSession),
 		mAllowImport:       true, // allowed until the server says otherwise
 	}
 	// Restore encrypted client if device is registered and token exists.
@@ -98,6 +100,8 @@ func (a *App) forwardDaemonEvents() {
 				// Translate daemon tunnel ID → uconf key if applicable
 				if uconfKey := a.uconfKeyByTunnelID(stats.TunnelID); uconfKey != "" {
 					stats.TunnelID = uconfKey
+				} else if key := a.wgpKeyByTunnelID(stats.TunnelID); key != "" {
+					stats.TunnelID = key
 				}
 				runtime.EventsEmit(a.ctx, evt.Type, stats)
 			}
@@ -106,6 +110,8 @@ func (a *App) forwardDaemonEvents() {
 			if json.Unmarshal(evt.Payload, &info) == nil {
 				if uconfKey := a.uconfKeyByTunnelID(info.ID); uconfKey != "" {
 					info.ID = uconfKey
+				} else if key := a.wgpKeyByTunnelID(info.ID); key != "" {
+					info.ID = key
 				}
 				sanitizeTunnelInfo(&info)
 				runtime.EventsEmit(a.ctx, evt.Type, info)
@@ -131,6 +137,7 @@ func (a *App) shutdown(ctx context.Context) {
 	// Wait (briefly) for the server to end the sessions: background retries
 	// would die with the process and leave the peers up until they time out.
 	a.endAllSessions(3 * time.Second)
+	a.releaseAllWGProfiles(2 * time.Second)
 	a.client.Close()
 }
 
@@ -146,6 +153,9 @@ func (a *App) removeOrphanedSessionTunnels() {
 	a.mMu.Lock()
 	live := make(map[string]bool, len(a.mSessions))
 	for _, s := range a.mSessions {
+		live[s.tunnelID] = true
+	}
+	for _, s := range a.mWGP {
 		live[s.tunnelID] = true
 	}
 	a.mMu.Unlock()
@@ -280,6 +290,10 @@ func (a *App) ListTunnels() ([]ipc.TunnelInfo, error) {
 	for k, v := range a.mUserConfigTunnels {
 		userConfigTunnels[k] = v
 	}
+	daemonToWGP := make(map[string]string, len(a.mWGP))
+	for id, sess := range a.mWGP {
+		daemonToWGP[sess.tunnelID] = wgpPrefix + id
+	}
 	mc := a.mClient
 	a.mMu.Unlock()
 
@@ -292,6 +306,8 @@ func (a *App) ListTunnels() ([]ipc.TunnelInfo, error) {
 		if uk, ok := daemonToUconf[tunnels[i].ID]; ok {
 			tunnels[i].ID = uk
 			connectedUconfs[uk] = true
+		} else if key, ok := daemonToWGP[tunnels[i].ID]; ok {
+			tunnels[i].ID = key
 		}
 	}
 
@@ -399,6 +415,9 @@ func (a *App) DeleteTunnel(id string) error {
 		}
 		return nil
 	}
+	if strings.HasPrefix(id, wgpPrefix) {
+		return errors.New(tr("err.wgProfileNoDelete"))
+	}
 
 	return a.client.DeleteTunnel(id)
 }
@@ -412,6 +431,9 @@ func (a *App) ConnectTunnel(id string) error {
 
 	if strings.HasPrefix(id, "uconf:") {
 		return a.connectUserConfig(id)
+	}
+	if strings.HasPrefix(id, wgpPrefix) {
+		return a.connectWGProfile(id)
 	}
 
 	return a.client.ConnectTunnel(id)
@@ -497,6 +519,9 @@ func (a *App) DisconnectTunnel(id string) error {
 		a.client.DeleteTunnel(tID)
 		return nil
 	}
+	if strings.HasPrefix(id, wgpPrefix) {
+		return a.disconnectWGProfile(id)
+	}
 
 	return a.client.DisconnectTunnel(id)
 }
@@ -515,6 +540,10 @@ func (a *App) GetStats(id string) (*ipc.StatsInfo, error) {
 			return nil, fmt.Errorf("tunnel not connected")
 		}
 		realID = tID
+	} else if strings.HasPrefix(id, wgpPrefix) {
+		if realID = a.wgpTunnelID(id); realID == "" {
+			return nil, fmt.Errorf("tunnel not connected")
+		}
 	}
 
 	stats, err := a.client.GetStats(realID)
@@ -757,6 +786,7 @@ func (a *App) ManagedLoginWithPush(username, password, pushAuthID string) (*Mana
 func (a *App) ManagedLogout() error {
 	a.disconnectAll()
 	a.stopPollLoop()
+	a.releaseAllWGProfiles(2 * time.Second)
 
 	// Disconnect and delete all active user-config ephemeral tunnels
 	a.mMu.Lock()
@@ -1077,13 +1107,16 @@ func (a *App) trayDaemonTunnelIDsHiddenFromStandalone() map[string]bool {
 			hidden[tunnelID] = true
 		}
 	}
+	for _, s := range a.mWGP {
+		hidden[s.tunnelID] = true
+	}
 	return hidden
 }
 
 // ManagedDisconnectByTunnelID finds the managed session owning tunnelID and disconnects it.
 func (a *App) ManagedDisconnectByTunnelID(tunnelID string) error {
 	// Check user-config tunnels first
-	if strings.HasPrefix(tunnelID, "uconf:") {
+	if strings.HasPrefix(tunnelID, "uconf:") || strings.HasPrefix(tunnelID, wgpPrefix) {
 		return a.DisconnectTunnel(tunnelID)
 	}
 	// Check managed VPN sessions

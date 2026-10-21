@@ -116,6 +116,9 @@ export const en = {
   'conns.importedEmpty': 'No imported profiles yet.',
   'conns.search': 'Search connections',
   'conns.importConf': 'Import .conf',
+  'conns.badgeShared': 'Shared',
+  'conns.inUseBy': 'In use by {name} ({device})',
+  'conns.inUseByYou': 'In use on your device {device}',
 
   // ── Configuration details ───────────────────────────────────────────────
   'config.interface': 'Interface',

@@ -241,6 +241,48 @@ export namespace main {
 	        this.has_saved_passphrase = source["has_saved_passphrase"];
 	    }
 	}
+	export class WGProfileView {
+	    id: string;
+	    name: string;
+	    description?: string;
+	    shared: boolean;
+	    address?: string;
+	    endpoint?: string;
+	    in_use_by?: managed.WGProfileHolder;
+	
+	    static createFrom(source: any = {}) {
+	        return new WGProfileView(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.description = source["description"];
+	        this.shared = source["shared"];
+	        this.address = source["address"];
+	        this.endpoint = source["endpoint"];
+	        this.in_use_by = this.convertValues(source["in_use_by"], managed.WGProfileHolder);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 
 }
 
@@ -268,6 +310,28 @@ export namespace managed {
 	        this.public_key = source["public_key"];
 	        this.subnet = source["subnet"];
 	        this.dns = source["dns"];
+	    }
+	}
+	export class WGProfileHolder {
+	    name: string;
+	    username: string;
+	    device: string;
+	    held_seconds: number;
+	    you: boolean;
+	    this_device: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new WGProfileHolder(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.username = source["username"];
+	        this.device = source["device"];
+	        this.held_seconds = source["held_seconds"];
+	        this.you = source["you"];
+	        this.this_device = source["this_device"];
 	    }
 	}
 

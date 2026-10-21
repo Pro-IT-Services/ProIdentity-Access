@@ -75,22 +75,22 @@ func (e *APIError) Error() string {
 	return fmt.Sprintf("push auth api error: status %d", e.Status)
 }
 
-func (c *Client) CreateAuthRequest(email, title, detail, clientIP string, expirySec int) (*AuthRequest, error) {
-	return c.createAuthRequest(email, "", title, detail, clientIP, expirySec)
+// CreateAuthRequest sends an approval request to the person's phone. It is
+// only ever called for that person's own sign-in or connection.
+//
+// There is deliberately no "provision user" call: the API can only create an
+// account by creating an approval request, which pushes to everyone already
+// enrolled. Instead displayName lets ProIdentity Cloud create the account on
+// the person's first real request (answered with ErrNeedsSetup).
+func (c *Client) CreateAuthRequest(email, displayName, title, detail, clientIP string, expirySec int) (*AuthRequest, error) {
+	return c.createAuthRequest(email, displayName, title, detail, clientIP, expirySec)
 }
 
-func (c *Client) EnsureUser(email, displayName, clientIP string) (string, error) {
-	req, err := c.createAuthRequest(email, displayName, "ProIdentity Access account setup", "Account provisioning", clientIP, 120)
-	if err != nil {
-		if apiErr, ok := err.(*APIError); ok && apiErr.Code == "user_created_needs_setup" {
-			return apiErr.Code, nil
-		}
-		return "", err
-	}
-	if req.Status != "" {
-		return req.Status, nil
-	}
-	return "ok", nil
+// NeedsSetup reports the answer for a person whose account was just created
+// (or who hasn't set up the app yet): no push could be sent.
+func NeedsSetup(err error) bool {
+	apiErr, ok := err.(*APIError)
+	return ok && apiErr.Code == "user_created_needs_setup"
 }
 
 func (c *Client) createAuthRequest(email, displayName, title, detail, clientIP string, expirySec int) (*AuthRequest, error) {

@@ -17,6 +17,7 @@ const (
 	PermResourcesManage Perm = "resources.manage"
 	PermServersManage   Perm = "servers.manage"
 	PermOpenVPNManage   Perm = "openvpn.manage"
+	PermWGProfilesManage Perm = "wgprofiles.manage"
 	PermSessionsManage  Perm = "sessions.manage"
 	PermAuditRead       Perm = "audit.read"
 	PermDenialsRead     Perm = "denials.read"
@@ -41,6 +42,7 @@ func PermCatalog() []PermDef {
 		{PermResourcesManage, "Manage resources",    "Create, edit, delete resources and bundles; attach bundles to servers.", "Access"},
 		{PermServersManage,   "Manage servers",      "Create, edit, delete WireGuard servers; manage attachments.", "Access"},
 		{PermOpenVPNManage,   "Manage OpenVPN",      "Upload OpenVPN profiles and assign them to users.", "Access"},
+		{PermWGProfilesManage, "Manage WireGuard profiles", "Upload WireGuard profiles, assign or share them, and free profiles in use.", "Access"},
 		{PermSessionsManage,  "Manage sessions",     "View live sessions and terminate them.", "Access"},
 		{PermTopologyRead,    "View topology",       "See the access graph (Topology page).", "Visibility"},
 		{PermTrafficRead,     "View traffic",        "See per-user / per-resource traffic analytics.", "Visibility"},

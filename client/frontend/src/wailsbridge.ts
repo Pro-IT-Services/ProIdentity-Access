@@ -309,6 +309,35 @@ export type OpenVPNStatus = {
   connected_at?: number
 }
 
+// --- Assigned WireGuard profiles ---
+
+/** Who has an assigned WireGuard profile up (one device at a time). */
+export type WGProfileHolder = {
+  name: string
+  username: string
+  device: string
+  held_seconds: number
+  /** The signed-in user (maybe on another device). */
+  you: boolean
+  this_device: boolean
+}
+
+export type WGProfileView = {
+  /** "wgp:<id>"; also the tunnel ID while connected. */
+  id: string
+  name: string
+  description?: string
+  shared: boolean
+  address?: string
+  endpoint?: string
+  in_use_by?: WGProfileHolder
+}
+
+export async function managedListWireGuardProfiles(): Promise<WGProfileView[]> {
+  if (!isWails()) return []
+  return (await (await App()).ManagedListWireGuardProfiles()) as WGProfileView[] ?? []
+}
+
 export async function managedListOpenVPNProfiles(): Promise<OpenVPNProfileView[]> {
   if (!isWails()) return []
   return (await (await App()).ManagedListOpenVPNProfiles()) as OpenVPNProfileView[] ?? []

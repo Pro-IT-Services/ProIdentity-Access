@@ -22,6 +22,10 @@ interface Props {
   onDisconnect: () => void
   /** The connect button cancels instead (an inline connect form is open). */
   cancelMode?: boolean
+  /** Replaces the status label, e.g. "In use by Jana on LAPTOP-7". */
+  statusText?: string
+  /** Connecting isn't possible right now; the reason is the button's tooltip. */
+  connectBlocked?: string
   /** Extra controls left of the main button (e.g. delete). */
   actions?: React.ReactNode
   /** Shown under the row: errors, details, inline forms. */
@@ -40,7 +44,7 @@ function statusLabel(s: Status): string {
 
 /** One connection in the connections sheet — the same layout for every kind. */
 export function ConnRow({
-  name, icon: Icon, status, sub, tags, busy, live, selected, onSelect, onConnect, onDisconnect, cancelMode, actions, children,
+  name, icon: Icon, status, sub, tags, busy, live, selected, onSelect, onConnect, onDisconnect, cancelMode, statusText, connectBlocked, actions, children,
 }: Props) {
   const connected = status === 'connected'
   const pending = busy || status === 'connecting' || status === 'reconnecting'
@@ -75,10 +79,11 @@ export function ConnRow({
           <div className="flex items-center gap-1.5 mt-1 min-w-0 text-[11px]">
             <StatusDot status={status} pulse={pending} className="shrink-0" />
             <span className={cn(
-              'shrink-0',
-              connected ? 'text-success font-medium' : pending ? 'text-warning font-medium' : status === 'error' ? 'text-destructive' : 'text-muted-foreground',
-            )}>
-              {busy ? (live ? t('common.disconnectingEllipsis') : t('common.connectingEllipsis')) : statusLabel(status)}
+              statusText && !busy ? 'min-w-0 truncate' : 'shrink-0',
+              connected ? 'text-success font-medium' : pending ? 'text-warning font-medium' : status === 'error' ? 'text-destructive'
+                : connectBlocked ? 'text-warning' : 'text-muted-foreground',
+            )} title={statusText}>
+              {busy ? (live ? t('common.disconnectingEllipsis') : t('common.connectingEllipsis')) : statusText ?? statusLabel(status)}
             </span>
             {sub && <span className="min-w-0 truncate font-mono text-muted-foreground" title={sub}>· {sub}</span>}
             {tags}
@@ -105,7 +110,8 @@ export function ConnRow({
             </Button>
           ) : (
             <Button
-              variant="primary" size="sm" disabled={busy}
+              variant="primary" size="sm" disabled={busy || !!connectBlocked}
+              title={connectBlocked}
               onClick={e => { e.stopPropagation(); onConnect() }}
               className="min-w-[96px]"
             >

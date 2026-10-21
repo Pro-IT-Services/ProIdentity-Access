@@ -221,6 +221,36 @@ var goStrings = map[string]map[string]string{ // key → {lang → text}
 		langEN: "profile not found", langSK: "profil sa nenašiel", langCS: "profil nebyl nalezen", langPL: "nie znaleziono profilu",
 		langHU: "a profil nem található", langDE: "Profil nicht gefunden", langIT: "profilo non trovato", langES: "perfil no encontrado",
 	},
+	"err.wgProfileInUse": {
+		langEN: "in use by {name} on {device}", langSK: "používa {name} na zariadení {device}",
+		langCS: "používá {name} na zařízení {device}", langPL: "używa {name} na urządzeniu {device}",
+		langHU: "{name} használja ezen az eszközön: {device}", langDE: "wird von {name} auf {device} verwendet",
+		langIT: "in uso da {name} su {device}", langES: "en uso por {name} en {device}",
+	},
+	"err.wgProfileInUseYou": {
+		langEN: "you are using it on {device}", langSK: "používate ho na zariadení {device}",
+		langCS: "používáte ho na zařízení {device}", langPL: "używasz go na urządzeniu {device}",
+		langHU: "Ön használja ezen az eszközön: {device}", langDE: "Sie verwenden es auf {device}",
+		langIT: "lo sta usando su {device}", langES: "lo está usando en {device}",
+	},
+	"err.wgProfileRemoved": {
+		langEN: "the profile is no longer assigned to you", langSK: "profil vám už nie je pridelený",
+		langCS: "profil vám už není přidělen", langPL: "profil nie jest już do Ciebie przypisany",
+		langHU: "a profil már nincs Önhöz rendelve", langDE: "das Profil ist Ihnen nicht mehr zugewiesen",
+		langIT: "il profilo non le è più assegnato", langES: "el perfil ya no está asignado a usted",
+	},
+	"err.wgProfileReleased": {
+		langEN: "an administrator disconnected this profile", langSK: "správca odpojil tento profil",
+		langCS: "správce odpojil tento profil", langPL: "administrator rozłączył ten profil",
+		langHU: "a rendszergazda bontotta a profil kapcsolatát", langDE: "ein Administrator hat dieses Profil getrennt",
+		langIT: "un amministratore ha disconnesso questo profilo", langES: "un administrador desconectó este perfil",
+	},
+	"err.wgProfileNoDelete": {
+		langEN: "profiles assigned by your organization can't be deleted", langSK: "profily pridelené vašou organizáciou sa nedajú odstrániť",
+		langCS: "profily přidělené vaší organizací nelze odstranit", langPL: "profili przypisanych przez organizację nie można usunąć",
+		langHU: "a szervezete által kiosztott profilok nem törölhetők", langDE: "von Ihrer Organisation zugewiesene Profile können nicht gelöscht werden",
+		langIT: "i profili assegnati dalla sua organizzazione non si possono eliminare", langES: "los perfiles asignados por su organización no se pueden eliminar",
+	},
 }
 
 // tr returns the GUI string for key in the user's language (the key itself

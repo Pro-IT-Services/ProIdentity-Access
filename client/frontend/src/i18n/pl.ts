@@ -115,6 +115,9 @@ export const pl: Translation = {
   'conns.importedEmpty': 'Brak zaimportowanych profili.',
   'conns.search': 'Szukaj połączeń',
   'conns.importConf': 'Importuj .conf',
+  'conns.badgeShared': 'Współdzielony',
+  'conns.inUseBy': 'Używa {name} ({device})',
+  'conns.inUseByYou': 'Używasz na urządzeniu {device}',
 
   // ── Configuration details ───────────────────────────────────────────────
   'config.interface': 'Interfejs',

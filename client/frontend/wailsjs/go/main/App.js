@@ -118,6 +118,10 @@ export function ManagedListServers() {
   return window['go']['main']['App']['ManagedListServers']();
 }
 
+export function ManagedListWireGuardProfiles() {
+  return window['go']['main']['App']['ManagedListWireGuardProfiles']();
+}
+
 export function ManagedLogin(arg1, arg2, arg3) {
   return window['go']['main']['App']['ManagedLogin'](arg1, arg2, arg3);
 }

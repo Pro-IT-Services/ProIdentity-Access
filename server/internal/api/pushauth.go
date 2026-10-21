@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -160,6 +161,19 @@ func lookupPendingPushAuth(requestID string) (pendingPushAuth, bool) {
 	return pending, true
 }
 
+// pushSetupMessage is shown when a person's ProIdentity Cloud account was
+// just set up on their first request, or the app isn't set up yet.
+const pushSetupMessage = "Your ProIdentity account was created. Install the ProIdentity app, finish its setup, then try again."
+
+// pushDisplayName is the name ProIdentity Cloud gives an account it creates
+// on a person's first request.
+func pushDisplayName(first, last, username string) string {
+	if name := strings.TrimSpace(strings.TrimSpace(first) + " " + strings.TrimSpace(last)); name != "" {
+		return name
+	}
+	return username
+}
+
 // POST /api/v1/auth/push — create a push auth request for the current user
 func (s *Server) handlePushAuthCreate(w http.ResponseWriter, r *http.Request) {
 	if !s.pushAuthEnabled() {
@@ -173,11 +187,17 @@ func (s *Server) handlePushAuthCreate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	claims := claimsFrom(r)
-	var email string
-	if err := s.db.Get(&email, "SELECT email FROM users WHERE id=?", claims.UserID); err != nil {
+	var u struct {
+		Email     string `db:"email"`
+		Username  string `db:"username"`
+		FirstName string `db:"first_name"`
+		LastName  string `db:"last_name"`
+	}
+	if err := s.db.Get(&u, "SELECT email, username, first_name, last_name FROM users WHERE id=?", claims.UserID); err != nil {
 		jsonError(w, http.StatusInternalServerError, "user not found")
 		return
 	}
+	email := u.Email
 
 	var req struct {
 		Context string `json:"context"`
@@ -201,7 +221,12 @@ func (s *Server) handlePushAuthCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ar, err := pc.CreateAuthRequest(email, "ProIdentity Access", req.Context, clientIP, 120)
+	ar, err := pc.CreateAuthRequest(email, pushDisplayName(u.FirstName, u.LastName, u.Username),
+		"ProIdentity Access", req.Context, clientIP, 120)
+	if pushauth.NeedsSetup(err) {
+		jsonError(w, http.StatusConflict, pushSetupMessage)
+		return
+	}
 	if err != nil {
 		log.Printf("push auth create failed for %s: %v", email, err)
 		jsonError(w, http.StatusBadGateway, err.Error())

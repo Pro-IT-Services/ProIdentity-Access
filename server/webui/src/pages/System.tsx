@@ -34,7 +34,7 @@ const SETTING_DEFS: { key: string; label: string; description: string; type?: st
   { key: 'webauthn_rp_id',     label: 'WebAuthn RP ID',    description: 'Relying-party domain (e.g. vpn.example.com). Required for passkeys.' },
   { key: 'webauthn_rp_name',   label: 'WebAuthn RP name',  description: 'Display name shown during passkey registration.' },
   { key: 'webauthn_origin',    label: 'WebAuthn origin',   description: 'Full origin URL (e.g. https://vpn.example.com).' },
-  { key: 'push_auth_enabled',  label: 'Push Auth',         description: 'Enable ProIdentity Cloud push authentication. Replaces classic TOTP when enabled. Set to "true" or "false".', type: 'text' },
+  { key: 'push_auth_enabled',  label: 'Push Auth',         description: 'Enable ProIdentity Cloud push authentication. Replaces classic TOTP when enabled. Turning it on sends nothing to anyone: each person gets an approval request only when they sign in or connect, and their ProIdentity account is created on that first request.', type: 'text' },
   { key: 'push_auth_api_key',  label: 'Push Auth API key', description: 'Your ProIdentity Cloud Service Provider API key (pi_live_xxx). Leave empty to keep the current key.', secret: true },
   { key: 'allow_personal_import', label: 'Personal imports', description: 'Let users import their own WireGuard/OpenVPN profiles in the apps. When blocked, only connections you assign are available.', type: 'bool' },
 ]
@@ -638,7 +638,6 @@ function KV({ label, value, truncate, className }: { label: string; value: strin
 function SettingsTab() {
   const [settings, setSettings] = useState<Record<string, string>>({})
   const [saved, setSaved] = useState(false)
-  const [syncMessage, setSyncMessage] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
@@ -652,13 +651,7 @@ function SettingsTab() {
         const def = SETTING_DEFS.find(d => d.key === key)
         return !def?.secret || (value !== '' && value !== '__configured__')
       }))
-      const res = await api.updateSettings(payload)
-      if (res.push_auth_sync) {
-        const { checked, synced, failed } = res.push_auth_sync
-        setSyncMessage(`Push Auth checked ${checked} users, synced ${synced}, failed ${failed}.`)
-      } else {
-        setSyncMessage('')
-      }
+      await api.updateSettings(payload)
       setSaved(true)
       setTimeout(() => setSaved(false), 2000)
     } catch (e: any) { setError(e.message ?? 'Failed') }
@@ -669,7 +662,6 @@ function SettingsTab() {
     <form onSubmit={submit} className="space-y-4 max-w-2xl">
       {error && <WarningCallout tone="error" title={error} />}
       {saved && <WarningCallout tone="success" title="Settings saved." />}
-      {syncMessage && <WarningCallout tone="info" title={syncMessage} />}
 
       <div className="rounded-xl border border-border bg-card divide-y divide-border">
         {SETTING_DEFS.map(def => (

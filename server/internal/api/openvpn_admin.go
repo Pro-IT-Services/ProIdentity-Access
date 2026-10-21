@@ -13,6 +13,11 @@ import (
 // decodeOVPNConfig accepts the uploaded config as base64 (binary-safe from a
 // file picker) and returns the raw .ovpn text.
 func decodeOVPNConfig(v string) (string, bool) {
+	return decodeBase64Config(v, maxOVPNConfigBytes)
+}
+
+// decodeBase64Config decodes an uploaded profile file of at most max bytes.
+func decodeBase64Config(v string, max int) (string, bool) {
 	v = strings.TrimSpace(v)
 	if v == "" {
 		return "", false
@@ -21,7 +26,7 @@ func decodeOVPNConfig(v string) (string, bool) {
 	if err != nil {
 		return "", false
 	}
-	if len(raw) == 0 || len(raw) > maxOVPNConfigBytes {
+	if len(raw) == 0 || len(raw) > max {
 		return "", false
 	}
 	return string(raw), true

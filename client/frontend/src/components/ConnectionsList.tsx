@@ -1,12 +1,13 @@
-import { useState } from 'react'
-import { Building2, FileKey, LogIn, Plus, Search } from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
+import { Building2, FileKey, LogIn, Plus, Search, Users } from 'lucide-react'
 import { useTunnelStore } from '../stores/useTunnelStore'
 import { useManagedStore } from '../stores/useManagedStore'
 import type { TunnelInfo, ServerStatus, ServerInfo } from '../types'
 import { Button } from './ui/Button'
 import type { Status } from './ui/StatusDot'
-import { managedDisconnectByTunnelID } from '../wailsbridge'
-import { ConnRow, ConnGroupCard, ProtocolHeader } from './ConnRow'
+import { managedDisconnectByTunnelID, managedListWireGuardProfiles, type WGProfileView } from '../wailsbridge'
+import { ConnRow, ConnGroupCard, ProtocolHeader, RowTag } from './ConnRow'
+import { toast } from './ui/Toast'
 import { useOpenVPN, OpenVPNRow, OpenVPNImport, ovpnSessionId } from './OpenVPNPanel'
 import { t, tNode } from '../i18n'
 
@@ -40,6 +41,7 @@ export function ConnectionsList({ onConnected, onConnectIntent, onConnectManaged
   const { servers, settings, connectServer, loadServers } = useManagedStore()
   const canImport = settings.allow_personal_import !== false
   const ovpn = useOpenVPN()
+  const wgp = useWGProfiles(settings.logged_in)
   const [busyKey, setBusyKey] = useState<string | null>(null)
   const [query, setQuery] = useState('')
 
@@ -49,10 +51,11 @@ export function ConnectionsList({ onConnected, onConnectIntent, onConnectManaged
 
   const accessWg = wgRows.filter(r => r.kind !== 'imported' && match(rowName(r)))
   const importedWg = wgRows.filter(r => r.kind === 'imported' && match(rowName(r)))
+  const accessWgp = wgp.profiles.filter(p => match(p.name))
   const accessOvpn = ovpn.profiles.filter(p => p.source === 'assigned' && match(p.name))
   const importedOvpn = ovpn.profiles.filter(p => p.source === 'local' && match(p.name))
-  const total = wgRows.length + ovpn.profiles.length
-  const shown = accessWg.length + importedWg.length + accessOvpn.length + importedOvpn.length
+  const total = wgRows.length + wgp.profiles.length + ovpn.profiles.length
+  const shown = accessWg.length + accessWgp.length + importedWg.length + accessOvpn.length + importedOvpn.length
 
   const handleConnect = async (row: WgRow) => {
     setBusyKey(row.key)
@@ -108,6 +111,52 @@ export function ConnectionsList({ onConnected, onConnectIntent, onConnectManaged
     )
   }
 
+  // An assigned WireGuard profile: one device at a time, so a profile someone
+  // else has up shows who and can't be connected.
+  const renderWgp = (p: WGProfileView) => {
+    const busy = busyKey === p.id
+    const tunnel = tunnels.find(x => x.id === p.id)
+    const status: Status = tunnel?.status === 'connected' || tunnel?.status === 'connecting' || tunnel?.status === 'error'
+      ? tunnel.status : 'disconnected'
+    const live = status === 'connected' || status === 'connecting'
+    const holder = p.in_use_by && !p.in_use_by.this_device && !live ? p.in_use_by : undefined
+    const inUse = holder
+      ? holder.you
+        ? t('conns.inUseByYou', { device: holder.device || '?' })
+        : t('conns.inUseBy', { name: holder.name, device: holder.device || '?' })
+      : undefined
+    const run = async (fn: () => Promise<void>, closeAfter: boolean) => {
+      setBusyKey(p.id)
+      try {
+        await fn()
+        if (closeAfter) onConnected?.()
+      } catch (e: any) {
+        toast(`${p.name}: ${String(e?.message ?? e)}`, 'warning', 6000)
+      } finally {
+        setBusyKey(null)
+        wgp.reload()
+      }
+    }
+    return (
+      <ConnRow
+        key={p.id}
+        name={p.name}
+        icon={Building2}
+        status={busy && !live ? 'connecting' : status}
+        statusText={inUse}
+        connectBlocked={inUse}
+        sub={inUse ? undefined : p.address}
+        tags={p.shared ? <RowTag><Users className="w-3 h-3" /> {t('conns.badgeShared')}</RowTag> : undefined}
+        busy={busy}
+        live={live}
+        selected={!!tunnel && tunnel.id === selectedId}
+        onSelect={tunnel ? () => setSelected(tunnel.id) : undefined}
+        onConnect={() => run(() => connect(p.id), true)}
+        onDisconnect={() => run(() => disconnect(p.id), false)}
+      />
+    )
+  }
+
   const renderOvpn = (p: (typeof ovpn.profiles)[number]) => {
     const id = ovpnSessionId(p)
     return (
@@ -124,7 +173,7 @@ export function ConnectionsList({ onConnected, onConnectIntent, onConnectManaged
   }
 
   const showSignIn = !settings.logged_in && !!onSignIn
-  const hasAccess = accessWg.length + accessOvpn.length > 0
+  const hasAccess = accessWg.length + accessWgp.length + accessOvpn.length > 0
   const hasImported = importedWg.length + importedOvpn.length > 0
 
   if (total === 0 && ovpn.loaded) {
@@ -171,9 +220,10 @@ export function ConnectionsList({ onConnected, onConnectIntent, onConnectManaged
           )}
           {hasAccess && (
             <ConnGroupCard>
-              {accessWg.length > 0 && <>
-                <ProtocolHeader label="WireGuard" count={accessWg.length} />
+              {accessWg.length + accessWgp.length > 0 && <>
+                <ProtocolHeader label="WireGuard" count={accessWg.length + accessWgp.length} />
                 {accessWg.map(renderWg)}
+                {accessWgp.map(renderWgp)}
               </>}
               {accessOvpn.length > 0 && <>
                 <ProtocolHeader label="OpenVPN" count={accessOvpn.length} />
@@ -238,7 +288,24 @@ function GroupHeading({ icon: Icon, title, desc }: { icon: React.ElementType; ti
   )
 }
 
-function buildRows(tunnels: TunnelInfo[], servers: ServerStatus[]): WgRow[] {
+/** Assigned WireGuard profiles, refreshed while the sheet is open so "in use by" stays current. */
+function useWGProfiles(loggedIn: boolean) {
+  const [profiles, setProfiles] = useState<WGProfileView[]>([])
+  const reload = useCallback(() => {
+    if (!loggedIn) { setProfiles([]); return }
+    managedListWireGuardProfiles().then(setProfiles).catch(() => {})
+  }, [loggedIn])
+  useEffect(() => {
+    reload()
+    const timer = setInterval(reload, 15000)
+    return () => clearInterval(timer)
+  }, [reload])
+  return { profiles, reload }
+}
+
+function buildRows(allTunnels: TunnelInfo[], servers: ServerStatus[]): WgRow[] {
+  // Assigned profiles ("wgp:") have their own rows.
+  const tunnels = allTunnels.filter(t => !t.id.startsWith('wgp:'))
   const rows: WgRow[] = []
   const managedTunnelIds = new Set<string>()
   for (const ss of servers) {

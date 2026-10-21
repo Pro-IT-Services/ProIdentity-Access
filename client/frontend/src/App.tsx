@@ -263,6 +263,12 @@ export default function App() {
         toastFailure(`${st.name}: ${ovpnErrorText(st)}`)
       }
     })
+    // An assigned WireGuard profile was taken down by the server (another
+    // device took it, or it was unassigned).
+    rt.EventsOn('wgprofile.lost', (...args: unknown[]) => {
+      const e = args[0] as { name?: string; reason?: string } | undefined
+      if (e?.reason) toastFailure(e.name ? `${e.name}: ${e.reason}` : e.reason)
+    })
     rt.EventsOn('update.state', (...args: unknown[]) => {
       const st = args[0] as UpdateState
       if (st) useUpdateStore.getState().applyEvent(st)
@@ -612,7 +618,7 @@ export default function App() {
         onSignOut={settings.logged_in ? () => logout() : undefined}
         onOpenConnections={() => setShowConns(true)}
         onOpenConfig={() => setShowConfig(true)}
-        configEnabled={!!focusedTunnel && !isSynth(focusedTunnel) && !isOpenVPNTunnel(focusedTunnel)}
+        configEnabled={!!focusedTunnel && !isSynth(focusedTunnel) && !isOpenVPNTunnel(focusedTunnel) && !focusedTunnel.id.startsWith('wgp:')}
       />
 
       <main className="relative flex-1 overflow-hidden flex">
@@ -655,7 +661,7 @@ export default function App() {
         widthPx={460}
       >
         <ErrorBoundary>
-          {focusedTunnel && !isSynth(focusedTunnel) && !isOpenVPNTunnel(focusedTunnel)
+          {focusedTunnel && !isSynth(focusedTunnel) && !isOpenVPNTunnel(focusedTunnel) && !focusedTunnel.id.startsWith('wgp:')
             ? <ConfigDisclosure tunnel={focusedTunnel} />
             : <p className="text-sm text-muted-foreground">{t('app.noTunnelSelected')}</p>}
         </ErrorBoundary>

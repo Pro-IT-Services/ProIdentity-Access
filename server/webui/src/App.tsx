@@ -8,6 +8,7 @@ import Overview from './pages/Overview'
 import Access from './pages/Access'
 import ServersList from './pages/ServersList'
 import OpenVPN from './pages/OpenVPN'
+import WireGuardProfiles from './pages/WireGuardProfiles'
 import ServerDetail from './pages/ServerDetail'
 import System from './pages/System'
 import Sessions from './pages/Sessions'
@@ -55,6 +56,7 @@ export default function App() {
         <Route path="servers" element={<RequireAdmin><ServersList /></RequireAdmin>} />
         <Route path="servers/:id" element={<RequireAdmin><ServerDetail /></RequireAdmin>} />
         <Route path="openvpn" element={<RequireAdmin><OpenVPN /></RequireAdmin>} />
+        <Route path="wireguard-profiles" element={<RequireAdmin><WireGuardProfiles /></RequireAdmin>} />
         <Route path="stored-profiles" element={<RequireAdmin><StoredProfiles /></RequireAdmin>} />
         <Route path="topology" element={<RequireAdmin><Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Loading topology…</div>}><Topology /></Suspense></RequireAdmin>} />
         <Route path="connection-history" element={<RequireAdmin><ConnectionHistory /></RequireAdmin>} />

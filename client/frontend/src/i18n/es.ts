@@ -116,6 +116,9 @@ export const es: Translation = {
   'conns.importedEmpty': 'Aún no hay perfiles importados.',
   'conns.search': 'Buscar conexiones',
   'conns.importConf': 'Importar .conf',
+  'conns.badgeShared': 'Compartido',
+  'conns.inUseBy': 'En uso por {name} ({device})',
+  'conns.inUseByYou': 'En uso en su dispositivo {device}',
 
   // ── Configuration details ───────────────────────────────────────────────
   'config.interface': 'Interfaz',

@@ -116,6 +116,12 @@ func (s *Server) buildRouter() *chi.Mux {
 			r.Get("/openvpn/profiles", s.handleListOpenVPNProfiles)
 			r.Get("/openvpn/profiles/{id}/config", s.handleDownloadOpenVPNProfile)
 
+			// WireGuard profiles assigned to the current user (one device at a time)
+			r.Get("/wireguard/profiles", s.handleListWGProfiles)
+			r.Post("/wireguard/profiles/{id}/claim", s.handleClaimWGProfile)
+			r.Post("/wireguard/profiles/{id}/heartbeat", s.handleHeartbeatWGProfile)
+			r.Post("/wireguard/profiles/{id}/release", s.handleReleaseWGProfile)
+
 			// Admin endpoints — gated per-resource by named permissions.
 			// is_admin users implicitly hold every permission (loaded by Authenticate),
 			// so existing admin behavior is preserved.
@@ -215,6 +221,18 @@ func (s *Server) buildRouter() *chi.Mux {
 				r.Get("/admin/openvpn/profiles/{id}/assignments", s.handleAdminListOpenVPNAssignments)
 				r.Post("/admin/openvpn/profiles/{id}/assignments", s.handleAdminAssignOpenVPN)
 				r.Delete("/admin/openvpn/profiles/{id}/assignments/{userId}", s.handleAdminUnassignOpenVPN)
+			})
+
+			// WireGuard profiles + assignments (single user, or shared)
+			r.With(RequirePerm(auth.PermWGProfilesManage)).Group(func(r chi.Router) {
+				r.Get("/admin/wireguard/profiles", s.handleAdminListWGProfiles)
+				r.Post("/admin/wireguard/profiles", s.handleAdminCreateWGProfile)
+				r.Put("/admin/wireguard/profiles/{id}", s.handleAdminUpdateWGProfile)
+				r.Delete("/admin/wireguard/profiles/{id}", s.handleAdminDeleteWGProfile)
+				r.Delete("/admin/wireguard/profiles/{id}/holder", s.handleAdminReleaseWGProfile)
+				r.Get("/admin/wireguard/profiles/{id}/assignments", s.handleAdminListWGAssignments)
+				r.Post("/admin/wireguard/profiles/{id}/assignments", s.handleAdminAssignWG)
+				r.Delete("/admin/wireguard/profiles/{id}/assignments/{userId}", s.handleAdminUnassignWG)
 			})
 
 			// Sessions (live + terminate)

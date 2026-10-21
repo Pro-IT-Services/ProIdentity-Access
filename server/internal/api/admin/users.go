@@ -96,7 +96,6 @@ func (h *UserHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 	var user model.User
 	h.DB.Get(&user, "SELECT * FROM users WHERE id=?", id)
-	maybeEnsurePushAuthUser(h.DB, user, r)
 	jsonOK(w, user)
 }
 
