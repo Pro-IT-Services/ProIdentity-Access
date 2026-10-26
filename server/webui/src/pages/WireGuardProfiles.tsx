@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { api, type WGProfile, type WGAssignment, type WGHolder, type User } from '../api/client'
-import { Plus, Search, KeyRound, Users, Trash2, UserPlus, X, Unplug } from 'lucide-react'
+import { Plus, Search, KeyRound, Users, Trash2, UserPlus, X, Unplug, Pencil, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetBody, SheetFooter } from '@/components/ui/sheet'
 import { PageHeader } from '@/components/PageHeader'
 import { Empty } from '@/components/Empty'
@@ -49,11 +50,13 @@ function holderText(h: WGHolder): string {
 
 const SHARED_HINT = 'A shared profile can be assigned to many users. It is still one WireGuard peer, so only one device can be connected at a time; the others see who is using it. A profile that is not shared can be assigned to one user only.'
 
+type ManageTab = 'settings' | 'users'
+
 export default function WireGuardProfiles() {
   const [profiles, setProfiles] = useState<WGProfile[]>([])
   const [query, setQuery] = useState('')
   const [uploading, setUploading] = useState(false)
-  const [manage, setManage] = useState<WGProfile | null>(null)
+  const [manage, setManage] = useState<{ profile: WGProfile; tab: ManageTab } | null>(null)
 
   const load = () => { api.adminListWGProfiles().then(d => setProfiles(d ?? [])).catch(() => {}) }
   useEffect(() => {
@@ -91,8 +94,8 @@ export default function WireGuardProfiles() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
           {filtered.map(p => (
-            <button key={p.id} onClick={() => setManage(p)}
-              className="group text-left rounded-xl border border-border bg-card hover:border-primary/40 hover:bg-card/80 transition-colors p-4">
+            <div key={p.id} className="rounded-xl border border-border bg-card hover:border-primary/40 transition-colors p-4 flex flex-col">
+            <button onClick={() => setManage({ profile: p, tab: 'settings' })} className="text-left flex-1">
               <div className="flex items-start justify-between gap-3 mb-3">
                 <div className="min-w-0">
                   <p className="font-semibold text-sm truncate">{p.name}</p>
@@ -106,18 +109,22 @@ export default function WireGuardProfiles() {
                 </p>
               )}
               <div className="flex flex-wrap gap-1.5">
-                <Tag>{p.assigned_count} assigned</Tag>
                 {p.in_use_by
                   ? <Tag tone="warn">In use: {holderText(p.in_use_by)}</Tag>
                   : <Tag>Free</Tag>}
               </div>
             </button>
+            <div className="flex items-center gap-1 mt-3 pt-3 border-t border-border">
+              <Button size="sm" variant="ghost" onClick={() => setManage({ profile: p, tab: 'settings' })}><Pencil className="w-3.5 h-3.5" /> Edit</Button>
+              <Button size="sm" variant="ghost" onClick={() => setManage({ profile: p, tab: 'users' })}><Users className="w-3.5 h-3.5" /> {p.assigned_count} assigned</Button>
+            </div>
+            </div>
           ))}
         </div>
       )}
 
       <UploadSheet open={uploading} onClose={() => setUploading(false)} onSaved={() => { load(); setUploading(false) }} />
-      <ManageSheet profile={manage} onClose={() => setManage(null)} onChanged={load} />
+      <ManageSheet target={manage} onClose={() => setManage(null)} onChanged={load} />
     </div>
   )
 }
@@ -192,7 +199,9 @@ function UploadSheet({ open, onClose, onSaved }: { open: boolean; onClose: () =>
   )
 }
 
-function ManageSheet({ profile, onClose, onChanged }: { profile: WGProfile | null; onClose: () => void; onChanged: () => void }) {
+function ManageSheet({ target, onClose, onChanged }: { target: { profile: WGProfile; tab: ManageTab } | null; onClose: () => void; onChanged: () => void }) {
+  const profile = target?.profile ?? null
+  const [tab, setTab] = useState<ManageTab>('settings')
   const [assignments, setAssignments] = useState<WGAssignment[]>([])
   const [users, setUsers] = useState<User[]>([])
   const [addUserId, setAddUserId] = useState('')
@@ -202,6 +211,7 @@ function ManageSheet({ profile, onClose, onChanged }: { profile: WGProfile | nul
   const [editDescription, setEditDescription] = useState('')
   const [editShared, setEditShared] = useState(false)
   const [newFile, setNewFile] = useState<File | null>(null)
+  const [fileKey, setFileKey] = useState(0) // resets the file input
   const [saved, setSaved] = useState(false)
   const [holder, setHolder] = useState<WGHolder | undefined>()
   const open = profile !== null
@@ -211,18 +221,19 @@ function ManageSheet({ profile, onClose, onChanged }: { profile: WGProfile | nul
     api.listUsers().then(d => setUsers(d ?? [])).catch(() => {})
   }
   useEffect(() => {
-    if (!profile) return
-    setError(''); setAddUserId(''); setSaved(false); setNewFile(null)
+    if (!profile || !target) return
+    setTab(target.tab)
+    setError(''); setAddUserId(''); setSaved(false); setNewFile(null); setFileKey(k => k + 1)
     setEditName(profile.name); setEditDescription(profile.description ?? ''); setEditShared(profile.shared)
     setHolder(profile.in_use_by)
     load(profile.id)
-  }, [profile])
+  }, [target])
 
   const dirty = !!profile && (editName !== profile.name || editDescription !== (profile.description ?? '') || editShared !== profile.shared || !!newFile)
   // Only one user may hold a profile that isn't shared (as saved).
   const canAdd = !!profile?.shared || assignments.length === 0
 
-  const saveDetails = async (e: React.FormEvent) => {
+  const saveSettings = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!profile) return
     setBusy(true); setError(''); setSaved(false)
@@ -234,7 +245,7 @@ function ManageSheet({ profile, onClose, onChanged }: { profile: WGProfile | nul
         config: newFile ? await fileToBase64(newFile) : undefined,
       })
       Object.assign(profile, { name: editName.trim(), description: editDescription.trim() || undefined, shared: editShared })
-      setNewFile(null); setSaved(true); onChanged()
+      setNewFile(null); setFileKey(k => k + 1); setSaved(true); onChanged()
     } catch (err: any) { setError(err.message ?? 'Save failed') }
     finally { setBusy(false) }
   }
@@ -281,82 +292,96 @@ function ManageSheet({ profile, onClose, onChanged }: { profile: WGProfile | nul
           </SheetDescription>
         </SheetHeader>
         <SheetBody>
-          <div className="space-y-5">
-            {error && <p className="text-sm text-destructive">{error}</p>}
+          {error && <p className="text-sm text-destructive mb-3">{error}</p>}
+          <Tabs value={tab} onValueChange={v => { setTab(v as ManageTab); setError('') }}>
+            <TabsList>
+              <TabsTrigger value="settings"><Pencil className="w-3.5 h-3.5 mr-1.5" /> Settings</TabsTrigger>
+              <TabsTrigger value="users"><Users className="w-3.5 h-3.5 mr-1.5" /> Users ({assignments.length})</TabsTrigger>
+            </TabsList>
 
-            <div className="rounded-md border border-border bg-card/40 p-3 flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-xs font-medium text-muted-foreground">Current connection</p>
-                <p className="text-sm truncate">{holder ? holderText(holder) : 'Free, nobody is connected'}</p>
-              </div>
-              {holder && (
-                <Button type="button" size="sm" variant="outline" onClick={release}><Unplug className="w-4 h-4" /> Disconnect</Button>
-              )}
-            </div>
-
-            <form onSubmit={saveDetails} className="space-y-3 rounded-md border border-border bg-card/40 p-3">
-              <Field label="Display name">
-                <Input value={editName} onChange={e => { setEditName(e.target.value); setSaved(false) }} required />
-              </Field>
-              <Field label="Description" hint="Optional">
-                <Input value={editDescription} onChange={e => { setEditDescription(e.target.value); setSaved(false) }} />
-              </Field>
-              <Field label="Replace .conf" hint="Optional. Devices pick up the new file on their next connect.">
-                <Input type="file" accept=".conf,text/plain" onChange={e => { setNewFile(e.target.files?.[0] ?? null); setSaved(false) }} />
-              </Field>
-              <label className="flex items-start gap-2 cursor-pointer">
-                <input type="checkbox" className="mt-1" checked={editShared} onChange={e => { setEditShared(e.target.checked); setSaved(false) }} />
-                <div>
-                  <p className="text-sm">Shared between users</p>
-                  <p className="text-xs text-muted-foreground">{SHARED_HINT}</p>
+            <TabsContent value="settings">
+              <div className="space-y-4">
+                <div className="rounded-md border border-border bg-card/40 p-3 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-muted-foreground">Current connection</p>
+                    <p className="text-sm break-words">{holder ? holderText(holder) : 'Free, nobody is connected'}</p>
+                  </div>
+                  {holder && (
+                    <Button type="button" size="sm" variant="outline" onClick={release}><Unplug className="w-4 h-4" /> Disconnect</Button>
+                  )}
                 </div>
-              </label>
-              <div className="flex items-center justify-end gap-2">
-                {saved && <span className="text-xs text-muted-foreground">Saved</span>}
-                <Button type="submit" size="sm" disabled={busy || !dirty || !editName.trim()}>Save details</Button>
-              </div>
-            </form>
 
-            <div>
-              <p className="text-xs font-medium text-muted-foreground mb-2">Assign to user</p>
-              {canAdd ? (
-                <div className="flex gap-2">
-                  <select
-                    value={addUserId}
-                    onChange={e => setAddUserId(e.target.value)}
-                    className="flex-1 h-9 rounded-md border border-border bg-background px-2 text-sm"
-                  >
-                    <option value="">Select a user…</option>
-                    {unassigned.map(u => <option key={u.id} value={u.id}>{u.username} ({u.email})</option>)}
-                  </select>
-                  <Button onClick={add} disabled={busy || !addUserId}><UserPlus className="w-4 h-4" /> Add</Button>
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">This profile isn't shared, so it can belong to one user only. Mark it as shared to assign more users.</p>
-              )}
-            </div>
-
-            <div>
-              <p className="text-xs font-medium text-muted-foreground mb-2">{assignments.length} assigned</p>
-              {assignments.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No users assigned yet.</p>
-              ) : (
-                <div className="space-y-1.5">
-                  {assignments.map(a => (
-                    <div key={a.user_id} className="flex items-center justify-between gap-2 rounded-md border border-border bg-card/40 px-3 py-2">
-                      <div className="min-w-0">
-                        <p className="text-sm truncate">{a.username}</p>
-                        <p className="text-[11px] text-muted-foreground truncate">{a.email}</p>
+                <form onSubmit={saveSettings} className="space-y-4">
+                  <Field label="Display name">
+                    <Input value={editName} onChange={e => { setEditName(e.target.value); setSaved(false) }} required />
+                  </Field>
+                  <Field label="Description" hint="Optional">
+                    <Input value={editDescription} onChange={e => { setEditDescription(e.target.value); setSaved(false) }} />
+                  </Field>
+                  <div className="rounded-md border border-border bg-card/40 p-3">
+                    <label className="flex items-start gap-2 cursor-pointer">
+                      <input type="checkbox" className="mt-1" checked={editShared} onChange={e => { setEditShared(e.target.checked); setSaved(false) }} />
+                      <div>
+                        <p className="text-sm">Shared between users</p>
+                        <p className="text-xs text-muted-foreground">{SHARED_HINT}</p>
                       </div>
-                      <button onClick={() => remove(a.user_id)} className="text-muted-foreground hover:text-destructive transition-colors" aria-label="Remove">
-                        <X className="w-4 h-4" />
-                      </button>
+                    </label>
+                  </div>
+                  <Field label="Replace .conf" hint="Optional. Address and endpoint are read again from the new file; devices get it on their next connect.">
+                    <Input key={fileKey} type="file" accept=".conf,text/plain" onChange={e => { setNewFile(e.target.files?.[0] ?? null); setSaved(false) }} />
+                  </Field>
+                  <div className="flex items-center justify-end gap-2">
+                    {saved && <span className="inline-flex items-center gap-1 text-xs text-muted-foreground"><Check className="w-3.5 h-3.5" /> Saved</span>}
+                    <Button type="submit" disabled={busy || !dirty || !editName.trim()}>{busy ? 'Saving…' : 'Save changes'}</Button>
+                  </div>
+                </form>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="users">
+              <div className="space-y-5">
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground mb-2">Assign to user</p>
+                  {canAdd ? (
+                    <div className="flex gap-2">
+                      <select
+                        value={addUserId}
+                        onChange={e => setAddUserId(e.target.value)}
+                        className="flex-1 h-9 rounded-md border border-border bg-background px-2 text-sm"
+                      >
+                        <option value="">Select a user…</option>
+                        {unassigned.map(u => <option key={u.id} value={u.id}>{u.username} ({u.email})</option>)}
+                      </select>
+                      <Button onClick={add} disabled={busy || !addUserId}><UserPlus className="w-4 h-4" /> Add</Button>
                     </div>
-                  ))}
+                  ) : (
+                    <p className="text-sm text-muted-foreground">This profile is not shared, so it can belong to one user only. Turn on sharing in Settings to assign more users.</p>
+                  )}
                 </div>
-              )}
-            </div>
-          </div>
+
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground mb-2">{assignments.length} assigned</p>
+                  {assignments.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No users assigned yet.</p>
+                  ) : (
+                    <div className="space-y-1.5">
+                      {assignments.map(a => (
+                        <div key={a.user_id} className="flex items-center justify-between gap-2 rounded-md border border-border bg-card/40 px-3 py-2">
+                          <div className="min-w-0">
+                            <p className="text-sm truncate">{a.username}</p>
+                            <p className="text-[11px] text-muted-foreground truncate">{a.email}</p>
+                          </div>
+                          <button onClick={() => remove(a.user_id)} className="p-1 text-muted-foreground hover:text-destructive transition-colors" aria-label={`Remove ${a.username}`}>
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
         </SheetBody>
         <SheetFooter>
           <Button type="button" variant="ghost" onClick={del} className="text-destructive hover:text-destructive"><Trash2 className="w-4 h-4" /> Delete profile</Button>

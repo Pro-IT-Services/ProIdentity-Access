@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/base64"
+	"net"
 	"net/http"
 	"strings"
 
@@ -37,6 +38,14 @@ func normalizeDevType(v string) string {
 		return "tap"
 	}
 	return "tun"
+}
+
+// devTypeOverride is "" (keep the stored or detected type) or tun/tap.
+func devTypeOverride(v string) string {
+	if strings.TrimSpace(v) == "" {
+		return ""
+	}
+	return normalizeDevType(v)
 }
 
 // ovpnNull maps an empty string to a SQL NULL.
@@ -200,7 +209,7 @@ func (s *Server) handleAdminUpdateOpenVPNProfile(w http.ResponseWriter, r *http.
 		UPDATE openvpn_profiles
 		SET name=?, autofill_name=?, description=?, requires_totp=?, allow_custom_ip=?, dev_type=COALESCE(NULLIF(?,''), dev_type)
 		WHERE id=?`,
-		req.Name, ovpnNull(req.AutofillName), ovpnNull(req.Description), req.RequiresTOTP, req.AllowCustomIP, strings.ToLower(strings.TrimSpace(req.DevType)), id)
+		req.Name, ovpnNull(req.AutofillName), ovpnNull(req.Description), req.RequiresTOTP, req.AllowCustomIP, devTypeOverride(req.DevType), id)
 	if err != nil {
 		jsonError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -262,11 +271,16 @@ func (s *Server) handleAdminAssignOpenVPN(w http.ResponseWriter, r *http.Request
 		jsonError(w, http.StatusBadRequest, "user_id required")
 		return
 	}
+	req.CustomIP = strings.TrimSpace(req.CustomIP)
+	if req.CustomIP != "" && net.ParseIP(req.CustomIP) == nil {
+		jsonError(w, http.StatusBadRequest, "custom IP must be an IP address, e.g. 10.9.0.15")
+		return
+	}
 	_, err := s.db.Exec(`
 		INSERT INTO openvpn_profile_assignments (id, profile_id, user_id, custom_ip)
 		VALUES (?, ?, ?, ?)
 		ON DUPLICATE KEY UPDATE custom_ip=VALUES(custom_ip)`,
-		newUUID(), id, req.UserID, ovpnNull(strings.TrimSpace(req.CustomIP)))
+		newUUID(), id, req.UserID, ovpnNull(req.CustomIP))
 	if err != nil {
 		jsonError(w, http.StatusInternalServerError, err.Error())
 		return
