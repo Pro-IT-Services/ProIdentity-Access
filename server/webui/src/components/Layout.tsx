@@ -46,7 +46,7 @@ const NAV: NavGroup[] = [
       { to: '/stored-profiles', label: 'Stored WireGuard Profiles', icon: FileLock2, anyPerm: ['users.manage', 'servers.manage'] },
       { to: '/topology', label: 'Topology', icon: Network, anyPerm: ['topology.read'] },
       { to: '/connection-history', label: 'Connection History', icon: History, anyPerm: ['sessions.manage'] },
-      { to: '/system', label: 'System', icon: Settings, anyPerm: ['system.settings', 'roles.manage', 'audit.read', 'denials.read', 'diagnostics.read'] },
+      { to: '/system', label: 'System', icon: Settings, anyPerm: ['system.settings', 'roles.manage', 'audit.read', 'denials.read', 'diagnostics.read', 'users.manage', 'sessions.manage'] },
     ],
   },
 ]

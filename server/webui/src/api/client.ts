@@ -18,6 +18,31 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   return data as T
 }
 
+/** POSTs a report request and saves the file the server returns. */
+async function download(path: string, body: unknown, fallbackName: string): Promise<void> {
+  const res = await fetch(BASE + path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(token() ? { Authorization: `Bearer ${token()}` } : {}) },
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) {
+    let msg = `HTTP ${res.status}`
+    try { msg = (await res.json()).error ?? msg } catch { /* not JSON */ }
+    throw new Error(msg)
+  }
+  const name = /filename="([^"]+)"/.exec(res.headers.get('Content-Disposition') ?? '')?.[1] ?? fallbackName
+  const url = URL.createObjectURL(await res.blob())
+  const a = document.createElement('a')
+  a.href = url
+  a.download = name
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
+}
+
+export type ReportFormat = 'pdf' | 'md' | 'csv'
+
 export const api = {
   // Auth
   login: (username: string, password: string, totp_code?: string, push_auth_request_id?: string) =>
@@ -65,6 +90,12 @@ export const api = {
 
   // Admin — users
   listUsers: () => request<User[]>('GET', '/admin/users'),
+
+  // Reports (System > Reports)
+  downloadAccessReport: (format: ReportFormat, tz: string) =>
+    download('/admin/reports/access', { format, tz }, `access-report.${format}`),
+  downloadConnectionReport: (data: { format: 'pdf' | 'csv'; tz: string; from: string; to: string; user_id?: string; server_id?: string }) =>
+    download('/admin/reports/connections', data, `connection-history.${data.format}`),
   createUser: (data: { username: string; email: string; password: string; first_name?: string; last_name?: string; is_admin: boolean }) =>
     request<User>('POST', '/admin/users', data),
   updateUser: (id: string, data: Partial<{ email: string; password: string; first_name: string; last_name: string; is_admin: boolean; is_active: boolean; disable_totp: boolean; admin_password: string }>) =>

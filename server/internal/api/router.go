@@ -223,6 +223,11 @@ func (s *Server) buildRouter() *chi.Mux {
 				r.Delete("/admin/openvpn/profiles/{id}/assignments/{userId}", s.handleAdminUnassignOpenVPN)
 			})
 
+			// Reports (System > Reports): downloads, POST so the audit log records them.
+			reports := &admin.ReportHandler{DB: s.db}
+			r.With(RequirePerm(auth.PermUsersManage)).Post("/admin/reports/access", reports.Access)
+			r.With(RequirePerm(auth.PermSessionsManage)).Post("/admin/reports/connections", reports.Connections)
+
 			// WireGuard profiles + assignments (single user, or shared)
 			r.With(RequirePerm(auth.PermWGProfilesManage)).Group(func(r chi.Router) {
 				r.Get("/admin/wireguard/profiles", s.handleAdminListWGProfiles)

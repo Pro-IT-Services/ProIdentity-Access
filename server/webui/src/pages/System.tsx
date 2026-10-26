@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { api, type Diagnostic, type AuditRow, type DenialRow, type Group, type User, type PermDef } from '../api/client'
-import { Save, Settings as SettingsIcon, AlertTriangle, ScrollText, Search, ChevronLeft, ChevronRight, ShieldAlert, KeyRound, Plus, Trash2 } from 'lucide-react'
+import { api, type Diagnostic, type AuditRow, type DenialRow, type Group, type User, type PermDef, type WGServer, type ReportFormat } from '../api/client'
+import { Save, Settings as SettingsIcon, AlertTriangle, ScrollText, Search, ChevronLeft, ChevronRight, ShieldAlert, KeyRound, Plus, Trash2, FileDown, Users as UsersIcon, History, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -17,7 +17,7 @@ import { DangerZone, DangerAction } from '@/components/DangerZone'
 import { useHasPerm } from '@/stores/useAuthStore'
 import { cn } from '@/lib/utils'
 
-type Tab = 'settings' | 'roles' | 'health' | 'audit' | 'denials'
+type Tab = 'settings' | 'roles' | 'health' | 'audit' | 'denials' | 'reports'
 
 const TAB_DEFS: { id: Tab; label: string; icon: React.ElementType; perm: string }[] = [
   { id: 'settings', label: 'Settings',  icon: SettingsIcon,    perm: 'system.settings'  },
@@ -25,6 +25,7 @@ const TAB_DEFS: { id: Tab; label: string; icon: React.ElementType; perm: string 
   { id: 'health',   label: 'Health',    icon: AlertTriangle,   perm: 'diagnostics.read' },
   { id: 'denials',  label: 'Denials',   icon: ShieldAlert,     perm: 'denials.read'     },
   { id: 'audit',    label: 'Audit log', icon: ScrollText,      perm: 'audit.read'       },
+  { id: 'reports',  label: 'Reports',   icon: FileDown,        perm: 'users.manage|sessions.manage' },
 ]
 
 const SETTING_DEFS: { key: string; label: string; description: string; type?: string; secret?: boolean }[] = [
@@ -61,7 +62,7 @@ export default function System() {
     <div className="p-6 max-w-5xl mx-auto">
       <PageHeader
         title="System"
-        description="Server-wide settings and live health checks."
+        description="Server-wide settings, health checks and reports."
       />
 
       <div className="border-b border-border mb-6">
@@ -86,6 +87,7 @@ export default function System() {
       {tab === 'health'   && <HealthTab />}
       {tab === 'denials'  && <DenialsTab />}
       {tab === 'audit'    && <AuditTab />}
+      {tab === 'reports'  && <ReportsTab />}
     </div>
   )
 }
@@ -97,10 +99,137 @@ function useTabsForUser() {
   const health   = useHasPerm('diagnostics.read')
   const denials  = useHasPerm('denials.read')
   const audit    = useHasPerm('audit.read')
+  const users    = useHasPerm('users.manage')
+  const sessions = useHasPerm('sessions.manage')
   return useMemo(() => {
-    const allow: Record<Tab, boolean> = { settings, roles, health, denials, audit }
+    const allow: Record<Tab, boolean> = { settings, roles, health, denials, audit, reports: users || sessions }
     return TAB_DEFS.filter(t => allow[t.id])
-  }, [settings, roles, health, denials, audit])
+  }, [settings, roles, health, denials, audit, users, sessions])
+}
+
+const browserTZ = () => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+const isoDay = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+
+/** Downloadable reports: who can reach what, and VPN connection history. */
+function ReportsTab() {
+  const canAccess = useHasPerm('users.manage')
+  const canHistory = useHasPerm('sessions.manage')
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      {canAccess && <AccessReportCard />}
+      {canHistory && <HistoryReportCard />}
+    </div>
+  )
+}
+
+function FormatButtons<F extends string>({ formats, busy, onPick }: { formats: { id: F; label: string }[]; busy: F | null; onPick: (f: F) => void }) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {formats.map(f => (
+        <Button key={f.id} variant="outline" disabled={busy !== null} onClick={() => onPick(f.id)}>
+          {busy === f.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />} {f.label}
+        </Button>
+      ))}
+    </div>
+  )
+}
+
+function AccessReportCard() {
+  const [busy, setBusy] = useState<ReportFormat | null>(null)
+  const [error, setError] = useState('')
+  const run = async (format: ReportFormat) => {
+    setBusy(format); setError('')
+    try { await api.downloadAccessReport(format, browserTZ()) }
+    catch (e: any) { setError(e.message ?? 'Export failed') }
+    finally { setBusy(null) }
+  }
+  return (
+    <section className="rounded-xl border border-border bg-card p-5 space-y-4">
+      <div className="flex items-start gap-3">
+        <UsersIcon className="w-5 h-5 text-primary mt-0.5" />
+        <div>
+          <h3 className="font-semibold">Users and their access</h3>
+          <p className="text-sm text-muted-foreground mt-1">
+            Every user with what they can reach: ProIdentity servers with their bundles and resources,
+            assigned OpenVPN and WireGuard profiles, two-factor status, roles and devices.
+          </p>
+        </div>
+      </div>
+      {error && <WarningCallout tone="error" title={error} />}
+      <FormatButtons<ReportFormat> busy={busy} onPick={run}
+        formats={[{ id: 'pdf', label: 'PDF' }, { id: 'md', label: 'Markdown' }, { id: 'csv', label: 'CSV' }]} />
+    </section>
+  )
+}
+
+function HistoryReportCard() {
+  const today = new Date()
+  const monthAgo = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate())
+  const [from, setFrom] = useState(isoDay(monthAgo))
+  const [to, setTo] = useState(isoDay(today))
+  const [userId, setUserId] = useState('')
+  const [serverId, setServerId] = useState('')
+  const [users, setUsers] = useState<User[]>([])
+  const [servers, setServers] = useState<WGServer[]>([])
+  const [busy, setBusy] = useState<'pdf' | 'csv' | null>(null)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    api.listUsers().then(d => setUsers(d ?? [])).catch(() => {})
+    api.adminListServers().then(d => setServers(d ?? [])).catch(() => {})
+  }, [])
+
+  const run = async (format: 'pdf' | 'csv') => {
+    if (!from || !to) { setError('Choose both dates.'); return }
+    if (to < from) { setError('The end date is before the start date.'); return }
+    setBusy(format); setError('')
+    try {
+      await api.downloadConnectionReport({ format, tz: browserTZ(), from, to, user_id: userId || undefined, server_id: serverId || undefined })
+    } catch (e: any) { setError(e.message ?? 'Export failed') }
+    finally { setBusy(null) }
+  }
+
+  const select = 'w-full h-9 rounded-md border border-border bg-background px-2 text-sm'
+  return (
+    <section className="rounded-xl border border-border bg-card p-5 space-y-4">
+      <div className="flex items-start gap-3">
+        <History className="w-5 h-5 text-primary mt-0.5" />
+        <div>
+          <h3 className="font-semibold">Connection history</h3>
+          <p className="text-sm text-muted-foreground mt-1">
+            VPN sessions to ProIdentity servers in a period: when, who, from which device and address, for how long, and how each ended.
+          </p>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <Label className="text-xs">From</Label>
+          <Input type="date" value={from} max={to} onChange={e => setFrom(e.target.value)} />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs">To</Label>
+          <Input type="date" value={to} min={from} max={isoDay(today)} onChange={e => setTo(e.target.value)} />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs">User</Label>
+          <select className={select} value={userId} onChange={e => setUserId(e.target.value)}>
+            <option value="">All users</option>
+            {users.map(u => <option key={u.id} value={u.id}>{u.username}</option>)}
+          </select>
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs">Server</Label>
+          <select className={select} value={serverId} onChange={e => setServerId(e.target.value)}>
+            <option value="">All servers</option>
+            {servers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
+        </div>
+      </div>
+      <p className="text-[11px] text-muted-foreground">Times are in your time zone ({browserTZ()}). Up to one year per report.</p>
+      {error && <WarningCallout tone="error" title={error} />}
+      <FormatButtons<'pdf' | 'csv'> busy={busy} onPick={run} formats={[{ id: 'pdf', label: 'PDF' }, { id: 'csv', label: 'CSV' }]} />
+    </section>
+  )
 }
 
 function RolesTab() {

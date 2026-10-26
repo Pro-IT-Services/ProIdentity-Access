@@ -7,6 +7,7 @@ toolchain go1.26.6
 require (
 	github.com/florianl/go-nflog/v2 v2.3.0
 	github.com/go-chi/chi/v5 v5.1.0
+	github.com/go-pdf/fpdf v0.9.0
 	github.com/go-sql-driver/mysql v1.8.1
 	github.com/go-webauthn/webauthn v0.10.2
 	github.com/golang-jwt/jwt/v5 v5.2.2
@@ -15,6 +16,7 @@ require (
 	github.com/pquerna/otp v1.4.0
 	github.com/ti-mo/conntrack v0.6.0
 	golang.org/x/crypto v0.57.0
+	golang.org/x/image v0.47.0
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20241231184526-a9ab2273dd10
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -31,7 +33,7 @@ require (
 )
 
 require (
-	github.com/boombuler/barcode v1.0.1-0.20190219062509-6c824513bacc // indirect
+	github.com/boombuler/barcode v1.0.1 // indirect
 	github.com/coreos/go-iptables v0.7.0
 	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
 	github.com/go-webauthn/x v0.1.12 // indirect
@@ -39,6 +41,6 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	golang.org/x/net v0.58.0 // indirect
-	golang.org/x/sys v0.48.0 // indirect
+	golang.org/x/sys v0.49.0 // indirect
 	golang.zx2c4.com/wireguard v0.0.0-20231211153847-12269c276173 // indirect
 )
